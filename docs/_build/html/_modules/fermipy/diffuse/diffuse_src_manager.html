@@ -1,0 +1,692 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fermipy.diffuse.diffuse_src_manager &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../../fermipy.html">fermipy</a> &raquo;</li>
+        
+      <li>fermipy.diffuse.diffuse_src_manager</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for fermipy.diffuse.diffuse_src_manager</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Classes and utilities that manage the diffuse emission background models</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">yaml</span>
+
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.name_policy</span> <span class="k">import</span> <span class="n">NameFactory</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.binning</span> <span class="k">import</span> <span class="n">Component</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.model_component</span> <span class="k">import</span> <span class="n">GalpropMergedRingInfo</span><span class="p">,</span>\
+    <span class="n">IsoComponentInfo</span><span class="p">,</span> <span class="n">MapCubeComponentInfo</span><span class="p">,</span> <span class="n">SpatialMapComponentInfo</span>
+
+
+<div class="viewcode-block" id="GalpropMapManager"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.GalpropMapManager">[docs]</a><span class="k">class</span> <span class="nc">GalpropMapManager</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Small helper class to keep track of Galprop gasmaps</span>
+
+<span class="sd">    This keeps track of two types of dictionaries.</span>
+<span class="sd">    Both are keyed by: key = {source_name}_{ring}_{galkey}</span>
+
+<span class="sd">    Where:</span>
+<span class="sd">    {source_name} is something like &#39;merged_C0&#39;</span>
+<span class="sd">    {ring} is the ring index</span>
+<span class="sd">    {galkey} is a key specifying which version of galprop rings to use.</span>
+
+<span class="sd">    The two dictionaries are:</span>
+<span class="sd">    ring_dict[key] = `model_component.GalpropMergedRingInfo`</span>
+<span class="sd">    diffuse_comp_info_dict[key] ] `model_component.ModelComponentInfo`</span>
+
+<span class="sd">    The dictionaries are defined in files called.</span>
+<span class="sd">    models/galprop_rings_{galkey}.yaml</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; C&#39;tor</span>
+
+<span class="sd">        Keyword arguments</span>
+<span class="sd">        -----------------</span>
+
+<span class="sd">        projtype : str [healpix]</span>
+<span class="sd">            Used to define path to gasmap files</span>
+<span class="sd">        basedir : str</span>
+<span class="sd">            Top level directory for finding files</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">projtype</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;projtype&#39;</span><span class="p">,</span> <span class="s1">&#39;healpix&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name_factory</span> <span class="o">=</span> <span class="n">NameFactory</span><span class="p">(</span><span class="n">basedir</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;basedir&#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ring_dicts</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_diffuse_comp_info_dicts</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="GalpropMapManager.read_galprop_rings_yaml"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.GalpropMapManager.read_galprop_rings_yaml">[docs]</a>    <span class="k">def</span> <span class="nf">read_galprop_rings_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">galkey</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Read the yaml file for a partiuclar galprop key</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">galprop_rings_yaml</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name_factory</span><span class="o">.</span><span class="n">galprop_rings_yaml</span><span class="p">(</span><span class="n">galkey</span><span class="o">=</span><span class="n">galkey</span><span class="p">,</span>
+                                                                   <span class="n">fullpath</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">galprop_rings</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">galprop_rings_yaml</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">galprop_rings</span></div>
+
+<div class="viewcode-block" id="GalpropMapManager.galkeys"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.GalpropMapManager.galkeys">[docs]</a>    <span class="k">def</span> <span class="nf">galkeys</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the list of galprop keys used &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_ring_dicts</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="GalpropMapManager.ring_dict"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.GalpropMapManager.ring_dict">[docs]</a>    <span class="k">def</span> <span class="nf">ring_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">galkey</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the ring dictionary for a particular galprop key</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_ring_dicts</span><span class="p">[</span><span class="n">galkey</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="GalpropMapManager.diffuse_comp_info_dicts"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.GalpropMapManager.diffuse_comp_info_dicts">[docs]</a>    <span class="k">def</span> <span class="nf">diffuse_comp_info_dicts</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">galkey</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the components info dictionary for a particular galprop key</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_diffuse_comp_info_dicts</span><span class="p">[</span><span class="n">galkey</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="GalpropMapManager.merged_components"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.GalpropMapManager.merged_components">[docs]</a>    <span class="k">def</span> <span class="nf">merged_components</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">galkey</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the set of merged components for a particular galprop key</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_diffuse_comp_info_dicts</span><span class="p">[</span><span class="n">galkey</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="GalpropMapManager.make_ring_filename"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.GalpropMapManager.make_ring_filename">[docs]</a>    <span class="k">def</span> <span class="nf">make_ring_filename</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_name</span><span class="p">,</span> <span class="n">ring</span><span class="p">,</span> <span class="n">galprop_run</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Make the name of a gasmap file for a single ring</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        source_name : str</span>
+<span class="sd">            The galprop component, used to define path to gasmap files</span>
+<span class="sd">        ring : int</span>
+<span class="sd">            The ring index</span>
+<span class="sd">        galprop_run : str</span>
+<span class="sd">            String identifying the galprop parameters</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">format_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">format_dict</span><span class="p">[</span><span class="s1">&#39;sourcekey&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name_factory</span><span class="o">.</span><span class="n">galprop_ringkey</span><span class="p">(</span><span class="n">source_name</span><span class="o">=</span><span class="n">source_name</span><span class="p">,</span>
+                                                                      <span class="n">ringkey</span><span class="o">=</span><span class="s2">&quot;ring_</span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">ring</span><span class="p">)</span>
+        <span class="n">format_dict</span><span class="p">[</span><span class="s1">&#39;galprop_run&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">galprop_run</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name_factory</span><span class="o">.</span><span class="n">galprop_gasmap</span><span class="p">(</span><span class="o">**</span><span class="n">format_dict</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GalpropMapManager.make_merged_name"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.GalpropMapManager.make_merged_name">[docs]</a>    <span class="k">def</span> <span class="nf">make_merged_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_name</span><span class="p">,</span> <span class="n">galkey</span><span class="p">,</span> <span class="n">fullpath</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Make the name of a gasmap file for a set of merged rings</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        source_name : str</span>
+<span class="sd">            The galprop component, used to define path to gasmap files</span>
+<span class="sd">        galkey : str</span>
+<span class="sd">            A short key identifying the galprop parameters</span>
+<span class="sd">        fullpath : bool</span>
+<span class="sd">            Return the full path name</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">format_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">format_dict</span><span class="p">[</span><span class="s1">&#39;sourcekey&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name_factory</span><span class="o">.</span><span class="n">galprop_sourcekey</span><span class="p">(</span><span class="n">source_name</span><span class="o">=</span><span class="n">source_name</span><span class="p">,</span>
+                                                                        <span class="n">galpropkey</span><span class="o">=</span><span class="n">galkey</span><span class="p">)</span>
+        <span class="n">format_dict</span><span class="p">[</span><span class="s1">&#39;fullpath&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fullpath</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name_factory</span><span class="o">.</span><span class="n">merged_gasmap</span><span class="p">(</span><span class="o">**</span><span class="n">format_dict</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GalpropMapManager.make_xml_name"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.GalpropMapManager.make_xml_name">[docs]</a>    <span class="k">def</span> <span class="nf">make_xml_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_name</span><span class="p">,</span> <span class="n">galkey</span><span class="p">,</span> <span class="n">fullpath</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Make the name of an xml file for a model definition for a set of merged rings</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        source_name : str</span>
+<span class="sd">            The galprop component, used to define path to gasmap files</span>
+<span class="sd">        galkey : str</span>
+<span class="sd">            A short key identifying the galprop parameters</span>
+<span class="sd">        fullpath : bool</span>
+<span class="sd">            Return the full path name</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">format_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">format_dict</span><span class="p">[</span><span class="s1">&#39;sourcekey&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name_factory</span><span class="o">.</span><span class="n">galprop_sourcekey</span><span class="p">(</span><span class="n">source_name</span><span class="o">=</span><span class="n">source_name</span><span class="p">,</span>
+                                                                        <span class="n">galpropkey</span><span class="o">=</span><span class="n">galkey</span><span class="p">)</span>
+        <span class="n">format_dict</span><span class="p">[</span><span class="s1">&#39;fullpath&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fullpath</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name_factory</span><span class="o">.</span><span class="n">srcmdl_xml</span><span class="p">(</span><span class="o">**</span><span class="n">format_dict</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GalpropMapManager.make_ring_filelist"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.GalpropMapManager.make_ring_filelist">[docs]</a>    <span class="k">def</span> <span class="nf">make_ring_filelist</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sourcekeys</span><span class="p">,</span> <span class="n">rings</span><span class="p">,</span> <span class="n">galprop_run</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Make a list of all the template files for a merged component</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        sourcekeys : list-like of str</span>
+<span class="sd">            The names of the componenents to merge</span>
+<span class="sd">        rings : list-like of int</span>
+<span class="sd">            The indices of the rings to merge</span>
+<span class="sd">        galprop_run : str</span>
+<span class="sd">            String identifying the galprop parameters</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">flist</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">sourcekey</span> <span class="ow">in</span> <span class="n">sourcekeys</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">ring</span> <span class="ow">in</span> <span class="n">rings</span><span class="p">:</span>
+                <span class="n">flist</span> <span class="o">+=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">make_ring_filename</span><span class="p">(</span><span class="n">sourcekey</span><span class="p">,</span>
+                                                  <span class="n">ring</span><span class="p">,</span> <span class="n">galprop_run</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">flist</span></div>
+
+<div class="viewcode-block" id="GalpropMapManager.make_ring_dict"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.GalpropMapManager.make_ring_dict">[docs]</a>    <span class="k">def</span> <span class="nf">make_ring_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">galkey</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Make a dictionary mapping the merged component names to list of template files</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        galkey : str</span>
+<span class="sd">            Unique key for this ring dictionary</span>
+
+<span class="sd">        Returns `model_component.GalpropMergedRingInfo`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">galprop_rings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_galprop_rings_yaml</span><span class="p">(</span><span class="n">galkey</span><span class="p">)</span>
+        <span class="n">galprop_run</span> <span class="o">=</span> <span class="n">galprop_rings</span><span class="p">[</span><span class="s1">&#39;galprop_run&#39;</span><span class="p">]</span>
+        <span class="n">ring_limits</span> <span class="o">=</span> <span class="n">galprop_rings</span><span class="p">[</span><span class="s1">&#39;ring_limits&#39;</span><span class="p">]</span>
+        <span class="n">comp_dict</span> <span class="o">=</span> <span class="n">galprop_rings</span><span class="p">[</span><span class="s1">&#39;diffuse_comp_dict&#39;</span><span class="p">]</span>
+        <span class="n">remove_rings</span> <span class="o">=</span> <span class="n">galprop_rings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;remove_rings&#39;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="n">ring_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">nring</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ring_limits</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">source_name</span><span class="p">,</span> <span class="n">source_value</span> <span class="ow">in</span> <span class="n">comp_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">base_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">source_name</span><span class="o">=</span><span class="n">source_name</span><span class="p">,</span>
+                             <span class="n">galkey</span><span class="o">=</span><span class="n">galkey</span><span class="p">,</span>
+                             <span class="n">galprop_run</span><span class="o">=</span><span class="n">galprop_run</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">iring</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nring</span><span class="p">):</span>
+                <span class="n">sourcekey</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">source_name</span><span class="p">,</span> <span class="n">iring</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">sourcekey</span> <span class="ow">in</span> <span class="n">remove_rings</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">full_key</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">sourcekey</span><span class="p">,</span> <span class="n">galkey</span><span class="p">)</span>
+                <span class="n">rings</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">ring_limits</span><span class="p">[</span><span class="n">iring</span><span class="p">],</span> <span class="n">ring_limits</span><span class="p">[</span><span class="n">iring</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+                <span class="n">base_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">ring</span><span class="o">=</span><span class="n">iring</span><span class="p">,</span>
+                                      <span class="n">sourcekey</span><span class="o">=</span><span class="n">sourcekey</span><span class="p">,</span>
+                                      <span class="n">files</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">make_ring_filelist</span><span class="p">(</span><span class="n">source_value</span><span class="p">,</span>
+                                                                    <span class="n">rings</span><span class="p">,</span> <span class="n">galprop_run</span><span class="p">),</span>
+                                      <span class="n">merged_gasmap</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">make_merged_name</span><span class="p">(</span><span class="n">sourcekey</span><span class="p">,</span>
+                                                                          <span class="n">galkey</span><span class="p">,</span> <span class="kc">False</span><span class="p">)))</span>
+                <span class="n">ring_dict</span><span class="p">[</span><span class="n">full_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">GalpropMergedRingInfo</span><span class="p">(</span><span class="o">**</span><span class="n">base_dict</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_ring_dicts</span><span class="p">[</span><span class="n">galkey</span><span class="p">]</span> <span class="o">=</span> <span class="n">ring_dict</span>
+        <span class="k">return</span> <span class="n">ring_dict</span></div>
+
+<div class="viewcode-block" id="GalpropMapManager.make_diffuse_comp_info"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.GalpropMapManager.make_diffuse_comp_info">[docs]</a>    <span class="k">def</span> <span class="nf">make_diffuse_comp_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">merged_name</span><span class="p">,</span> <span class="n">galkey</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Make the information about a single merged component</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        merged_name : str</span>
+<span class="sd">            The name of the merged component</span>
+<span class="sd">        galkey : str</span>
+<span class="sd">            A short key identifying the galprop parameters</span>
+
+<span class="sd">        Returns `Model_component.ModelComponentInfo`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">source_name</span><span class="o">=</span><span class="n">merged_name</span><span class="p">,</span>
+                      <span class="n">source_ver</span><span class="o">=</span><span class="n">galkey</span><span class="p">,</span>
+                      <span class="n">model_type</span><span class="o">=</span><span class="s1">&#39;MapCubeSource&#39;</span><span class="p">,</span>
+                      <span class="n">Spatial_Filename</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">make_merged_name</span><span class="p">(</span>
+                          <span class="n">merged_name</span><span class="p">,</span> <span class="n">galkey</span><span class="p">,</span> <span class="n">fullpath</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                      <span class="n">srcmdl_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">make_xml_name</span><span class="p">(</span><span class="n">merged_name</span><span class="p">,</span> <span class="n">galkey</span><span class="p">,</span> <span class="n">fullpath</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">MapCubeComponentInfo</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="GalpropMapManager.make_diffuse_comp_info_dict"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.GalpropMapManager.make_diffuse_comp_info_dict">[docs]</a>    <span class="k">def</span> <span class="nf">make_diffuse_comp_info_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">galkey</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Make a dictionary maping from merged component to information about that component</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        galkey : str</span>
+<span class="sd">            A short key identifying the galprop parameters</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">galprop_rings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">read_galprop_rings_yaml</span><span class="p">(</span><span class="n">galkey</span><span class="p">)</span>
+        <span class="n">ring_limits</span> <span class="o">=</span> <span class="n">galprop_rings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ring_limits&#39;</span><span class="p">)</span>
+        <span class="n">comp_dict</span> <span class="o">=</span> <span class="n">galprop_rings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;diffuse_comp_dict&#39;</span><span class="p">)</span>
+        <span class="n">remove_rings</span> <span class="o">=</span> <span class="n">galprop_rings</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;remove_rings&#39;</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="n">diffuse_comp_info_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">nring</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">ring_limits</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="k">for</span> <span class="n">source_key</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">comp_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="k">for</span> <span class="n">iring</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nring</span><span class="p">):</span>
+                <span class="n">source_name</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">source_key</span><span class="p">,</span> <span class="n">iring</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">source_name</span> <span class="ow">in</span> <span class="n">remove_rings</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">full_key</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">source_name</span><span class="p">,</span> <span class="n">galkey</span><span class="p">)</span>
+                <span class="n">diffuse_comp_info_dict</span><span class="p">[</span><span class="n">full_key</span><span class="p">]</span> <span class="o">=</span>\
+                    <span class="bp">self</span><span class="o">.</span><span class="n">make_diffuse_comp_info</span><span class="p">(</span><span class="n">source_name</span><span class="p">,</span> <span class="n">galkey</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_diffuse_comp_info_dicts</span><span class="p">[</span><span class="n">galkey</span><span class="p">]</span> <span class="o">=</span> <span class="n">diffuse_comp_info_dict</span>
+        <span class="k">return</span> <span class="n">diffuse_comp_info_dict</span></div></div>
+
+
+<div class="viewcode-block" id="DiffuseModelManager"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.DiffuseModelManager">[docs]</a><span class="k">class</span> <span class="nc">DiffuseModelManager</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Small helper class to keep track of diffuse component templates</span>
+
+<span class="sd">    This keeps track of the &#39;diffuse component infomation&#39; dictionary</span>
+
+<span class="sd">    This keyed by: key = {source_name}_{source_ver}</span>
+<span class="sd">    Where:</span>
+<span class="sd">    {source_name} is something like &#39;loopI&#39;</span>
+<span class="sd">    {source_ver} is somthinng like v00</span>
+
+<span class="sd">    The dictioary is</span>
+<span class="sd">    diffuse_comp_info_dict[key] - &gt; `model_component.ModelComponentInfo`</span>
+
+<span class="sd">    Note that some components ( those that represent moving sources or are selection depedent )</span>
+<span class="sd">    will have a sub-dictionary of diffuse_comp_info_dict object for each sub-component</span>
+
+<span class="sd">    The compoents are defined in a file called</span>
+<span class="sd">    config/diffuse_components.yaml</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; C&#39;tor</span>
+
+<span class="sd">        Keyword arguments</span>
+<span class="sd">        -----------------</span>
+
+<span class="sd">        name_policy : str</span>
+<span class="sd">            Name of yaml file contain file naming policy definitions</span>
+<span class="sd">        basedir : str</span>
+<span class="sd">            Top level directory for finding files</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_name_factory</span> <span class="o">=</span> <span class="n">NameFactory</span><span class="p">(</span><span class="n">basedir</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;basedir&#39;</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_diffuse_comp_info_dict</span> <span class="o">=</span> <span class="p">{}</span>
+
+<div class="viewcode-block" id="DiffuseModelManager.read_diffuse_component_yaml"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.DiffuseModelManager.read_diffuse_component_yaml">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">read_diffuse_component_yaml</span><span class="p">(</span><span class="n">yamlfile</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Read the yaml file for the diffuse components</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">diffuse_components</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">yamlfile</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">diffuse_components</span></div>
+
+<div class="viewcode-block" id="DiffuseModelManager.sourcekeys"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.DiffuseModelManager.sourcekeys">[docs]</a>    <span class="k">def</span> <span class="nf">sourcekeys</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the list of source keys&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_diffuse_comp_info_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span></div>
+
+<div class="viewcode-block" id="DiffuseModelManager.diffuse_comp_info"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.DiffuseModelManager.diffuse_comp_info">[docs]</a>    <span class="k">def</span> <span class="nf">diffuse_comp_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sourcekey</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the Component info associated to a particular key</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_diffuse_comp_info_dict</span><span class="p">[</span><span class="n">sourcekey</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="DiffuseModelManager.make_template_name"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.DiffuseModelManager.make_template_name">[docs]</a>    <span class="k">def</span> <span class="nf">make_template_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_type</span><span class="p">,</span> <span class="n">sourcekey</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Make the name of a template file for particular component</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        model_type : str</span>
+<span class="sd">            Type of model to use for this component</span>
+<span class="sd">        sourcekey : str</span>
+<span class="sd">            Key to identify this component</span>
+
+<span class="sd">        Returns filename or None if component does not require a template file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">format_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">format_dict</span><span class="p">[</span><span class="s1">&#39;sourcekey&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sourcekey</span>
+        <span class="k">if</span> <span class="n">model_type</span> <span class="o">==</span> <span class="s1">&#39;IsoSource&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name_factory</span><span class="o">.</span><span class="n">spectral_template</span><span class="p">(</span><span class="o">**</span><span class="n">format_dict</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">model_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;MapCubeSource&#39;</span><span class="p">,</span> <span class="s1">&#39;SpatialMap&#39;</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name_factory</span><span class="o">.</span><span class="n">diffuse_template</span><span class="p">(</span><span class="o">**</span><span class="n">format_dict</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unexpected model_type </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">model_type</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DiffuseModelManager.make_xml_name"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.DiffuseModelManager.make_xml_name">[docs]</a>    <span class="k">def</span> <span class="nf">make_xml_name</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sourcekey</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Make the name of an xml file for a model definition of a single component</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        sourcekey : str</span>
+<span class="sd">            Key to identify this component</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">format_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">format_dict</span><span class="p">[</span><span class="s1">&#39;sourcekey&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">sourcekey</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name_factory</span><span class="o">.</span><span class="n">srcmdl_xml</span><span class="p">(</span><span class="o">**</span><span class="n">format_dict</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DiffuseModelManager.make_diffuse_comp_info"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.DiffuseModelManager.make_diffuse_comp_info">[docs]</a>    <span class="k">def</span> <span class="nf">make_diffuse_comp_info</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_name</span><span class="p">,</span> <span class="n">source_ver</span><span class="p">,</span> <span class="n">diffuse_dict</span><span class="p">,</span>
+                               <span class="n">components</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">comp_key</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Make a dictionary mapping the merged component names to list of template files</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        source_name : str</span>
+<span class="sd">           Name of the source</span>
+<span class="sd">        source_ver : str</span>
+<span class="sd">           Key identifying the version of the source</span>
+<span class="sd">        diffuse_dict : dict</span>
+<span class="sd">           Information about this component</span>
+<span class="sd">        comp_key : str</span>
+<span class="sd">           Used when we need to keep track of sub-components, i.e.,</span>
+<span class="sd">           for moving and selection dependent sources.</span>
+
+<span class="sd">        Returns `model_component.ModelComponentInfo` or</span>
+<span class="sd">        `model_component.IsoComponentInfo`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">model_type</span> <span class="o">=</span> <span class="n">diffuse_dict</span><span class="p">[</span><span class="s1">&#39;model_type&#39;</span><span class="p">]</span>
+        <span class="n">sourcekey</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">_</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">source_name</span><span class="p">,</span> <span class="n">source_ver</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">comp_key</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">template_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_template_name</span><span class="p">(</span><span class="n">model_type</span><span class="p">,</span> <span class="n">sourcekey</span><span class="p">)</span>
+            <span class="n">srcmdl_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_xml_name</span><span class="p">(</span><span class="n">sourcekey</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">template_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_template_name</span><span class="p">(</span>
+                <span class="n">model_type</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">sourcekey</span><span class="p">,</span> <span class="n">comp_key</span><span class="p">))</span>
+            <span class="n">srcmdl_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_xml_name</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">sourcekey</span><span class="p">,</span> <span class="n">comp_key</span><span class="p">))</span>
+
+        <span class="n">template_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name_factory</span><span class="o">.</span><span class="n">fullpath</span><span class="p">(</span><span class="n">localpath</span><span class="o">=</span><span class="n">template_name</span><span class="p">)</span>
+        <span class="n">srcmdl_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name_factory</span><span class="o">.</span><span class="n">fullpath</span><span class="p">(</span><span class="n">localpath</span><span class="o">=</span><span class="n">srcmdl_name</span><span class="p">)</span>
+
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">source_name</span><span class="o">=</span><span class="n">source_name</span><span class="p">,</span>
+                      <span class="n">source_ver</span><span class="o">=</span><span class="n">source_ver</span><span class="p">,</span>
+                      <span class="n">model_type</span><span class="o">=</span><span class="n">model_type</span><span class="p">,</span>
+                      <span class="n">srcmdl_name</span><span class="o">=</span><span class="n">srcmdl_name</span><span class="p">,</span>
+                      <span class="n">components</span><span class="o">=</span><span class="n">components</span><span class="p">,</span>
+                      <span class="n">comp_key</span><span class="o">=</span><span class="n">comp_key</span><span class="p">)</span>
+        <span class="n">kwargs</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">diffuse_dict</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">model_type</span> <span class="o">==</span> <span class="s1">&#39;IsoSource&#39;</span><span class="p">:</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;Spectral_Filename&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">template_name</span>
+            <span class="k">return</span> <span class="n">IsoComponentInfo</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">model_type</span> <span class="o">==</span> <span class="s1">&#39;MapCubeSource&#39;</span><span class="p">:</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;Spatial_Filename&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">template_name</span>
+            <span class="k">return</span> <span class="n">MapCubeComponentInfo</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">model_type</span> <span class="o">==</span> <span class="s1">&#39;SpatialMap&#39;</span><span class="p">:</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;Spatial_Filename&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">template_name</span>
+            <span class="k">return</span> <span class="n">SpatialMapComponentInfo</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unexpected model type </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">model_type</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="DiffuseModelManager.make_diffuse_comp_info_dict"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_src_manager.DiffuseModelManager.make_diffuse_comp_info_dict">[docs]</a>    <span class="k">def</span> <span class="nf">make_diffuse_comp_info_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">diffuse_sources</span><span class="p">,</span> <span class="n">components</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Make a dictionary maping from diffuse component to information about that component</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        diffuse_sources : dict</span>
+<span class="sd">            Dictionary with diffuse source defintions</span>
+<span class="sd">        components : dict</span>
+<span class="sd">            Dictionary with event selection defintions,</span>
+<span class="sd">            needed for selection depenedent diffuse components</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        ret_dict : dict</span>
+<span class="sd">            Dictionary mapping sourcekey to `model_component.ModelComponentInfo`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ret_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">diffuse_sources</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">model_type</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;model_type&#39;</span><span class="p">,</span> <span class="s1">&#39;MapCubeSource&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">model_type</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;galprop_rings&#39;</span><span class="p">,</span> <span class="s1">&#39;catalog&#39;</span><span class="p">]:</span>
+                <span class="k">continue</span>
+            <span class="n">selection_dependent</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;selection_dependent&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+            <span class="n">moving</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;moving&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+            <span class="n">versions</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;versions&#39;</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="k">for</span> <span class="n">version</span> <span class="ow">in</span> <span class="n">versions</span><span class="p">:</span>
+                <span class="c1"># sourcekey = self._name_factory.sourcekey(source_name=key,</span>
+                <span class="c1">#                                         source_ver=version)</span>
+                <span class="n">comp_dict</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">if</span> <span class="n">selection_dependent</span><span class="p">:</span>
+                    <span class="c1"># For selection dependent diffuse sources we need to split</span>
+                    <span class="c1"># by binning component</span>
+                    <span class="n">comp_dict</span> <span class="o">=</span> <span class="p">{}</span>
+                    <span class="k">for</span> <span class="n">comp</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
+                        <span class="n">comp_key</span> <span class="o">=</span> <span class="n">comp</span><span class="o">.</span><span class="n">make_key</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{ebin_name}</span><span class="s1">_</span><span class="si">{evtype_name}</span><span class="s1">&#39;</span><span class="p">)</span>
+                        <span class="n">comp_dict</span><span class="p">[</span><span class="n">comp_key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_diffuse_comp_info</span><span class="p">(</span>
+                            <span class="n">key</span><span class="p">,</span> <span class="n">version</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">comp_key</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">moving</span><span class="p">:</span>
+                    <span class="c1"># For moving diffuse sources we need to split by zmax cut</span>
+                    <span class="n">comp_dict</span> <span class="o">=</span> <span class="p">{}</span>
+                    <span class="n">zmax_dict</span> <span class="o">=</span> <span class="p">{}</span>
+                    <span class="k">for</span> <span class="n">comp</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
+                        <span class="n">zmax_dict</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">comp</span><span class="o">.</span><span class="n">zmax</span><span class="p">)]</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="n">zmax_list</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">zmax_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+                    <span class="k">for</span> <span class="n">zmax</span> <span class="ow">in</span> <span class="n">zmax_list</span><span class="p">:</span>
+                        <span class="n">comp_key</span> <span class="o">=</span> <span class="s2">&quot;zmax</span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">zmax</span><span class="p">)</span>
+                        <span class="n">comp_dict</span><span class="p">[</span><span class="n">comp_key</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_diffuse_comp_info</span><span class="p">(</span>
+                            <span class="n">key</span><span class="p">,</span> <span class="n">version</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="n">comp_key</span><span class="p">)</span>
+
+                <span class="n">comp_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_diffuse_comp_info</span><span class="p">(</span>
+                    <span class="n">key</span><span class="p">,</span> <span class="n">version</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">comp_dict</span><span class="p">)</span>
+                <span class="n">ret_dict</span><span class="p">[</span><span class="n">comp_info</span><span class="o">.</span><span class="n">sourcekey</span><span class="p">]</span> <span class="o">=</span> <span class="n">comp_info</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_diffuse_comp_info_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">ret_dict</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ret_dict</span></div></div>
+
+
+<span class="k">def</span> <span class="nf">make_ring_dicts</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build and return the information about the Galprop rings</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">library_yamlfile</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;library&#39;</span><span class="p">,</span> <span class="s1">&#39;models/library.yaml&#39;</span><span class="p">)</span>
+    <span class="n">gmm</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;GalpropMapManager&#39;</span><span class="p">,</span> <span class="n">GalpropMapManager</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">library_yamlfile</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">library_yamlfile</span> <span class="o">==</span> <span class="s1">&#39;None&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">gmm</span>
+    <span class="n">diffuse_comps</span> <span class="o">=</span> <span class="n">DiffuseModelManager</span><span class="o">.</span><span class="n">read_diffuse_component_yaml</span><span class="p">(</span><span class="n">library_yamlfile</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">diffuse_value</span> <span class="ow">in</span> <span class="n">diffuse_comps</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">diffuse_value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">diffuse_value</span><span class="p">[</span><span class="s1">&#39;model_type&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;galprop_rings&#39;</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">versions</span> <span class="o">=</span> <span class="n">diffuse_value</span><span class="p">[</span><span class="s1">&#39;versions&#39;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">version</span> <span class="ow">in</span> <span class="n">versions</span><span class="p">:</span>
+            <span class="n">gmm</span><span class="o">.</span><span class="n">make_ring_dict</span><span class="p">(</span><span class="n">version</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">gmm</span>
+
+
+<span class="k">def</span> <span class="nf">make_diffuse_comp_info_dict</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Build and return the information about the diffuse components</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">library_yamlfile</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;library&#39;</span><span class="p">,</span> <span class="s1">&#39;models/library.yaml&#39;</span><span class="p">)</span>
+    <span class="n">components</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;components&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">components</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">comp_yamlfile</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;comp&#39;</span><span class="p">,</span> <span class="s1">&#39;config/binning.yaml&#39;</span><span class="p">)</span>
+        <span class="n">components</span> <span class="o">=</span> <span class="n">Component</span><span class="o">.</span><span class="n">build_from_yamlfile</span><span class="p">(</span><span class="n">comp_yamlfile</span><span class="p">)</span>
+    <span class="n">gmm</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;GalpropMapManager&#39;</span><span class="p">,</span> <span class="n">GalpropMapManager</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+    <span class="n">dmm</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;DiffuseModelManager&#39;</span><span class="p">,</span> <span class="n">DiffuseModelManager</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">library_yamlfile</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">library_yamlfile</span> <span class="o">==</span> <span class="s1">&#39;None&#39;</span><span class="p">:</span>
+        <span class="n">diffuse_comps</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">diffuse_comps</span> <span class="o">=</span> <span class="n">DiffuseModelManager</span><span class="o">.</span><span class="n">read_diffuse_component_yaml</span><span class="p">(</span>
+            <span class="n">library_yamlfile</span><span class="p">)</span>
+    <span class="n">diffuse_comp_info_dict</span> <span class="o">=</span> <span class="n">dmm</span><span class="o">.</span><span class="n">make_diffuse_comp_info_dict</span><span class="p">(</span>
+        <span class="n">diffuse_comps</span><span class="p">,</span> <span class="n">components</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">diffuse_value</span> <span class="ow">in</span> <span class="n">diffuse_comps</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">diffuse_value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">diffuse_value</span><span class="p">[</span><span class="s1">&#39;model_type&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;galprop_rings&#39;</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">versions</span> <span class="o">=</span> <span class="n">diffuse_value</span><span class="p">[</span><span class="s1">&#39;versions&#39;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">version</span> <span class="ow">in</span> <span class="n">versions</span><span class="p">:</span>
+            <span class="n">galprop_dict</span> <span class="o">=</span> <span class="n">gmm</span><span class="o">.</span><span class="n">make_diffuse_comp_info_dict</span><span class="p">(</span><span class="n">version</span><span class="p">)</span>
+            <span class="n">diffuse_comp_info_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">galprop_dict</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="nb">dict</span><span class="p">(</span><span class="n">comp_info_dict</span><span class="o">=</span><span class="n">diffuse_comp_info_dict</span><span class="p">,</span>
+                <span class="n">GalpropMapManager</span><span class="o">=</span><span class="n">gmm</span><span class="p">,</span>
+                <span class="n">DiffuseModelManager</span><span class="o">=</span><span class="n">dmm</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

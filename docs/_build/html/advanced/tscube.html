@@ -1,0 +1,443 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>TS Cube &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Residual Map" href="residmap.html" />
+    <link rel="prev" title="TS Map" href="tsmap.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer.html">Developer Notes</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Advanced Analysis Methods</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="sed.html">SED Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lightcurve.html">Light Curves</a></li>
+<li class="toctree-l2"><a class="reference internal" href="extension.html">Extension Fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tsmap.html">TS Map</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">TS Cube</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#examples">Examples</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#reference-api">Reference/API</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="residmap.html">Residual Map</a></li>
+<li class="toctree-l2"><a class="reference internal" href="detection.html">Source Finding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="localization.html">Source Localization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="phased.html">Phased Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sensitivity.html">Sensitivity Tools</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Advanced Analysis Methods</a> &raquo;</li>
+        
+      <li>TS Cube</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/advanced/tscube.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="ts-cube">
+<span id="tscube"></span><h1>TS Cube<a class="headerlink" href="#ts-cube" title="Permalink to this headline">¶</a></h1>
+<div class="admonition warning">
+<p class="first admonition-title">Warning</p>
+<p class="last">This method requires Fermi Science Tools version 11-04-00
+or later.</p>
+</div>
+<p><a class="reference internal" href="../fermipy.html#fermipy.gtanalysis.GTAnalysis.tscube" title="fermipy.gtanalysis.GTAnalysis.tscube"><code class="xref py py-meth docutils literal notranslate"><span class="pre">tscube()</span></code></a> can be used generate
+both test statistic (TS) maps and bin-by-bin scans of the test source
+likelihood as a function of spatial pixel and energy bin (likelihood cubes).
+The implemention is based on the <code class="xref py py-obj docutils literal notranslate"><span class="pre">gttscube</span></code> ST application which uses
+an efficient newton optimization algorithm for fitting the test source at
+each pixel in the ROI.</p>
+<p>The TS map output has the same format as TS maps produced by
+<a class="reference internal" href="../fermipy.html#fermipy.gtanalysis.GTAnalysis.tsmap" title="fermipy.gtanalysis.GTAnalysis.tsmap"><code class="xref py py-meth docutils literal notranslate"><span class="pre">tsmap()</span></code></a> (see <a class="reference internal" href="tsmap.html#tsmap"><span class="std std-ref">TS Map</span></a> for
+further details).  However while
+<a class="reference internal" href="../fermipy.html#fermipy.gtanalysis.GTAnalysis.tsmap" title="fermipy.gtanalysis.GTAnalysis.tsmap"><code class="xref py py-meth docutils literal notranslate"><span class="pre">tsmap()</span></code></a> fixes the background
+model, <a class="reference internal" href="../fermipy.html#fermipy.gtanalysis.GTAnalysis.tscube" title="fermipy.gtanalysis.GTAnalysis.tscube"><code class="xref py py-meth docutils literal notranslate"><span class="pre">tscube()</span></code></a> can also fit
+background normalization parameters when scanning the test source
+likelihood.  This method makes no approximations in the
+evaluation of the likelihood and may be somewhat slower than
+<a class="reference internal" href="../fermipy.html#fermipy.gtanalysis.GTAnalysis.tsmap" title="fermipy.gtanalysis.GTAnalysis.tsmap"><code class="xref py py-meth docutils literal notranslate"><span class="pre">tsmap()</span></code></a> depending on the ROI
+dimensions and energy bounds.</p>
+<p>For each spatial bin the method calculates the maximum likelihood test
+statistic given by</p>
+<div class="math notranslate nohighlight">
+\[\mathrm{TS} = 2 \sum_{k} \ln L(\mu,\hat{\theta}|n_{k}) - \ln L(0,\hat{\hat{\theta}}|n_{k})\]</div>
+<p>where the summation index <em>k</em> runs over both spatial and energy bins,
+μ is the test source normalization parameter, and θ represents the
+parameters of the background model.  Normalization parameters of the
+background model are refit at every test source position if they are
+free in the model.  All other spectral parameters (indices etc.) are
+kept fixed.</p>
+<div class="section" id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
+<p>The method is executed by providing a <code class="xref py py-obj docutils literal notranslate"><span class="pre">model</span></code> dictionary argument that
+defines the spectrum and spatial morphology of the test source:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Generate TS cube for a power-law point source with Index=2.0</span>
+<span class="n">model</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;Index&#39;</span> <span class="p">:</span> <span class="mf">2.0</span><span class="p">,</span> <span class="s1">&#39;SpatialModel&#39;</span> <span class="p">:</span> <span class="s1">&#39;PointSource&#39;</span><span class="p">}</span>
+<span class="n">cube</span> <span class="o">=</span> <span class="n">gta</span><span class="o">.</span><span class="n">tscube</span><span class="p">(</span><span class="s1">&#39;fit1&#39;</span><span class="p">,</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
+
+<span class="c1"># Generate TS cube for a power-law point source with Index=2.0 and</span>
+<span class="c1"># restricting the analysis to E &gt; 3.16 GeV</span>
+<span class="n">model</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;Index&#39;</span> <span class="p">:</span> <span class="mf">2.0</span><span class="p">,</span> <span class="s1">&#39;SpatialModel&#39;</span> <span class="p">:</span> <span class="s1">&#39;PointSource&#39;</span><span class="p">}</span>
+<span class="n">cube</span> <span class="o">=</span> <span class="n">gta</span><span class="o">.</span><span class="n">tscube</span><span class="p">(</span><span class="s1">&#39;fit1_emin35&#39;</span><span class="p">,</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span><span class="n">erange</span><span class="o">=</span><span class="p">[</span><span class="mf">3.5</span><span class="p">,</span><span class="bp">None</span><span class="p">])</span>
+
+<span class="c1"># Generate TS cubes for a power-law point source with Index=1.5, 2.0, and 2.5</span>
+<span class="n">model</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;SpatialModel&#39;</span> <span class="p">:</span> <span class="s1">&#39;PointSource&#39;</span><span class="p">}</span>
+<span class="n">cubes</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="p">[</span><span class="mf">1.5</span><span class="p">,</span><span class="mf">2.0</span><span class="p">,</span><span class="mf">2.5</span><span class="p">]:</span>
+    <span class="n">model</span><span class="p">[</span><span class="s1">&#39;Index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">index</span>
+    <span class="n">cubes</span> <span class="o">+=</span> <span class="p">[</span><span class="n">gta</span><span class="o">.</span><span class="n">tsmap</span><span class="p">(</span><span class="s1">&#39;fit1&#39;</span><span class="p">,</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)]</span>
+</pre></div>
+</div>
+<p>In addition to generating a TS map, this method can also extract a
+test source likelihood profile as a function of energy at every
+position in the ROI (likelihood cube).  This information is saved to
+the <code class="docutils literal notranslate"><span class="pre">SCANDATA</span></code> HDU of the output FITS file:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span>
+<span class="n">cube</span> <span class="o">=</span> <span class="n">gta</span><span class="o">.</span><span class="n">tscube</span><span class="p">(</span><span class="s1">&#39;fit1&#39;</span><span class="p">,</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">,</span> <span class="n">do_sed</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="n">tab_scan</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">cube</span><span class="p">[</span><span class="s1">&#39;file&#39;</span><span class="p">],</span><span class="s1">&#39;SCANDATA&#39;</span><span class="p">)</span>
+<span class="n">tab_ebounds</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">cube</span><span class="p">[</span><span class="s1">&#39;file&#39;</span><span class="p">],</span><span class="s1">&#39;EBOUNDS&#39;</span><span class="p">)</span>
+
+<span class="n">eflux_scan</span> <span class="o">=</span> <span class="n">tab_ebounds</span><span class="p">[</span><span class="s1">&#39;REF_EFLUX&#39;</span><span class="p">][</span><span class="bp">None</span><span class="p">,:,</span><span class="bp">None</span><span class="p">]</span><span class="o">*</span><span class="n">tab_scan</span><span class="p">[</span><span class="s1">&#39;norm_scan&#39;</span><span class="p">]</span>
+
+<span class="c1"># Plot likelihood for pixel 400 and energy bin 2</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">eflux_scan</span><span class="p">[</span><span class="mi">400</span><span class="p">,</span><span class="mi">2</span><span class="p">],</span><span class="n">tab_scan</span><span class="p">[</span><span class="s1">&#39;dloglike_scan&#39;</span><span class="p">][</span><span class="mi">400</span><span class="p">,</span><span class="mi">2</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>The likelihood profile cube can be used to evaluate the likelihood for
+a test source with an arbitrary spectral model at any position in the
+ROI.  The <a class="reference internal" href="../fermipy.html#fermipy.castro.TSCube" title="fermipy.castro.TSCube"><code class="xref py py-obj docutils literal notranslate"><span class="pre">TSCube</span></code></a> and <a class="reference internal" href="../fermipy.html#fermipy.castro.CastroData" title="fermipy.castro.CastroData"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CastroData</span></code></a>
+classes can be used to analyze a TS cube:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">fermipy.castro</span> <span class="kn">import</span> <span class="n">TSCube</span>
+<span class="n">tscube</span> <span class="o">=</span> <span class="n">TSCube</span><span class="o">.</span><span class="n">create_from_fits</span><span class="p">(</span><span class="s1">&#39;tscube.fits&#39;</span><span class="p">)</span>
+<span class="n">cd</span> <span class="o">=</span> <span class="n">tscube</span><span class="o">.</span><span class="n">castroData_from_ipix</span><span class="p">(</span><span class="mi">400</span><span class="p">)</span>
+
+<span class="c1"># Fit the likelihoods at pixel 400 with different spectral models</span>
+<span class="n">cd</span><span class="o">.</span><span class="n">test_spectra</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline">¶</a></h2>
+<p>The default configuration of the method is controlled with the
+<a class="reference internal" href="../config.html#config-tscube"><span class="std std-ref">tscube</span></a> section of the configuration file.  The default
+configuration can be overriden by passing the option as a <em>kwargs</em>
+argument to the method.</p>
+<table border="1" class="colwidths-given docutils" id="id1">
+<caption><span class="caption-text"><em>tscube</em> Options</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">cov_scale</span></code></td>
+<td>-1.0</td>
+<td>Scale factor to apply to broadband fitting cov. matrix in bin-by-bin fits ( &lt; 0 -&gt; fixed )</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">cov_scale_bb</span></code></td>
+<td>-1.0</td>
+<td>Scale factor to apply to global fitting cov. matrix in broadband fits. ( &lt; 0 -&gt; no prior )</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">do_sed</span></code></td>
+<td>True</td>
+<td>Compute the energy bin-by-bin fits</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">exclude</span></code></td>
+<td>None</td>
+<td>List of sources that will be removed from the model when computing the TS map.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">init_lambda</span></code></td>
+<td>0</td>
+<td>Initial value of damping parameter for newton step size calculation.   A value of zero disables damping.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">max_iter</span></code></td>
+<td>30</td>
+<td>Maximum number of iterations for the Newtons method fitter.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">model</span></code></td>
+<td>None</td>
+<td>Dictionary defining the spatial/spectral properties of the test source. If model is None the test source will be a PointSource with an Index 2 power-law spectrum.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">nnorm</span></code></td>
+<td>10</td>
+<td>Number of points in the likelihood v. normalization scan</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">norm_sigma</span></code></td>
+<td>5.0</td>
+<td>Number of sigma to use for the scan range</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">remake_test_source</span></code></td>
+<td>False</td>
+<td>If true, recomputes the test source image (otherwise just shifts it)</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">st_scan_level</span></code></td>
+<td>0</td>
+<td>Level to which to do ST-based fitting (for testing)</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">tol</span></code></td>
+<td>0.001</td>
+<td>Critetia for fit convergence (estimated vertical distance to min &lt; tol )</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">tol_type</span></code></td>
+<td>0</td>
+<td>Absoulte (0) or relative (1) criteria for convergence.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="reference-api">
+<h2>Reference/API<a class="headerlink" href="#reference-api" title="Permalink to this headline">¶</a></h2>
+<dl class="method">
+<dt>
+<code class="descclassname">GTAnalysis.</code><code class="descname">tscube</code><span class="sig-paren">(</span><em>prefix=''</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>Generate a spatial TS map for a source component with
+properties defined by the <code class="xref py py-obj docutils literal notranslate"><span class="pre">model</span></code> argument.  This method uses
+the <code class="xref py py-obj docutils literal notranslate"><span class="pre">gttscube</span></code> ST application for source fitting and will
+simultaneously fit the test source normalization as well as
+the normalizations of any background components that are
+currently free.  The output of this method is a dictionary
+containing <a class="reference internal" href="../fermipy.html#fermipy.skymap.Map" title="fermipy.skymap.Map"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Map</span></code></a> objects with the TS and
+amplitude of the best-fit test source.  By default this method
+will also save maps to FITS files and render them as image
+files.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>prefix</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Optional string that will be prepended to all output files
+(FITS and rendered images).</li>
+<li><strong>model</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a>) – Dictionary defining the properties of the test source.</li>
+<li><strong>do_sed</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Compute the energy bin-by-bin fits.</li>
+<li><strong>nnorm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Number of points in the likelihood v. normalization scan.</li>
+<li><strong>norm_sigma</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – Number of sigma to use for the scan range.</li>
+<li><strong>tol</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – Critetia for fit convergence (estimated vertical distance
+to min &lt; tol ).</li>
+<li><strong>tol_type</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Absoulte (0) or relative (1) criteria for convergence.</li>
+<li><strong>max_iter</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Maximum number of iterations for the Newton’s method fitter</li>
+<li><strong>remake_test_source</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – If true, recomputes the test source image (otherwise just shifts it)</li>
+<li><strong>st_scan_level</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – </li>
+<li><strong>make_plots</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Write image files.</li>
+<li><strong>write_fits</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Write a FITS file with the results of the analysis.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>maps</strong> – A dictionary containing the <a class="reference internal" href="../fermipy.html#fermipy.skymap.Map" title="fermipy.skymap.Map"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Map</span></code></a> objects
+for TS and source amplitude.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)">dict</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="residmap.html" class="btn btn-neutral float-right" title="Residual Map" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="tsmap.html" class="btn btn-neutral float-left" title="TS Map" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

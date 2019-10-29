@@ -1,0 +1,942 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fermipy.spectrum &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../fermipy.html">fermipy</a> &raquo;</li>
+        
+      <li>fermipy.spectrum</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for fermipy.spectrum</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="k">import</span> <span class="n">RegularGridInterpolator</span>
+
+
+<div class="viewcode-block" id="cast_args"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.cast_args">[docs]</a><span class="k">def</span> <span class="nf">cast_args</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">x</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">x</span>
+
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">ndmin</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="cast_params"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.cast_params">[docs]</a><span class="k">def</span> <span class="nf">cast_params</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="ow">and</span> <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">ndim</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+    <span class="n">o</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+        <span class="n">o</span> <span class="o">+=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">ndmin</span><span class="o">=</span><span class="mi">1</span><span class="p">),</span> <span class="mi">0</span><span class="p">)]</span>
+
+    <span class="k">return</span> <span class="n">o</span></div>
+
+
+<div class="viewcode-block" id="SEDFunctor"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SEDFunctor">[docs]</a><span class="k">class</span> <span class="nc">SEDFunctor</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Functor object that wraps a</span>
+<span class="sd">    `~fermipy.spectrum.SpectralFunction` and computes the</span>
+<span class="sd">    normalization of the model in a sequence of SED energy bins.  The</span>
+<span class="sd">    evaluation method of this class accepts a single vector for the</span>
+<span class="sd">    parameters of the model.  This class serves as an object that can</span>
+<span class="sd">    be passed to likelihood optimizers.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sfn</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">):</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_emin</span> <span class="o">=</span> <span class="n">emin</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_emax</span> <span class="o">=</span> <span class="n">emax</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sfn</span> <span class="o">=</span> <span class="n">sfn</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">emin</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_emin</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">emax</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_emax</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">spectral_fn</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sfn</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">scale</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sfn</span><span class="o">.</span><span class="n">scale</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sfn</span><span class="o">.</span><span class="n">params</span>
+
+    <span class="nd">@scale</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">scale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sfn</span><span class="o">.</span><span class="n">scale</span> <span class="o">=</span> <span class="n">scale</span>
+
+    <span class="nd">@params</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sfn</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="n">params</span></div>
+
+
+<div class="viewcode-block" id="SEDFluxFunctor"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SEDFluxFunctor">[docs]</a><span class="k">class</span> <span class="nc">SEDFluxFunctor</span><span class="p">(</span><span class="n">SEDFunctor</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Functor that computes the flux of a source in a pre-defined</span>
+<span class="sd">    sequence of energy bins.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sfn</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SEDFluxFunctor</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sfn</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+
+        <span class="n">params</span> <span class="o">=</span> <span class="n">cast_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">emin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">emin</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">emax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">emax</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sfn</span><span class="o">.</span><span class="n">flux</span><span class="p">(</span><span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">params</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="SEDEFluxFunctor"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SEDEFluxFunctor">[docs]</a><span class="k">class</span> <span class="nc">SEDEFluxFunctor</span><span class="p">(</span><span class="n">SEDFunctor</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Functor that computes the energy flux of a source in a</span>
+<span class="sd">    pre-defined sequence of energy bins.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sfn</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SEDEFluxFunctor</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">sfn</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+
+        <span class="n">params</span> <span class="o">=</span> <span class="n">cast_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">emin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">emin</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">emax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">emax</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_sfn</span><span class="o">.</span><span class="n">eflux</span><span class="p">(</span><span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">params</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="SpectralFunction"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction">[docs]</a><span class="k">class</span> <span class="nc">SpectralFunction</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Base class for spectral models.  Spectral models inheriting</span>
+<span class="sd">    from this class should implement at a minimum an `_eval_dnde`</span>
+<span class="sd">    method which evaluates the differential flux at a given energy.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_params</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span> <span class="o">=</span> <span class="n">scale</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extra_params</span> <span class="o">=</span> <span class="n">extra_params</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return parameter vector of the function.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_params</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">log_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return transformed parameter vector in which norm and scale</span>
+<span class="sd">        parameters are converted to log10.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">params_to_log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_params</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">scale</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span>
+
+    <span class="nd">@scale</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">scale</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scale</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_scale</span> <span class="o">=</span> <span class="n">scale</span>
+
+    <span class="nd">@params</span><span class="o">.</span><span class="n">setter</span>
+    <span class="k">def</span> <span class="nf">params</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_params</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nparam</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_params</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">extra_params</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Dictionary containing additional parameters needed for</span>
+<span class="sd">        evaluation of the function.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extra_params</span>
+
+<div class="viewcode-block" id="SpectralFunction.create_from_flux"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.create_from_flux">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">create_from_flux</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">flux</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a spectral function instance given its flux.&quot;&quot;&quot;</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">flux</span> <span class="o">/</span> <span class="bp">cls</span><span class="o">.</span><span class="n">eval_flux</span><span class="p">(</span><span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SpectralFunction.create_from_eflux"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.create_from_eflux">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">create_from_eflux</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">eflux</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a spectral function instance given its energy flux.&quot;&quot;&quot;</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">eflux</span> <span class="o">/</span> <span class="bp">cls</span><span class="o">.</span><span class="n">eval_eflux</span><span class="p">(</span><span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SpectralFunction.create_functor"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.create_functor">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">create_functor</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">spec_type</span><span class="p">,</span> <span class="n">func_type</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span>
+                       <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spec_type</span><span class="p">,</span> <span class="n">SpectralFunction</span><span class="p">):</span>
+            <span class="n">sfn</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">spec_type</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sfn</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">spec_type</span><span class="p">)(</span><span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">extra_params</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">func_type</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;flux&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">SEDFluxFunctor</span><span class="p">(</span><span class="n">sfn</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">func_type</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;eflux&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">SEDEFluxFunctor</span><span class="p">(</span><span class="n">sfn</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Did not recognize func_type: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">func_type</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SpectralFunction.create_flux_functor"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.create_flux_functor">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">create_flux_functor</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+                            <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">sfn</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">extra_params</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">SEDFluxFunctor</span><span class="p">(</span><span class="n">sfn</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SpectralFunction.create_eflux_functor"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.create_eflux_functor">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">create_eflux_functor</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+                             <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">sfn</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">extra_params</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">SEDEFluxFunctor</span><span class="p">(</span><span class="n">sfn</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SpectralFunction.eval_e2dnde"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.eval_e2dnde">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">eval_e2dnde</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">cast_args</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">cast_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_eval_dnde</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">extra_params</span><span class="p">)</span> <span class="o">*</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span></div>
+
+<div class="viewcode-block" id="SpectralFunction.eval_ednde"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.eval_ednde">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">eval_ednde</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">cast_args</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">cast_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_eval_dnde</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">extra_params</span><span class="p">)</span> <span class="o">*</span> <span class="n">x</span></div>
+
+<div class="viewcode-block" id="SpectralFunction.eval_dnde"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.eval_dnde">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">eval_dnde</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">cast_args</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">cast_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_eval_dnde</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">extra_params</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SpectralFunction.eval_dnde_deriv"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.eval_dnde_deriv">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">eval_dnde_deriv</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">cast_args</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">cast_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_eval_dnde_deriv</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">extra_params</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SpectralFunction.eval_ednde_deriv"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.eval_ednde_deriv">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">eval_ednde_deriv</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">cast_args</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">cast_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">dnde_deriv</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_eval_dnde_deriv</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">extra_params</span><span class="p">)</span>
+        <span class="n">dnde</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_eval_dnde</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span> <span class="o">*</span> <span class="n">dnde_deriv</span> <span class="o">+</span> <span class="n">dnde</span></div>
+
+<div class="viewcode-block" id="SpectralFunction.eval_e2dnde_deriv"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.eval_e2dnde_deriv">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">eval_e2dnde_deriv</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">cast_args</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">cast_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">dnde_deriv</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_eval_dnde_deriv</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">extra_params</span><span class="p">)</span>
+        <span class="n">dnde</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_eval_dnde</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">x</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">dnde_deriv</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">x</span> <span class="o">*</span> <span class="n">dnde</span></div>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_integrate</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">fn</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                   <span class="n">npt</span><span class="o">=</span><span class="mi">20</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fast numerical integration method using mid-point rule.&quot;&quot;&quot;</span>
+
+        <span class="n">emin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">emin</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">emax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">emax</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">params</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+            <span class="n">params</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">xedges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">npt</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">logx_edge</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">emin</span><span class="p">)</span> <span class="o">+</span> <span class="n">xedges</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">emax</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">emin</span><span class="p">))</span>
+        <span class="n">logx</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">logx_edge</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="n">logx_edge</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">xw</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">logx_edge</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">1</span><span class="p">:])</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">logx_edge</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">dnde</span> <span class="o">=</span> <span class="n">fn</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">logx</span><span class="p">),</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">extra_params</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dnde</span> <span class="o">*</span> <span class="n">xw</span><span class="p">,</span> <span class="n">axis</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_eval_dnde_deriv</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                         <span class="n">eps</span><span class="o">=</span><span class="mf">1E-6</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_eval_dnde</span><span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="n">eps</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span> <span class="o">-</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_eval_dnde</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">))</span> <span class="o">/</span> <span class="n">eps</span>
+
+<div class="viewcode-block" id="SpectralFunction.eval_flux"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.eval_flux">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">eval_flux</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">emin</span> <span class="o">=</span> <span class="n">cast_args</span><span class="p">(</span><span class="n">emin</span><span class="p">)</span>
+        <span class="n">emax</span> <span class="o">=</span> <span class="n">cast_args</span><span class="p">(</span><span class="n">emax</span><span class="p">)</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">cast_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_integrate</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">eval_dnde</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span>
+                              <span class="n">extra_params</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SpectralFunction.eval_eflux"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.eval_eflux">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">eval_eflux</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">emin</span> <span class="o">=</span> <span class="n">cast_args</span><span class="p">(</span><span class="n">emin</span><span class="p">)</span>
+        <span class="n">emax</span> <span class="o">=</span> <span class="n">cast_args</span><span class="p">(</span><span class="n">emax</span><span class="p">)</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">cast_params</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_integrate</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">eval_ednde</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span>
+                              <span class="n">extra_params</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SpectralFunction.dnde"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.dnde">[docs]</a>    <span class="k">def</span> <span class="nf">dnde</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate differential flux.&quot;&quot;&quot;</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">params</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eval_dnde</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">,</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">extra_params</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="SpectralFunction.ednde"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.ednde">[docs]</a>    <span class="k">def</span> <span class="nf">ednde</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate E times differential flux.&quot;&quot;&quot;</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">params</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eval_ednde</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">,</span>
+                                          <span class="bp">self</span><span class="o">.</span><span class="n">extra_params</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="SpectralFunction.e2dnde"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.e2dnde">[docs]</a>    <span class="k">def</span> <span class="nf">e2dnde</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate E^2 times differential flux.&quot;&quot;&quot;</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">params</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eval_e2dnde</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">,</span>
+                                           <span class="bp">self</span><span class="o">.</span><span class="n">extra_params</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="SpectralFunction.dnde_deriv"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.dnde_deriv">[docs]</a>    <span class="k">def</span> <span class="nf">dnde_deriv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate derivative of the differential flux with respect to E.&quot;&quot;&quot;</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">params</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eval_dnde_deriv</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">,</span>
+                                               <span class="bp">self</span><span class="o">.</span><span class="n">extra_params</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="SpectralFunction.ednde_deriv"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.ednde_deriv">[docs]</a>    <span class="k">def</span> <span class="nf">ednde_deriv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate derivative of E times differential flux with respect to</span>
+<span class="sd">        E.&quot;&quot;&quot;</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">params</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eval_ednde_deriv</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">,</span>
+                                                <span class="bp">self</span><span class="o">.</span><span class="n">extra_params</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="SpectralFunction.e2dnde_deriv"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.e2dnde_deriv">[docs]</a>    <span class="k">def</span> <span class="nf">e2dnde_deriv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate derivative of E^2 times differential flux with</span>
+<span class="sd">        respect to E.&quot;&quot;&quot;</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">params</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eval_e2dnde_deriv</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">,</span>
+                                                 <span class="bp">self</span><span class="o">.</span><span class="n">extra_params</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="SpectralFunction.flux"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.flux">[docs]</a>    <span class="k">def</span> <span class="nf">flux</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate the integral flux.&quot;&quot;&quot;</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">params</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eval_flux</span><span class="p">(</span><span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">,</span>
+                                         <span class="bp">self</span><span class="o">.</span><span class="n">extra_params</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="SpectralFunction.eflux"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.SpectralFunction.eflux">[docs]</a>    <span class="k">def</span> <span class="nf">eflux</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate the integral energy flux.&quot;&quot;&quot;</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">params</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">squeeze</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eval_eflux</span><span class="p">(</span><span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">scale</span><span class="p">,</span>
+                                          <span class="bp">self</span><span class="o">.</span><span class="n">extra_params</span><span class="p">))</span></div></div>
+
+
+<div class="viewcode-block" id="PowerLaw"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.PowerLaw">[docs]</a><span class="k">class</span> <span class="nc">PowerLaw</span><span class="p">(</span><span class="n">SpectralFunction</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class that evaluates a power-law function with the</span>
+<span class="sd">    parameterization:</span>
+
+<span class="sd">    F(x) = p_0 * (x/x_s)^p_1</span>
+
+<span class="sd">    where x_s is the scale parameter.  The `params` array should be</span>
+<span class="sd">    defined with:</span>
+
+<span class="sd">    * params[0] : Prefactor (p_0)</span>
+<span class="sd">    * params[1] : Index (p_1)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">(</span><span class="n">params</span> <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span>
+                  <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">5e-13</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.0</span><span class="p">]))</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PowerLaw</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span>
+
+<div class="viewcode-block" id="PowerLaw.nparam"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.PowerLaw.nparam">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">nparam</span><span class="p">():</span>
+        <span class="k">return</span> <span class="mi">2</span></div>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_eval_dnde</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">scale</span><span class="p">)</span> <span class="o">**</span> <span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+<div class="viewcode-block" id="PowerLaw.eval_flux"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.PowerLaw.eval_flux">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">eval_flux</span><span class="p">(</span><span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+        <span class="n">phi0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">ndmin</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">ndmin</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">x0</span> <span class="o">=</span> <span class="n">scale</span>
+
+        <span class="n">index1</span> <span class="o">=</span> <span class="n">index</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">index1</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="n">iindex0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">index</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">iindex1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">index</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+        <span class="n">iindex1</span><span class="p">[</span><span class="o">~</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">index1</span><span class="p">[</span><span class="o">~</span><span class="n">m</span><span class="p">]</span>
+        <span class="n">iindex0</span><span class="p">[</span><span class="n">m</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
+
+        <span class="n">xmin</span> <span class="o">=</span> <span class="n">emin</span> <span class="o">/</span> <span class="n">scale</span>
+        <span class="n">xmax</span> <span class="o">=</span> <span class="n">emax</span> <span class="o">/</span> <span class="n">scale</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="n">phi0</span> <span class="o">*</span> <span class="n">iindex1</span> <span class="o">*</span> <span class="p">(</span><span class="n">emax</span> <span class="o">*</span> <span class="n">xmax</span><span class="o">**</span><span class="n">index</span> <span class="o">-</span>
+                              <span class="n">emin</span> <span class="o">*</span> <span class="n">xmin</span><span class="o">**</span><span class="n">index</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">m</span><span class="p">):</span>
+            <span class="n">v</span> <span class="o">+=</span> <span class="n">phi0</span> <span class="o">*</span> <span class="n">x0</span> <span class="o">*</span> <span class="n">iindex0</span> <span class="o">*</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">emax</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">emin</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">v</span></div>
+
+<div class="viewcode-block" id="PowerLaw.eval_eflux"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.PowerLaw.eval_eflux">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">eval_eflux</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+        <span class="n">params</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+        <span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="mf">1.0</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">eval_flux</span><span class="p">(</span><span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span> <span class="o">*</span> <span class="n">scale</span></div>
+
+<div class="viewcode-block" id="PowerLaw.eval_norm"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.PowerLaw.eval_norm">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">eval_norm</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">scale</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="n">flux</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">flux</span> <span class="o">/</span> <span class="bp">cls</span><span class="o">.</span><span class="n">eval_flux</span><span class="p">(</span><span class="n">emin</span><span class="p">,</span> <span class="n">emax</span><span class="p">,</span> <span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">index</span><span class="p">],</span> <span class="n">scale</span><span class="o">=</span><span class="n">scale</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="LogParabola"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.LogParabola">[docs]</a><span class="k">class</span> <span class="nc">LogParabola</span><span class="p">(</span><span class="n">SpectralFunction</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class that evaluates a function with the parameterization:</span>
+
+<span class="sd">    F(x) = p_0 * (x/x_s)^(p_1 - p_2*log(x/x_s) )</span>
+
+<span class="sd">    where x_s is a scale parameter.  The `params` array should be</span>
+<span class="sd">    defined with:</span>
+
+<span class="sd">    * params[0] : Prefactor (p_0)</span>
+<span class="sd">    * params[1] : Index (p_1)</span>
+<span class="sd">    * params[2] : Curvature (p_2)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">(</span><span class="n">params</span> <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span>
+                  <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">5e-13</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]))</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">LogParabola</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span>
+
+<div class="viewcode-block" id="LogParabola.nparam"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.LogParabola.nparam">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">nparam</span><span class="p">():</span>
+        <span class="k">return</span> <span class="mi">3</span></div>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_eval_dnde</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">scale</span><span class="p">)</span> <span class="o">**</span>
+                <span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">scale</span><span class="p">)))</span></div>
+
+
+<div class="viewcode-block" id="PLExpCutoff"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.PLExpCutoff">[docs]</a><span class="k">class</span> <span class="nc">PLExpCutoff</span><span class="p">(</span><span class="n">SpectralFunction</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class that evaluates a function with the parameterization:</span>
+
+<span class="sd">    F(x) = p_0 * (x/x_s)^(p_1) * exp(- x/p_2 )</span>
+
+<span class="sd">    where x_s is the scale parameter.  The `params` array should be</span>
+<span class="sd">    defined with:</span>
+
+<span class="sd">    * params[0] : Prefactor (p_0)</span>
+<span class="sd">    * params[1] : Index (p_1)</span>
+<span class="sd">    * params[2] : Cutoff (p_2)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">(</span><span class="n">params</span> <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span>
+                  <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">5e-13</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1E4</span><span class="p">]))</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PLExpCutoff</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span>
+
+<div class="viewcode-block" id="PLExpCutoff.params_to_log"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.PLExpCutoff.params_to_log">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">params_to_log</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                <span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">])]</span></div>
+
+<div class="viewcode-block" id="PLExpCutoff.log_to_params"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.PLExpCutoff.log_to_params">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">log_to_params</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="mi">10</span><span class="o">**</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="mi">10</span><span class="o">**</span><span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">]]</span></div>
+
+<div class="viewcode-block" id="PLExpCutoff.nparam"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.PLExpCutoff.nparam">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">nparam</span><span class="p">():</span>
+        <span class="k">return</span> <span class="mi">3</span></div>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_eval_dnde</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">scale</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">/</span> <span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_eval_dnde_deriv</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_eval_dnde</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span> <span class="o">*</span>
+                <span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">x</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">x</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="PLSuperExpCutoff"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.PLSuperExpCutoff">[docs]</a><span class="k">class</span> <span class="nc">PLSuperExpCutoff</span><span class="p">(</span><span class="n">SpectralFunction</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class that evaluates a function with the parameterization:</span>
+
+<span class="sd">    F(x) = p_0 * (x/x_s)^(p_1) * exp(-(x/p2)**p3)</span>
+
+<span class="sd">    where x_s is the scale parameter.  The `params` array should be</span>
+<span class="sd">    defined with:</span>
+
+<span class="sd">    * params[0] : Prefactor (p_0)</span>
+<span class="sd">    * params[1] : Index1 (p_1)</span>
+<span class="sd">    * params[2] : Curvature (p_2)</span>
+<span class="sd">    * params[3] : Index2 (p3)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="p">(</span><span class="n">params</span> <span class="k">if</span> <span class="n">params</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span>
+                  <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">5e-13</span><span class="p">,</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1E4</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">]))</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PLSuperExpCutoff</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span>
+
+<div class="viewcode-block" id="PLSuperExpCutoff.params_to_log"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.PLSuperExpCutoff.params_to_log">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">params_to_log</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                <span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span>
+                <span class="n">params</span><span class="p">[</span><span class="mi">3</span><span class="p">]]</span></div>
+
+<div class="viewcode-block" id="PLSuperExpCutoff.log_to_params"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.PLSuperExpCutoff.log_to_params">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">log_to_params</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="mi">10</span><span class="o">**</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                <span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                <span class="mi">10</span><span class="o">**</span><span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span>
+                <span class="n">params</span><span class="p">[</span><span class="mi">3</span><span class="p">]]</span></div>
+
+<div class="viewcode-block" id="PLSuperExpCutoff.nparam"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.PLSuperExpCutoff.nparam">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">nparam</span><span class="p">():</span>
+        <span class="k">return</span> <span class="mi">4</span></div>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_eval_dnde</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">scale</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span> <span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span> <span class="o">**</span> <span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">3</span><span class="p">]))</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_eval_dnde_deriv</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">_eval_dnde</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="p">)</span> <span class="o">*</span>
+                <span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">x</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span> <span class="n">x</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="DMFitFunction"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.DMFitFunction">[docs]</a><span class="k">class</span> <span class="nc">DMFitFunction</span><span class="p">(</span><span class="n">SpectralFunction</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class that evaluates the spectrum for a DM particle of a given</span>
+<span class="sd">    mass, channel, cross section, and J-factor.  The parameterization</span>
+<span class="sd">    is given by:</span>
+
+<span class="sd">    F(x) = 1 / (8 * pi) * (1/mass^2) * sigmav * J * dN/dE(E,mass,i)</span>
+
+<span class="sd">    where the `params` array should be defined with:</span>
+
+<span class="sd">    * params[0] : sigmav (or tau for decay)</span>
+<span class="sd">    * params[1] : mass</span>
+
+<span class="sd">    Note that this class assumes that mass and J-factor are provided</span>
+<span class="sd">    in units of GeV and GeV^2 cm^-5 while energies are defined in MeV.</span>
+
+<span class="sd">    For decay the D-factor is in uits of GeV cm^-2 s</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Mapping between the ST channel codes and the rows in the gammamc</span>
+    <span class="c1"># file</span>
+    <span class="n">channel_index_mapping</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="mi">1</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>  <span class="c1"># ee</span>
+        <span class="mi">2</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span>  <span class="c1"># mumu</span>
+        <span class="mi">3</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>  <span class="c1"># tautau</span>
+        <span class="mi">4</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>  <span class="c1"># bb</span>
+        <span class="mi">5</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>  <span class="c1"># tt</span>
+        <span class="mi">6</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span>  <span class="c1"># gg</span>
+        <span class="mi">7</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>  <span class="c1"># ww</span>
+        <span class="mi">8</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>  <span class="c1"># zz</span>
+        <span class="mi">9</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>  <span class="c1"># cc</span>
+        <span class="mi">10</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>  <span class="c1"># uu</span>
+        <span class="mi">11</span><span class="p">:</span> <span class="mi">11</span><span class="p">,</span>  <span class="c1"># dd</span>
+        <span class="mi">12</span><span class="p">:</span> <span class="mi">9</span><span class="p">,</span>  <span class="c1"># ss</span>
+        <span class="mi">101</span><span class="p">:</span> <span class="mi">8</span><span class="p">,</span>  <span class="c1"># ee</span>
+        <span class="mi">102</span><span class="p">:</span> <span class="mi">6</span><span class="p">,</span>  <span class="c1"># mumu</span>
+        <span class="mi">103</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>  <span class="c1"># tautau</span>
+        <span class="mi">104</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>  <span class="c1"># bb</span>
+        <span class="mi">105</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span>  <span class="c1"># tt</span>
+        <span class="mi">106</span><span class="p">:</span> <span class="mi">7</span><span class="p">,</span>  <span class="c1"># gg</span>
+        <span class="mi">107</span><span class="p">:</span> <span class="mi">4</span><span class="p">,</span>  <span class="c1"># ww</span>
+        <span class="mi">108</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>  <span class="c1"># zz</span>
+        <span class="mi">109</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>  <span class="c1"># cc</span>
+        <span class="mi">110</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>  <span class="c1"># uu</span>
+        <span class="mi">111</span><span class="p">:</span> <span class="mi">11</span><span class="p">,</span>  <span class="c1"># dd</span>
+        <span class="mi">112</span><span class="p">:</span> <span class="mi">9</span><span class="p">,</span>  <span class="c1"># ss</span>
+
+    <span class="p">}</span>
+
+    <span class="c1"># Mapping between ST channel codes and string aliases</span>
+    <span class="n">channel_name_mapping</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="mi">1</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;e+e-&quot;</span><span class="p">,</span> <span class="s2">&quot;ee&quot;</span><span class="p">],</span>
+        <span class="mi">2</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;mu+mu-&quot;</span><span class="p">,</span> <span class="s2">&quot;mumu&quot;</span><span class="p">,</span> <span class="s2">&quot;musrc&quot;</span><span class="p">],</span>
+        <span class="mi">3</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;tau+tau-&quot;</span><span class="p">,</span> <span class="s2">&quot;tautau&quot;</span><span class="p">,</span> <span class="s2">&quot;tausrc&quot;</span><span class="p">],</span>
+        <span class="mi">4</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;bb-bar&quot;</span><span class="p">,</span> <span class="s2">&quot;bb&quot;</span><span class="p">,</span> <span class="s2">&quot;bbbar&quot;</span><span class="p">,</span> <span class="s2">&quot;bbsrc&quot;</span><span class="p">],</span>
+        <span class="mi">5</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;tt-bar&quot;</span><span class="p">,</span> <span class="s2">&quot;tt&quot;</span><span class="p">],</span>
+        <span class="mi">6</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;gluons&quot;</span><span class="p">,</span> <span class="s2">&quot;gg&quot;</span><span class="p">],</span>
+        <span class="mi">7</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;W+W-&quot;</span><span class="p">,</span> <span class="s2">&quot;w+w-&quot;</span><span class="p">,</span> <span class="s2">&quot;ww&quot;</span><span class="p">,</span> <span class="s2">&quot;wwsrc&quot;</span><span class="p">],</span>
+        <span class="mi">8</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;ZZ&quot;</span><span class="p">,</span> <span class="s2">&quot;zz&quot;</span><span class="p">],</span>
+        <span class="mi">9</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;cc-bar&quot;</span><span class="p">,</span> <span class="s2">&quot;cc&quot;</span><span class="p">],</span>
+        <span class="mi">10</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;uu-bar&quot;</span><span class="p">,</span> <span class="s2">&quot;uu&quot;</span><span class="p">],</span>
+        <span class="mi">11</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;dd-bar&quot;</span><span class="p">,</span> <span class="s2">&quot;dd&quot;</span><span class="p">],</span>
+        <span class="mi">12</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;ss-bar&quot;</span><span class="p">,</span> <span class="s2">&quot;ss&quot;</span><span class="p">],</span>
+        <span class="mi">101</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;e+e-_decay&quot;</span><span class="p">,</span> <span class="s2">&quot;ee_decay&quot;</span><span class="p">],</span>
+        <span class="mi">102</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;mu+mu-_decay&quot;</span><span class="p">,</span> <span class="s2">&quot;mumu_decay&quot;</span><span class="p">,</span> <span class="s2">&quot;musrc_decay&quot;</span><span class="p">],</span>
+        <span class="mi">103</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;tau+tau-_decay&quot;</span><span class="p">,</span> <span class="s2">&quot;tautau_decay&quot;</span><span class="p">,</span> <span class="s2">&quot;tausrc_decay&quot;</span><span class="p">],</span>
+        <span class="mi">104</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;bb-bar_decay&quot;</span><span class="p">,</span> <span class="s2">&quot;bb_decay&quot;</span><span class="p">,</span> <span class="s2">&quot;bbbar_decay&quot;</span><span class="p">,</span> <span class="s2">&quot;bbsrc_decay&quot;</span><span class="p">],</span>
+        <span class="mi">105</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;tt-bar_decay&quot;</span><span class="p">,</span> <span class="s2">&quot;tt_decay&quot;</span><span class="p">],</span>
+        <span class="mi">106</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;gluons_decay&quot;</span><span class="p">,</span> <span class="s2">&quot;gg_decay&quot;</span><span class="p">],</span>
+        <span class="mi">107</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;W+W-_decay&quot;</span><span class="p">,</span> <span class="s2">&quot;w+w-_decay&quot;</span><span class="p">,</span> <span class="s2">&quot;ww_decay&quot;</span><span class="p">,</span> <span class="s2">&quot;wwsrc_decay&quot;</span><span class="p">],</span>
+        <span class="mi">108</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;ZZ_decay&quot;</span><span class="p">,</span> <span class="s2">&quot;zz_decay&quot;</span><span class="p">],</span>
+        <span class="mi">109</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;cc-bar_decay&quot;</span><span class="p">,</span> <span class="s2">&quot;cc_decay&quot;</span><span class="p">],</span>
+        <span class="mi">110</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;uu-bar_decay&quot;</span><span class="p">,</span> <span class="s2">&quot;uu_decay&quot;</span><span class="p">],</span>
+        <span class="mi">111</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;dd-bar_decay&quot;</span><span class="p">,</span> <span class="s2">&quot;dd_decay&quot;</span><span class="p">],</span>
+        <span class="mi">112</span><span class="p">:</span>  <span class="p">[</span><span class="s2">&quot;ss-bar_decay&quot;</span><span class="p">,</span> <span class="s2">&quot;ss_decay&quot;</span><span class="p">]}</span>
+
+
+    <span class="n">channel_shortname_mapping</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="mi">1</span><span class="p">:</span> <span class="s2">&quot;ee&quot;</span><span class="p">,</span>
+        <span class="mi">2</span><span class="p">:</span> <span class="s2">&quot;mumu&quot;</span><span class="p">,</span>
+        <span class="mi">3</span><span class="p">:</span> <span class="s2">&quot;tautau&quot;</span><span class="p">,</span>
+        <span class="mi">4</span><span class="p">:</span> <span class="s2">&quot;bb&quot;</span><span class="p">,</span>
+        <span class="mi">5</span><span class="p">:</span> <span class="s2">&quot;tt&quot;</span><span class="p">,</span>
+        <span class="mi">6</span><span class="p">:</span> <span class="s2">&quot;gg&quot;</span><span class="p">,</span>
+        <span class="mi">7</span><span class="p">:</span> <span class="s2">&quot;ww&quot;</span><span class="p">,</span>
+        <span class="mi">8</span><span class="p">:</span> <span class="s2">&quot;zz&quot;</span><span class="p">,</span>
+        <span class="mi">9</span><span class="p">:</span> <span class="s2">&quot;cc&quot;</span><span class="p">,</span>
+        <span class="mi">10</span><span class="p">:</span> <span class="s2">&quot;uu&quot;</span><span class="p">,</span>
+        <span class="mi">11</span><span class="p">:</span> <span class="s2">&quot;dd&quot;</span><span class="p">,</span>
+        <span class="mi">12</span><span class="p">:</span> <span class="s2">&quot;ss&quot;</span><span class="p">,</span>
+        <span class="mi">101</span><span class="p">:</span> <span class="s2">&quot;ee&quot;</span><span class="p">,</span>
+        <span class="mi">102</span><span class="p">:</span> <span class="s2">&quot;mumu&quot;</span><span class="p">,</span>
+        <span class="mi">103</span><span class="p">:</span> <span class="s2">&quot;tautau&quot;</span><span class="p">,</span>
+        <span class="mi">104</span><span class="p">:</span> <span class="s2">&quot;bb&quot;</span><span class="p">,</span>
+        <span class="mi">105</span><span class="p">:</span> <span class="s2">&quot;tt&quot;</span><span class="p">,</span>
+        <span class="mi">106</span><span class="p">:</span> <span class="s2">&quot;gg&quot;</span><span class="p">,</span>
+        <span class="mi">107</span><span class="p">:</span> <span class="s2">&quot;ww&quot;</span><span class="p">,</span>
+        <span class="mi">108</span><span class="p">:</span> <span class="s2">&quot;zz&quot;</span><span class="p">,</span>
+        <span class="mi">109</span><span class="p">:</span> <span class="s2">&quot;cc&quot;</span><span class="p">,</span>
+        <span class="mi">110</span><span class="p">:</span> <span class="s2">&quot;uu&quot;</span><span class="p">,</span>
+        <span class="mi">111</span><span class="p">:</span> <span class="s2">&quot;dd&quot;</span><span class="p">,</span>
+        <span class="mi">112</span><span class="p">:</span> <span class="s2">&quot;ss&quot;</span><span class="p">}</span>
+
+    <span class="n">channel_rev_map</span> <span class="o">=</span> <span class="p">{</span><span class="n">vv</span><span class="p">:</span> <span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">channel_name_mapping</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                       <span class="k">for</span> <span class="n">vv</span> <span class="ow">in</span> <span class="n">v</span><span class="p">}</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">ann_channel_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> 
+        <span class="k">return</span> <span class="p">[</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_shortname_mapping</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">13</span><span class="p">)</span> <span class="p">]</span>
+        
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">decay_channel_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span> 
+        <span class="k">return</span> <span class="p">[</span> <span class="bp">self</span><span class="o">.</span><span class="n">channel_shortname_mapping</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">101</span><span class="p">,</span><span class="mi">113</span><span class="p">)</span> <span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">chan</span><span class="o">=</span><span class="s1">&#39;bb&#39;</span><span class="p">,</span> <span class="n">jfactor</span><span class="o">=</span><span class="mf">1E19</span><span class="p">,</span> <span class="n">tablepath</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dfactor</span><span class="o">=</span><span class="mf">1E17</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Constructor.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        params : list</span>
+<span class="sd">            Parameter vector.</span>
+
+<span class="sd">        chan : str</span>
+<span class="sd">            Channel string.  Can be one of cc, bb, tt, tautau, ww, zz,</span>
+<span class="sd">            mumu, gg, ee, ss, uu, dd, or any of the above with _decay appended.</span>
+
+<span class="sd">        jfactor : float</span>
+<span class="sd">            J-factor of this object.  Note that this needs to be given</span>
+<span class="sd">            in the same units as the mass parameter.</span>
+
+<span class="sd">        tablepath : str</span>
+<span class="sd">            Path to lookup table with pre-computed DM spectra on a</span>
+<span class="sd">            grid of energy, mass, and channel.</span>
+
+<span class="sd">        dfactor : float</span>
+<span class="sd">            D-factor of this object.  Note that this needs to be given</span>
+<span class="sd">            in the same units as the mass parameter.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">tablepath</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">tablepath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;$FERMIPY_DATA_DIR&#39;</span><span class="p">,</span>
+                                     <span class="s1">&#39;gammamc_dif.dat&#39;</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expandvars</span><span class="p">(</span><span class="n">tablepath</span><span class="p">))</span>
+
+        <span class="c1"># Number of decades in x = log10(E/M)</span>
+        <span class="n">ndec</span> <span class="o">=</span> <span class="mf">10.0</span>
+        <span class="n">xedge</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mi">251</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_x</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">xedge</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="n">xedge</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">ndec</span> <span class="o">-</span> <span class="n">ndec</span>
+
+        <span class="n">chan_code</span> <span class="o">=</span> <span class="n">DMFitFunction</span><span class="o">.</span><span class="n">channel_rev_map</span><span class="p">[</span><span class="n">chan</span><span class="p">]</span>
+        <span class="n">ichan</span> <span class="o">=</span> <span class="n">DMFitFunction</span><span class="o">.</span><span class="n">channel_index_mapping</span><span class="p">[</span><span class="n">chan_code</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_chan</span> <span class="o">=</span> <span class="n">chan</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_chan_code</span> <span class="o">=</span> <span class="n">chan_code</span>
+
+        <span class="c1"># These are the mass points</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mass</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">,</span> <span class="mf">6.0</span><span class="p">,</span> <span class="mf">8.0</span><span class="p">,</span> <span class="mf">10.0</span><span class="p">,</span>
+                               <span class="mf">25.0</span><span class="p">,</span> <span class="mf">50.0</span><span class="p">,</span> <span class="mf">80.3</span><span class="p">,</span> <span class="mf">91.2</span><span class="p">,</span> <span class="mf">100.0</span><span class="p">,</span>
+                               <span class="mf">150.0</span><span class="p">,</span> <span class="mf">176.0</span><span class="p">,</span> <span class="mf">200.0</span><span class="p">,</span> <span class="mf">250.0</span><span class="p">,</span> <span class="mf">350.0</span><span class="p">,</span> <span class="mf">500.0</span><span class="p">,</span> <span class="mf">750.0</span><span class="p">,</span>
+                               <span class="mf">1000.0</span><span class="p">,</span> <span class="mf">1500.0</span><span class="p">,</span> <span class="mf">2000.0</span><span class="p">,</span> <span class="mf">3000.0</span><span class="p">,</span> <span class="mf">5000.0</span><span class="p">,</span> <span class="mf">7000.0</span><span class="p">,</span> <span class="mf">1E4</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dndx</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="mi">12</span><span class="p">,</span> <span class="mi">24</span><span class="p">,</span> <span class="mi">250</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dndx_interp</span> <span class="o">=</span> <span class="n">RegularGridInterpolator</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_mass</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_x</span><span class="p">],</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">_dndx</span><span class="p">[</span><span class="n">ichan</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:],</span>
+                                                    <span class="n">bounds_error</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                                    <span class="n">fill_value</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="n">extra_params</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">dndx_interp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dndx_interp</span><span class="p">,</span>
+                            <span class="n">chan</span><span class="o">=</span><span class="n">chan_code</span><span class="p">,</span>
+                            <span class="n">jfactor</span><span class="o">=</span><span class="n">jfactor</span><span class="p">,</span>
+                            <span class="n">dfactor</span><span class="o">=</span><span class="n">dfactor</span><span class="p">)</span>
+
+        <span class="nb">super</span><span class="p">(</span><span class="n">DMFitFunction</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">chan</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the channel string.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_chan</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">chan_code</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the channel code.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_chan_code</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">decay</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return True if this is a decay spectrum &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_chan_code</span> <span class="o">&gt;=</span> <span class="mi">100</span>
+
+<div class="viewcode-block" id="DMFitFunction.nparam"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.DMFitFunction.nparam">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">nparam</span><span class="p">():</span>
+        <span class="k">return</span> <span class="mi">2</span></div>
+
+<div class="viewcode-block" id="DMFitFunction.channels"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.DMFitFunction.channels">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">channels</span><span class="p">():</span>
+        <span class="sd">&quot;&quot;&quot; Return all available DMFit channel strings &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">DMFitFunction</span><span class="o">.</span><span class="n">channel_rev_map</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span></div>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_eval_dnde</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">params</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">extra_params</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+        <span class="n">dndx_interp</span> <span class="o">=</span> <span class="n">extra_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dndx_interp&#39;</span><span class="p">)</span>
+        <span class="n">chan</span> <span class="o">=</span> <span class="n">extra_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;chan&#39;</span><span class="p">)</span>
+        <span class="n">mass</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">xm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">x</span> <span class="o">/</span> <span class="n">mass</span><span class="p">)</span> <span class="o">-</span> <span class="mf">3.0</span>
+        <span class="k">if</span> <span class="n">chan</span> <span class="o">&gt;=</span> <span class="mi">100</span><span class="p">:</span>
+            <span class="n">tau</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">dfactor</span> <span class="o">=</span> <span class="n">extra_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dfactor&#39;</span><span class="p">)</span>
+            <span class="n">phip</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="mf">4.</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">dfactor</span> <span class="o">/</span> <span class="p">(</span> <span class="n">mass</span><span class="o">*</span><span class="n">tau</span> <span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sigmav</span> <span class="o">=</span> <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">jfactor</span> <span class="o">=</span> <span class="n">extra_params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;jfactor&#39;</span><span class="p">)</span>
+            <span class="n">phip</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="mf">8.</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">mass</span><span class="p">,</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">sigmav</span> <span class="o">*</span> <span class="n">jfactor</span><span class="p">)</span>
+        <span class="c1">#dndx = self._dndx_interp[ichan]((np.log10(mass),xm))</span>
+        <span class="n">dndx</span> <span class="o">=</span> <span class="n">dndx_interp</span><span class="p">((</span><span class="n">mass</span><span class="p">,</span> <span class="n">xm</span><span class="p">))</span>
+        <span class="n">dndx</span><span class="p">[</span><span class="n">xm</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="n">phip</span> <span class="o">*</span> <span class="n">dndx</span> <span class="o">/</span> <span class="n">x</span>
+
+<div class="viewcode-block" id="DMFitFunction.set_channel"><a class="viewcode-back" href="../../fermipy.html#fermipy.spectrum.DMFitFunction.set_channel">[docs]</a>    <span class="k">def</span> <span class="nf">set_channel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chan</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">chan</span><span class="p">,</span> <span class="nb">int</span><span class="p">):</span>
+            <span class="n">ichan</span> <span class="o">=</span> <span class="n">DMFitFunction</span><span class="o">.</span><span class="n">channel_index_mapping</span><span class="p">[</span><span class="n">chan</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_chan</span> <span class="o">=</span> <span class="n">DMFitFunction</span><span class="o">.</span><span class="n">channel_shortname_mapping</span><span class="p">[</span><span class="n">chan</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_chan_code</span> <span class="o">=</span> <span class="n">chan</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_chan</span> <span class="o">=</span> <span class="n">chan</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_chan_code</span> <span class="o">=</span> <span class="n">DMFitFunction</span><span class="o">.</span><span class="n">channel_rev_map</span><span class="p">[</span><span class="n">chan</span><span class="p">]</span>
+            <span class="n">ichan</span> <span class="o">=</span> <span class="n">DMFitFunction</span><span class="o">.</span><span class="n">channel_index_mapping</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_chan_code</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dndx_interp</span> <span class="o">=</span> <span class="n">RegularGridInterpolator</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_mass</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_x</span><span class="p">],</span>
+                                                    <span class="bp">self</span><span class="o">.</span><span class="n">_dndx</span><span class="p">[</span><span class="n">ichan</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:],</span>
+                                                    <span class="n">bounds_error</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                                    <span class="n">fill_value</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extra_params</span><span class="p">[</span><span class="s1">&#39;dndx_interp&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dndx_interp</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">extra_params</span><span class="p">[</span><span class="s1">&#39;chan&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_chan_code</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

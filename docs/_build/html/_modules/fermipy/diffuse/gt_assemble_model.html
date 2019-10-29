@@ -1,0 +1,510 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fermipy.diffuse.gt_assemble_model &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../../fermipy.html">fermipy</a> &raquo;</li>
+        
+      <li>fermipy.diffuse.gt_assemble_model</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for fermipy.diffuse.gt_assemble_model</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Merge source maps to build composite sources</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">import</span> <span class="nn">yaml</span>
+
+<span class="kn">from</span> <span class="nn">astropy.io</span> <span class="k">import</span> <span class="n">fits</span>
+<span class="kn">from</span> <span class="nn">fermipy.skymap</span> <span class="k">import</span> <span class="n">HpxMap</span>
+
+<span class="kn">from</span> <span class="nn">fermipy.utils</span> <span class="k">import</span> <span class="n">load_yaml</span>
+
+<span class="kn">from</span> <span class="nn">fermipy.jobs.scatter_gather</span> <span class="k">import</span> <span class="n">ScatterGather</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.slac_impl</span> <span class="k">import</span> <span class="n">make_nfs_path</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.link</span> <span class="k">import</span> <span class="n">Link</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.chain</span> <span class="k">import</span> <span class="n">Chain</span>
+
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.binning</span> <span class="k">import</span> <span class="n">Component</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.name_policy</span> <span class="k">import</span> <span class="n">NameFactory</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse</span> <span class="k">import</span> <span class="n">defaults</span> <span class="k">as</span> <span class="n">diffuse_defaults</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.model_manager</span> <span class="k">import</span> <span class="n">make_library</span>
+
+<span class="n">NAME_FACTORY</span> <span class="o">=</span> <span class="n">NameFactory</span><span class="p">()</span>
+
+
+<div class="viewcode-block" id="InitModel"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.gt_assemble_model.InitModel">[docs]</a><span class="k">class</span> <span class="nc">InitModel</span><span class="p">(</span><span class="n">Link</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small class to preprate files fermipy analysis.</span>
+
+<span class="sd">    Specifically this create the srcmap_manifest and fermipy_config_yaml files</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-init-model&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;init-model&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Initialize model fitting directory&quot;</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">comp</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">],</span>
+                           <span class="n">data</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span>
+                           <span class="n">library</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;library&#39;</span><span class="p">],</span>
+                           <span class="n">models</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;models&#39;</span><span class="p">],</span>
+                           <span class="n">hpx_order</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;hpx_order_fitting&#39;</span><span class="p">])</span>
+
+<div class="viewcode-block" id="InitModel.run_analysis"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.gt_assemble_model.InitModel.run_analysis">[docs]</a>    <span class="k">def</span> <span class="nf">run_analysis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">argv</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Build the manifest for all the models</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
+        <span class="n">components</span> <span class="o">=</span> <span class="n">Component</span><span class="o">.</span><span class="n">build_from_yamlfile</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">comp</span><span class="p">)</span>
+        <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">update_base_dict</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">model_dict</span> <span class="o">=</span> <span class="n">make_library</span><span class="p">(</span><span class="o">**</span><span class="n">args</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">)</span>
+        <span class="n">model_manager</span> <span class="o">=</span> <span class="n">model_dict</span><span class="p">[</span><span class="s1">&#39;ModelManager&#39;</span><span class="p">]</span>
+        <span class="n">models</span> <span class="o">=</span> <span class="n">load_yaml</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">models</span><span class="p">)</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">data</span>
+        <span class="n">hpx_order</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">hpx_order</span>
+        <span class="k">for</span> <span class="n">modelkey</span> <span class="ow">in</span> <span class="n">models</span><span class="p">:</span>
+            <span class="n">model_manager</span><span class="o">.</span><span class="n">make_srcmap_manifest</span><span class="p">(</span><span class="n">modelkey</span><span class="p">,</span> <span class="n">components</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+            <span class="n">model_manager</span><span class="o">.</span><span class="n">make_fermipy_config_yaml</span><span class="p">(</span><span class="n">modelkey</span><span class="p">,</span> <span class="n">components</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span>
+                                                   <span class="n">hpx_order</span><span class="o">=</span><span class="n">hpx_order</span><span class="p">,</span>
+                                                   <span class="n">irf_ver</span><span class="o">=</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">irf_ver</span><span class="p">())</span></div></div>
+
+
+<div class="viewcode-block" id="AssembleModel"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.gt_assemble_model.AssembleModel">[docs]</a><span class="k">class</span> <span class="nc">AssembleModel</span><span class="p">(</span><span class="n">Link</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small class to assemple source map files for fermipy analysis.</span>
+
+<span class="sd">    This is useful for re-merging after parallelizing source map creation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-assemble-model&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;assemble-model&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Assemble sourcemaps for model fitting&quot;</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Input yaml file&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">compname</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Component name.&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">hpx_order</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;hpx_order_fitting&#39;</span><span class="p">])</span>
+
+<div class="viewcode-block" id="AssembleModel.copy_ccube"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.gt_assemble_model.AssembleModel.copy_ccube">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">copy_ccube</span><span class="p">(</span><span class="n">ccube</span><span class="p">,</span> <span class="n">outsrcmap</span><span class="p">,</span> <span class="n">hpx_order</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Copy a counts cube into outsrcmap file</span>
+<span class="sd">        reducing the HEALPix order to hpx_order if needed.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;  Copying counts cube from </span><span class="si">%s</span><span class="s2"> to </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ccube</span><span class="p">,</span> <span class="n">outsrcmap</span><span class="p">))</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">hdulist_in</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">ccube</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+            <span class="n">hdulist_in</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">.gz&quot;</span> <span class="o">%</span> <span class="n">ccube</span><span class="p">)</span>
+
+        <span class="n">hpx_order_in</span> <span class="o">=</span> <span class="n">hdulist_in</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;ORDER&#39;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">hpx_order_in</span> <span class="o">&gt;</span> <span class="n">hpx_order</span><span class="p">:</span>
+            <span class="n">hpxmap</span> <span class="o">=</span> <span class="n">HpxMap</span><span class="o">.</span><span class="n">create_from_hdulist</span><span class="p">(</span><span class="n">hdulist_in</span><span class="p">)</span>
+            <span class="n">hpxmap_out</span> <span class="o">=</span> <span class="n">hpxmap</span><span class="o">.</span><span class="n">ud_grade</span><span class="p">(</span><span class="n">hpx_order</span><span class="p">,</span> <span class="n">preserve_counts</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">hpxlist_out</span> <span class="o">=</span> <span class="n">hdulist_in</span>
+            <span class="c1">#hpxlist_out[&#39;SKYMAP&#39;] = hpxmap_out.create_image_hdu()</span>
+            <span class="n">hpxlist_out</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">hpxmap_out</span><span class="o">.</span><span class="n">create_image_hdu</span><span class="p">()</span>
+            <span class="n">hpxlist_out</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;SKYMAP&#39;</span>
+            <span class="n">hpxlist_out</span><span class="o">.</span><span class="n">writeto</span><span class="p">(</span><span class="n">outsrcmap</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">hpx_order</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s1">&#39;cp </span><span class="si">%s</span><span class="s1"> </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">ccube</span><span class="p">,</span> <span class="n">outsrcmap</span><span class="p">))</span>
+            <span class="c1">#os.system(&#39;cp %s.gz %s.gz&#39; % (ccube, outsrcmap))</span>
+            <span class="c1">#os.system(&#39;gunzip -f %s.gz&#39; % (outsrcmap))</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="AssembleModel.open_outsrcmap"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.gt_assemble_model.AssembleModel.open_outsrcmap">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">open_outsrcmap</span><span class="p">(</span><span class="n">outsrcmap</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Open and return the outsrcmap file in append mode &quot;&quot;&quot;</span>
+        <span class="n">outhdulist</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">outsrcmap</span><span class="p">,</span> <span class="s1">&#39;append&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">outhdulist</span></div>
+
+<div class="viewcode-block" id="AssembleModel.append_hdus"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.gt_assemble_model.AssembleModel.append_hdus">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">append_hdus</span><span class="p">(</span><span class="n">hdulist</span><span class="p">,</span> <span class="n">srcmap_file</span><span class="p">,</span> <span class="n">source_names</span><span class="p">,</span> <span class="n">hpx_order</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Append HEALPix maps to a list</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        hdulist : list</span>
+<span class="sd">            The list being appended to</span>
+<span class="sd">        srcmap_file : str</span>
+<span class="sd">            Path to the file containing the HDUs</span>
+<span class="sd">        source_names : list of str</span>
+<span class="sd">            Names of the sources to extract from srcmap_file</span>
+<span class="sd">        hpx_order : int</span>
+<span class="sd">            Maximum order for maps</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;  Extracting </span><span class="si">%i</span><span class="s2"> sources from </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">source_names</span><span class="p">),</span> <span class="n">srcmap_file</span><span class="p">))</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">hdulist_in</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">srcmap_file</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">hdulist_in</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">%s</span><span class="s1">.gz&#39;</span> <span class="o">%</span> <span class="n">srcmap_file</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">IOError</span><span class="p">:</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;  Missing file </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">srcmap_file</span><span class="p">)</span>
+                <span class="k">return</span>
+
+        <span class="k">for</span> <span class="n">source_name</span> <span class="ow">in</span> <span class="n">source_names</span><span class="p">:</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">hpx_order</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">hdulist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hdulist_in</span><span class="p">[</span><span class="n">source_name</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">hpxmap</span> <span class="o">=</span> <span class="n">HpxMap</span><span class="o">.</span><span class="n">create_from_hdulist</span><span class="p">(</span><span class="n">hdulist_in</span><span class="p">,</span> <span class="n">hdu</span><span class="o">=</span><span class="n">source_name</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  Index error on source </span><span class="si">%s</span><span class="s2"> in file </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">source_name</span><span class="p">,</span> <span class="n">srcmap_file</span><span class="p">))</span>
+                    <span class="k">continue</span>
+                <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  Key error on source </span><span class="si">%s</span><span class="s2"> in file </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">source_name</span><span class="p">,</span> <span class="n">srcmap_file</span><span class="p">))</span>
+                    <span class="k">continue</span>
+                <span class="n">hpxmap_out</span> <span class="o">=</span> <span class="n">hpxmap</span><span class="o">.</span><span class="n">ud_grade</span><span class="p">(</span><span class="n">hpx_order</span><span class="p">,</span> <span class="n">preserve_counts</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">hdulist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">hpxmap_out</span><span class="o">.</span><span class="n">create_image_hdu</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">source_name</span><span class="p">))</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">hdulist</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="n">hdulist_in</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="AssembleModel.assemble_component"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.gt_assemble_model.AssembleModel.assemble_component">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">assemble_component</span><span class="p">(</span><span class="n">compname</span><span class="p">,</span> <span class="n">compinfo</span><span class="p">,</span> <span class="n">hpx_order</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Assemble the source map file for one binning component</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        compname : str</span>
+<span class="sd">            The key for this component (e.g., E0_PSF3)</span>
+<span class="sd">        compinfo : dict</span>
+<span class="sd">            Information about this component</span>
+<span class="sd">        hpx_order : int</span>
+<span class="sd">            Maximum order for maps</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Working on component </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">compname</span><span class="p">)</span>
+        <span class="n">ccube</span> <span class="o">=</span> <span class="n">compinfo</span><span class="p">[</span><span class="s1">&#39;ccube&#39;</span><span class="p">]</span>
+        <span class="n">outsrcmap</span> <span class="o">=</span> <span class="n">compinfo</span><span class="p">[</span><span class="s1">&#39;outsrcmap&#39;</span><span class="p">]</span>
+        <span class="n">source_dict</span> <span class="o">=</span> <span class="n">compinfo</span><span class="p">[</span><span class="s1">&#39;source_dict&#39;</span><span class="p">]</span>
+
+        <span class="n">hpx_order</span> <span class="o">=</span> <span class="n">AssembleModel</span><span class="o">.</span><span class="n">copy_ccube</span><span class="p">(</span><span class="n">ccube</span><span class="p">,</span> <span class="n">outsrcmap</span><span class="p">,</span> <span class="n">hpx_order</span><span class="p">)</span>
+        <span class="n">hdulist</span> <span class="o">=</span> <span class="n">AssembleModel</span><span class="o">.</span><span class="n">open_outsrcmap</span><span class="p">(</span><span class="n">outsrcmap</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">comp_name</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">source_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="n">source_info</span> <span class="o">=</span> <span class="n">source_dict</span><span class="p">[</span><span class="n">comp_name</span><span class="p">]</span>
+            <span class="n">source_names</span> <span class="o">=</span> <span class="n">source_info</span><span class="p">[</span><span class="s1">&#39;source_names&#39;</span><span class="p">]</span>
+            <span class="n">srcmap_file</span> <span class="o">=</span> <span class="n">source_info</span><span class="p">[</span><span class="s1">&#39;srcmap_file&#39;</span><span class="p">]</span>
+            <span class="n">AssembleModel</span><span class="o">.</span><span class="n">append_hdus</span><span class="p">(</span><span class="n">hdulist</span><span class="p">,</span> <span class="n">srcmap_file</span><span class="p">,</span>
+                                      <span class="n">source_names</span><span class="p">,</span> <span class="n">hpx_order</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Done!</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AssembleModel.run_analysis"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.gt_assemble_model.AssembleModel.run_analysis">[docs]</a>    <span class="k">def</span> <span class="nf">run_analysis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">argv</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Assemble the source map file for one binning component</span>
+<span class="sd">        FIXME</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
+        <span class="n">manifest</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">input</span><span class="p">))</span>
+
+        <span class="n">compname</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">compname</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="n">manifest</span><span class="p">[</span><span class="n">compname</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assemble_component</span><span class="p">(</span><span class="n">compname</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">hpx_order</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="AssembleModel_SG"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.gt_assemble_model.AssembleModel_SG">[docs]</a><span class="k">class</span> <span class="nc">AssembleModel_SG</span><span class="p">(</span><span class="n">ScatterGather</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small class to generate configurations for this script</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    --compname  : binning component definition yaml file</span>
+<span class="sd">    --data      : datset definition yaml file</span>
+<span class="sd">    --models    : model definitino yaml file</span>
+<span class="sd">    args        : Names of models to assemble source maps for</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-assemble-model-sg&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> [options]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Copy source maps from the library to a analysis directory&quot;</span>
+    <span class="n">clientclass</span> <span class="o">=</span> <span class="n">AssembleModel</span>
+
+    <span class="n">job_time</span> <span class="o">=</span> <span class="mi">300</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">comp</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">],</span>
+                           <span class="n">data</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span>
+                           <span class="n">models</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;models&#39;</span><span class="p">])</span>
+
+<div class="viewcode-block" id="AssembleModel_SG.build_job_configs"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.gt_assemble_model.AssembleModel_SG.build_job_configs">[docs]</a>    <span class="k">def</span> <span class="nf">build_job_configs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Hook to build job configurations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">job_configs</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">components</span> <span class="o">=</span> <span class="n">Component</span><span class="o">.</span><span class="n">build_from_yamlfile</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">])</span>
+        <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">update_base_dict</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">])</span>
+
+        <span class="n">models</span> <span class="o">=</span> <span class="n">load_yaml</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;models&#39;</span><span class="p">])</span>
+
+        <span class="k">for</span> <span class="n">modelkey</span> <span class="ow">in</span> <span class="n">models</span><span class="p">:</span>
+            <span class="n">manifest</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;analysis&#39;</span><span class="p">,</span> <span class="s1">&#39;model_</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">modelkey</span><span class="p">,</span>
+                                    <span class="s1">&#39;srcmap_manifest_</span><span class="si">%s</span><span class="s1">.yaml&#39;</span> <span class="o">%</span> <span class="n">modelkey</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">comp</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="n">comp</span><span class="o">.</span><span class="n">make_key</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{ebin_name}</span><span class="s1">_</span><span class="si">{evtype_name}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="n">fullkey</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">modelkey</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+                <span class="n">outfile</span> <span class="o">=</span> <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">merged_srcmaps</span><span class="p">(</span><span class="n">modelkey</span><span class="o">=</span><span class="n">modelkey</span><span class="p">,</span>
+                                                      <span class="n">component</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+                                                      <span class="n">coordsys</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">coordsys</span><span class="p">,</span>
+                                                      <span class="n">mktime</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span>
+                                                      <span class="n">irf_ver</span><span class="o">=</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">irf_ver</span><span class="p">())</span>
+                <span class="n">logfile</span> <span class="o">=</span> <span class="n">make_nfs_path</span><span class="p">(</span><span class="n">outfile</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.fits&#39;</span><span class="p">,</span> <span class="s1">&#39;.log&#39;</span><span class="p">))</span>
+                <span class="n">job_configs</span><span class="p">[</span><span class="n">fullkey</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="n">manifest</span><span class="p">,</span>
+                                            <span class="n">compname</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+                                            <span class="n">logfile</span><span class="o">=</span><span class="n">logfile</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">job_configs</span></div></div>
+
+
+<div class="viewcode-block" id="AssembleModelChain"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.gt_assemble_model.AssembleModelChain">[docs]</a><span class="k">class</span> <span class="nc">AssembleModelChain</span><span class="p">(</span><span class="n">Chain</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small class to split, apply mktime and bin data according to some user-provided specification</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-assemble-model-chain&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;assemble-model-chain&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s1">&#39;Run init-model and assemble-model&#39;</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span>
+                           <span class="n">comp</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">],</span>
+                           <span class="n">library</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;library&#39;</span><span class="p">],</span>
+                           <span class="n">models</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;models&#39;</span><span class="p">],</span>
+                           <span class="n">hpx_order</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;hpx_order_fitting&#39;</span><span class="p">],</span>
+                           <span class="n">dry_run</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;dry_run&#39;</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;C&#39;tor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">AssembleModelChain</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">comp_dict</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">_register_link_classes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">InitModel</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+        <span class="n">AssembleModel_SG</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_map_arguments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">input_dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Map from the top-level arguments to the arguments provided to</span>
+<span class="sd">        the indiviudal links &quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">input_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">)</span>
+        <span class="n">comp</span> <span class="o">=</span> <span class="n">input_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;comp&#39;</span><span class="p">)</span>
+        <span class="n">library</span> <span class="o">=</span> <span class="n">input_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;library&#39;</span><span class="p">)</span>
+        <span class="n">models</span> <span class="o">=</span> <span class="n">input_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;models&#39;</span><span class="p">)</span>
+        <span class="n">hpx_order</span> <span class="o">=</span> <span class="n">input_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;hpx_order_fitting&#39;</span><span class="p">)</span>
+        <span class="n">dry_run</span> <span class="o">=</span> <span class="n">input_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dry_run&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_link</span><span class="p">(</span><span class="s1">&#39;init-model&#39;</span><span class="p">,</span> <span class="n">InitModel</span><span class="p">,</span>
+                       <span class="n">comp</span><span class="o">=</span><span class="n">comp</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                       <span class="n">library</span><span class="o">=</span><span class="n">library</span><span class="p">,</span>
+                       <span class="n">models</span><span class="o">=</span><span class="n">models</span><span class="p">,</span>
+                       <span class="n">hpx_order</span><span class="o">=</span><span class="n">hpx_order</span><span class="p">,</span>
+                       <span class="n">dry_run</span><span class="o">=</span><span class="n">dry_run</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_link</span><span class="p">(</span><span class="s1">&#39;assemble-model&#39;</span><span class="p">,</span> <span class="n">AssembleModel_SG</span><span class="p">,</span>
+                       <span class="n">comp</span><span class="o">=</span><span class="n">comp</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                       <span class="n">models</span><span class="o">=</span><span class="n">models</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">register_classes</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Register these classes with the `LinkFactory` &quot;&quot;&quot;</span>
+    <span class="n">InitModel</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">AssembleModel</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">AssembleModel_SG</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">AssembleModelChain</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

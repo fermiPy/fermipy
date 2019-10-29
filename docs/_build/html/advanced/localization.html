@@ -1,0 +1,626 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Source Localization &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Phased Analysis" href="phased.html" />
+    <link rel="prev" title="Source Finding" href="detection.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer.html">Developer Notes</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Advanced Analysis Methods</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="sed.html">SED Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lightcurve.html">Light Curves</a></li>
+<li class="toctree-l2"><a class="reference internal" href="extension.html">Extension Fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tsmap.html">TS Map</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tscube.html">TS Cube</a></li>
+<li class="toctree-l2"><a class="reference internal" href="residmap.html">Residual Map</a></li>
+<li class="toctree-l2"><a class="reference internal" href="detection.html">Source Finding</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Source Localization</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#examples">Examples</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#reference-api">Reference/API</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="phased.html">Phased Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sensitivity.html">Sensitivity Tools</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Advanced Analysis Methods</a> &raquo;</li>
+        
+      <li>Source Localization</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/advanced/localization.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="source-localization">
+<span id="localization"></span><h1>Source Localization<a class="headerlink" href="#source-localization" title="Permalink to this headline">¶</a></h1>
+<p>The <a class="reference internal" href="../fermipy.html#fermipy.gtanalysis.GTAnalysis.localize" title="fermipy.gtanalysis.GTAnalysis.localize"><code class="xref py py-meth docutils literal notranslate"><span class="pre">localize()</span></code></a> method can be
+used to spatially localize a source.  Localization is performed by
+scanning the likelihood surface in source position in a local patch
+around the nominal source position.  The fit to the source position
+proceeds in two iterations:</p>
+<ul class="simple">
+<li><strong>TS Map Scan</strong>: Obtain a first estimate of the source position by
+generating a likelihood map of the region using the
+<a class="reference internal" href="../fermipy.html#fermipy.gtanalysis.GTAnalysis.tsmap" title="fermipy.gtanalysis.GTAnalysis.tsmap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tsmap</span></code></a> method.  In this step all
+background parameters are fixed to their nominal values.  The size
+of the search region used for this step is set with the
+<code class="docutils literal notranslate"><span class="pre">dtheta_max</span></code> parameter.</li>
+<li><strong>Likelihood Scan</strong>: Refine the position of the source by performing a
+scan of the likelihood surface in a box centered on the best-fit
+position found in the first iteration.  The size of the search
+region is set to encompass the 99% positional uncertainty contour.
+This method uses a full likelihood fit at each point in the
+likelihood scan and will re-fit all free parameters of the model.</li>
+</ul>
+<p>If a peak is found in the search region and the positional fit
+succeeds, the method will update the position of the source in the
+model to the new best-fit position.</p>
+<div class="section" id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
+<p>The localization method is executed by passing the name of a source as
+its argument.  The method returns a python dictionary with the
+best-fit source position and localization errors and also saves the same
+information to FITS and numpy files.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">loc</span> <span class="o">=</span> <span class="n">gta</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="s1">&#39;3FGL J1722.7+6104&#39;</span><span class="p">,</span> <span class="n">make_plots</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span><span class="p">(</span><span class="n">loc</span><span class="p">[</span><span class="s1">&#39;ra&#39;</span><span class="p">],</span><span class="n">loc</span><span class="p">[</span><span class="s1">&#39;dec&#39;</span><span class="p">],</span><span class="n">loc</span><span class="p">[</span><span class="s1">&#39;pos_r68&#39;</span><span class="p">],</span><span class="n">loc</span><span class="p">[</span><span class="s1">&#39;pos_r95&#39;</span><span class="p">])</span>
+<span class="go">(260.53164555483784, 61.04493807148745, 0.14384100879403075, 0.23213050350030126)</span>
+</pre></div>
+</div>
+<p>When running with <code class="docutils literal notranslate"><span class="pre">make_plots=True</span></code> the method will save a
+diagnostic plot to the working directory with a visualization of the
+localization contours.  The green and white contours show the
+uncertainty ellipse derived from the first and second iterations of
+the positional scan.</p>
+<table border="1" class="colwidths-given docutils">
+<colgroup>
+<col width="50%" />
+<col width="50%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">First Iteration</th>
+<th class="head">Second Iteration</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><a class="reference internal" href="../_images/3fgl_j1722.7+6104_localize.png"><img alt="image_loc" src="../_images/3fgl_j1722.7+6104_localize.png" style="width: 100%;" /></a></td>
+<td><a class="reference internal" href="../_images/3fgl_j1722.7+6104_localize_peak.png"><img alt="image_loc_peak" src="../_images/3fgl_j1722.7+6104_localize_peak.png" style="width: 100%;" /></a></td>
+</tr>
+</tbody>
+</table>
+<p>The default configuration for the localization analysis can be
+overriden by supplying one or more <em>kwargs</em>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Localize the source and update its properties in the model</span>
+<span class="c1"># with the localized position</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">o</span> <span class="o">=</span> <span class="n">gta</span><span class="o">.</span><span class="n">extension</span><span class="p">(</span><span class="s1">&#39;3FGL J1722.7+6104&#39;</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>By default all background parameters will be fixed when the positional
+fit is performed.  One can choose to free background parameters with
+the <code class="docutils literal notranslate"><span class="pre">free_background</span></code> and <code class="docutils literal notranslate"><span class="pre">free_radius</span></code> options:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Free a nearby source that may be be partially degenerate with the</span>
+<span class="c1"># source of interest</span>
+<span class="n">gta</span><span class="o">.</span><span class="n">free_norm</span><span class="p">(</span><span class="s1">&#39;sourceB&#39;</span><span class="p">)</span>
+<span class="n">gta</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="s1">&#39;3FGL J1722.7+6104&#39;</span><span class="p">,</span> <span class="n">free_background</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="c1"># Free normalizations of background sources within a certain</span>
+<span class="c1"># distance of the source of interest</span>
+<span class="n">gta</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="s1">&#39;3FGL J1722.7+6104&#39;</span><span class="p">,</span> <span class="n">free_radius</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The contents of the output dictionary are described in the following table:</p>
+<table border="1" class="colwidths-given docutils" id="id1">
+<caption><span class="caption-text"><em>localize</em> Output</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">name</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a></td>
+<td>Name of source.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">file</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a></td>
+<td>Name of output FITS file.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">config</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></td>
+<td>Copy of the input configuration to this method.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">ra</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Right ascension of best-fit position (deg).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dec</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Declination of best-fit position (deg).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">glon</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Galactic Longitude of best-fit position (deg).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">glat</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Galactic Latitude of best-fit position (deg).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">xpix</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Longitude pixel coordinate of best-fit position.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">ypix</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Latitude pixel coordinate of best-fit position.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">deltax</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Longitude offset from old position (deg).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">deltay</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Latitude offset from old position (deg).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">skydir</span></code></td>
+<td><a class="reference external" href="http://docs.astropy.org/en/stable/api/astropy.coordinates.SkyCoord.html#astropy.coordinates.SkyCoord" title="(in Astropy v3.2.3)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">SkyCoord</span></code></a></td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">ra_preloc</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Right ascension of pre-localization position (deg).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dec_preloc</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Declination of pre-localization position (deg).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">glon_preloc</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Galactic Longitude of pre-localization position (deg).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">glat_preloc</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Galactic Latitude of pre-localization position (deg).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">ra_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Std. deviation of positional uncertainty in right ascension (deg).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dec_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Std. deviation of positional uncertainty in declination (deg).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">glon_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Std. deviation of positional uncertainty in galactic longitude (deg).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">glat_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Std. deviation of positional uncertainty in galactic latitude (deg).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">pos_offset</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Angular offset (deg) between the old and new (localized) source positions.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">pos_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>1-sigma positional uncertainty (deg).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">pos_r68</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>68% positional uncertainty (deg).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">pos_r95</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>95% positional uncertainty (deg).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">pos_r99</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>99% positional uncertainty (deg).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">pos_err_semimajor</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>1-sigma uncertainty (deg) along major axis of uncertainty ellipse.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">pos_err_semiminor</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>1-sigma uncertainty (deg) along minor axis of uncertainty ellipse.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">pos_angle</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Position angle of uncertainty ellipse with respect to major axis.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">pos_ecc</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Eccentricity of uncertainty ellipse defined as sqrt(1-b**2/a**2).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">pos_ecc2</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Eccentricity of uncertainty ellipse defined as sqrt(a**2/b**2-1).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">pos_gal_cov</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Covariance matrix of positional uncertainties in local projection in galactic coordinates.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">pos_gal_corr</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Correlation matrix of positional uncertainties in local projection in galactic coordinates.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">pos_cel_cov</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Covariance matrix of positional uncertainties in local projection in celestial coordinates.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">pos_cel_corr</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Correlation matrix of positional uncertainties in local projection in celestial coordinates.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">tsmap</span></code></td>
+<td><a class="reference internal" href="../fermipy.html#fermipy.skymap.Map" title="fermipy.skymap.Map"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Map</span></code></a></td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">tsmap_peak</span></code></td>
+<td><a class="reference internal" href="../fermipy.html#fermipy.skymap.Map" title="fermipy.skymap.Map"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Map</span></code></a></td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">loglike_init</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Log-Likelihood of model before localization.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">loglike_base</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Log-Likelihood of model after initial spectral fit.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">loglike_loc</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Log-Likelihood of model after localization.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dloglike_loc</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Difference in log-likelihood before and after localization.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">fit_success</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a></td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">fit_inbounds</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">bool</span></code></a></td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">fit_init</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">fit_scan</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline">¶</a></h2>
+<table border="1" class="colwidths-given docutils" id="id2">
+<caption><span class="caption-text"><em>localize</em> Options</span><a class="headerlink" href="#id2" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dtheta_max</span></code></td>
+<td>0.5</td>
+<td>Half-width of the search region in degrees used for the first pass of the localization search.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">fix_shape</span></code></td>
+<td>False</td>
+<td>Fix spectral shape parameters of the source of interest. If True then only the normalization parameter will be fit.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">free_background</span></code></td>
+<td>False</td>
+<td>Leave background parameters free when performing the fit. If True then any parameters that are currently free in the model will be fit simultaneously with the source of interest.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">free_radius</span></code></td>
+<td>None</td>
+<td>Free normalizations of background sources within this angular distance in degrees from the source of interest.  If None then no sources will be freed.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">make_plots</span></code></td>
+<td>False</td>
+<td>Generate diagnostic plots.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">nstep</span></code></td>
+<td>5</td>
+<td>Number of steps in longitude/latitude that will be taken when refining the source position.  The bounds of the scan range are set to the 99% positional uncertainty as determined from the TS map peak fit.  The total number of sampling points will be nstep**2.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">tsmap_fitter</span></code></td>
+<td>tsmap</td>
+<td>Set the method for generating the TS map.  Valid options are tsmap or tscube.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">update</span></code></td>
+<td>True</td>
+<td>Update the source model with the best-fit position.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">write_fits</span></code></td>
+<td>True</td>
+<td>Write the output to a FITS file.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">write_npy</span></code></td>
+<td>True</td>
+<td>Write the output dictionary to a numpy file.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="reference-api">
+<h2>Reference/API<a class="headerlink" href="#reference-api" title="Permalink to this headline">¶</a></h2>
+<dl class="method">
+<dt>
+<code class="descclassname">GTAnalysis.</code><code class="descname">localize</code><span class="sig-paren">(</span><em>name</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>Find the best-fit position of a source.  Localization is
+performed in two steps.  First a TS map is computed centered
+on the source with half-width set by <code class="docutils literal notranslate"><span class="pre">dtheta_max</span></code>.  A fit is
+then performed to the maximum TS peak in this map.  The source
+position is then further refined by scanning the likelihood in
+the vicinity of the peak found in the first step.  The size of
+the scan region is set to encompass the 99% positional
+uncertainty contour as determined from the peak fit.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Source name.</li>
+<li><strong>dtheta_max</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – Half-width of the search region in degrees used for the
+first pass of the localization search. (default : 0.5)</li>
+<li><strong>fix_shape</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Fix spectral shape parameters of the source of interest. If
+True then only the normalization parameter will be fit.
+(default : False)</li>
+<li><strong>free_background</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Leave background parameters free when performing the fit. If
+True then any parameters that are currently free in the
+model will be fit simultaneously with the source of
+interest. (default : False)</li>
+<li><strong>free_radius</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – Free normalizations of background sources within this
+angular distance in degrees from the source of interest.  If
+None then no sources will be freed. (default : None)</li>
+<li><strong>make_plots</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Generate diagnostic plots. (default : False)</li>
+<li><strong>nstep</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Number of steps in longitude/latitude that will be taken
+when refining the source position.  The bounds of the scan
+range are set to the 99% positional uncertainty as
+determined from the TS map peak fit.  The total number of
+sampling points will be nstep**2. (default : 5)</li>
+<li><strong>tsmap_fitter</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Set the method for generating the TS map.  Valid options are
+tsmap or tscube. (default : tsmap)</li>
+<li><strong>update</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Update the source model with the best-fit position. (default
+: True)</li>
+<li><strong>write_fits</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Write the output to a FITS file. (default : True)</li>
+<li><strong>write_npy</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Write the output dictionary to a numpy file. (default :
+True)</li>
+<li><strong>optimizer</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a>) – Dictionary that overrides the default optimizer settings.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>localize</strong> – Dictionary containing results of the localization
+analysis.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)">dict</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="phased.html" class="btn btn-neutral float-right" title="Phased Analysis" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="detection.html" class="btn btn-neutral float-left" title="Source Finding" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

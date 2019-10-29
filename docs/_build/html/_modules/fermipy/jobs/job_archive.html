@@ -1,0 +1,916 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fermipy.jobs.job_archive &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../../fermipy.html">fermipy</a> &raquo;</li>
+        
+      <li>fermipy.jobs.job_archive</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for fermipy.jobs.job_archive</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Classes and utilites to keep track the various jobs that are running</span>
+<span class="sd">in an analysis pipeline.</span>
+
+<span class="sd">The main class is `JobArchive`, which keep track of all the jobs associated to an analysis.</span>
+
+<span class="sd">The `JobDetails` helper class encapsulates information on a instance of running a job.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span>
+
+<span class="c1"># from enum import Enum</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">astropy.table</span> <span class="k">import</span> <span class="n">Table</span><span class="p">,</span> <span class="n">Column</span>
+
+<span class="kn">from</span> <span class="nn">fermipy.fits_utils</span> <span class="k">import</span> <span class="n">write_tables_to_fits</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.file_archive</span> <span class="k">import</span> <span class="n">get_timestamp</span><span class="p">,</span> <span class="n">FileStatus</span><span class="p">,</span> <span class="n">FileDict</span><span class="p">,</span> <span class="n">FileArchive</span>
+
+
+<span class="c1"># @unique</span>
+<span class="c1"># class JobStatus(Enum):</span>
+<div class="viewcode-block" id="JobStatus"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobStatus">[docs]</a><span class="k">class</span> <span class="nc">JobStatus</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Enumeration of job status types&quot;&quot;&quot;</span>
+    <span class="n">no_job</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>           <span class="c1"># Job does not exist</span>
+    <span class="n">unknown</span> <span class="o">=</span> <span class="mi">0</span>           <span class="c1"># JobDetails exist, but status hasn&#39;t been set</span>
+    <span class="n">not_ready</span> <span class="o">=</span> <span class="mi">1</span>         <span class="c1"># Inputs are not ready</span>
+    <span class="n">ready</span> <span class="o">=</span> <span class="mi">2</span>             <span class="c1"># Inputs are ready</span>
+    <span class="n">pending</span> <span class="o">=</span> <span class="mi">3</span>           <span class="c1"># Job is pending (in the batch queue)</span>
+    <span class="n">running</span> <span class="o">=</span> <span class="mi">4</span>           <span class="c1"># Job is running</span>
+    <span class="n">done</span> <span class="o">=</span> <span class="mi">5</span>              <span class="c1"># Job is successfully completed</span>
+    <span class="n">failed</span> <span class="o">=</span> <span class="mi">6</span>            <span class="c1"># Job failed</span>
+    <span class="n">partial_failed</span> <span class="o">=</span> <span class="mi">7</span>    <span class="c1"># Some sub-jobs have failed</span>
+    <span class="n">removed</span> <span class="o">=</span> <span class="mi">8</span>           <span class="c1"># Job marked as removed</span></div>
+
+
+<span class="n">JOB_STATUS_STRINGS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Unknown&quot;</span><span class="p">,</span>
+                      <span class="s2">&quot;Not Ready&quot;</span><span class="p">,</span>
+                      <span class="s2">&quot;Ready&quot;</span><span class="p">,</span>
+                      <span class="s2">&quot;Pending&quot;</span><span class="p">,</span>
+                      <span class="s2">&quot;Running&quot;</span><span class="p">,</span>
+                      <span class="s2">&quot;Done&quot;</span><span class="p">,</span>
+                      <span class="s2">&quot;Failed&quot;</span><span class="p">,</span>
+                      <span class="s2">&quot;Partially Failed&quot;</span><span class="p">,</span>
+                      <span class="s2">&quot;Removed&quot;</span><span class="p">,</span>
+                      <span class="s2">&quot;No Job&quot;</span><span class="p">]</span>
+
+
+<div class="viewcode-block" id="JobStatusVector"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobStatusVector">[docs]</a><span class="k">class</span> <span class="nc">JobStatusVector</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Vector that counts the status of jobs</span>
+<span class="sd">    and returns an overall status flag based on those</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;C&#39;tor &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get an item by index&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_counters</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set an item by index&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_counters</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+
+    <span class="k">def</span> <span class="nf">__incr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">idx</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Increment an item by index&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_counters</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Turn self into a str listing the number of jobs:</span>
+<span class="sd">        Output format is:</span>
+<span class="sd">        waiting pending running done failed total</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">tup</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_waiting</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_pending</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_running</span><span class="p">,</span>
+               <span class="bp">self</span><span class="o">.</span><span class="n">n_done</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_failed</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_total</span><span class="p">)</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="si">%4i</span><span class="s2">/</span><span class="si">%4i</span><span class="s2">/</span><span class="si">%4i</span><span class="s2">/</span><span class="si">%4i</span><span class="s2">/</span><span class="si">%4i</span><span class="s2">/</span><span class="si">%4i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">tup</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">n_waiting</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the number of jobs in various waiting states&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_counters</span><span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">no_job</span><span class="p">]</span> <span class="o">+</span>\
+            <span class="bp">self</span><span class="o">.</span><span class="n">_counters</span><span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">unknown</span><span class="p">]</span> <span class="o">+</span>\
+            <span class="bp">self</span><span class="o">.</span><span class="n">_counters</span><span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">not_ready</span><span class="p">]</span> <span class="o">+</span>\
+            <span class="bp">self</span><span class="o">.</span><span class="n">_counters</span><span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">ready</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">n_pending</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the number jobs submitted to batch, but not yet running&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_counters</span><span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">pending</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">n_running</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the number of running jobs&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_counters</span><span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">running</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">n_done</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the number of successfully completed jobs&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_counters</span><span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">done</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">n_failed</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the number of failed jobs&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_counters</span><span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">failed</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_counters</span><span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">partial_failed</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">n_total</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the total number of jobs&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_counters</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+<div class="viewcode-block" id="JobStatusVector.reset"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobStatusVector.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Reset the counters&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_counters</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">JOB_STATUS_STRINGS</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="JobStatusVector.get_status"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobStatusVector.get_status">[docs]</a>    <span class="k">def</span> <span class="nf">get_status</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return an overall status based</span>
+<span class="sd">        on the number of jobs in various states.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_total</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">no_job</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_done</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_total</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">done</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_failed</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># If more that a quater of the jobs fail, fail the whole thing</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_failed</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_total</span> <span class="o">/</span> <span class="mf">4.</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">failed</span>
+            <span class="k">return</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">partial_failed</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_running</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">running</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_pending</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">pending</span>
+        <span class="k">return</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">ready</span></div></div>
+
+
+<div class="viewcode-block" id="JobDetails"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobDetails">[docs]</a><span class="k">class</span> <span class="nc">JobDetails</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A simple structure to keep track of the details of each</span>
+<span class="sd">    of the sub-proccess jobs.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    dbkey : int</span>
+<span class="sd">       A unique key to identify this job</span>
+
+<span class="sd">    jobname : str</span>
+<span class="sd">       A name used to idenfity this job</span>
+
+<span class="sd">    jobkey : str</span>
+<span class="sd">        A string to identify this instance of the job</span>
+
+<span class="sd">    appname : str</span>
+<span class="sd">        The executable inovked to run the job</span>
+
+<span class="sd">    logfile : str</span>
+<span class="sd">        The logfile for this job, may be used to check for success/ failure</span>
+
+<span class="sd">    job_config : dict</span>
+<span class="sd">        A dictionrary with the arguments for the job</span>
+
+<span class="sd">    parent_id : int</span>
+<span class="sd">        Unique key identifying the parent job</span>
+
+<span class="sd">    infile_ids : list of int</span>
+<span class="sd">        Keys to identify input files to this job</span>
+
+<span class="sd">    outfile_ids : list of int</span>
+<span class="sd">        Keys to identify output files from this job</span>
+
+<span class="sd">    rmfile_ids : list of int</span>
+<span class="sd">        Keys to identify temporary files removed by this job</span>
+
+<span class="sd">    intfile_ids : list of int</span>
+<span class="sd">        Keys to identify internal files</span>
+
+<span class="sd">    status : int</span>
+<span class="sd">        Current job status, one of the enums above</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">topkey</span> <span class="o">=</span> <span class="s1">&#39;__top__&#39;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; C&#39;tor</span>
+
+<span class="sd">        Take values of class members from keyword arguments.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dbkey</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dbkey&#39;</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">jobname</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;jobname&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">jobkey</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;jobkey&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">appname</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;appname&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logfile</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;logfile&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">job_config</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;job_config&#39;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">job_config</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">job_config</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">job_config</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">SyntaxError</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">job_config</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;timestamp&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_dict</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;file_dict&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sub_file_dict</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;sub_file_dict&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">infile_ids</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;infile_ids&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">outfile_ids</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;outfile_ids&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rmfile_ids</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;rmfile_ids&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">intfile_ids</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;intfile_ids&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;status&#39;</span><span class="p">,</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">unknown</span><span class="p">)</span>
+
+<div class="viewcode-block" id="JobDetails.make_fullkey"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobDetails.make_fullkey">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">make_fullkey</span><span class="p">(</span><span class="n">jobname</span><span class="p">,</span> <span class="n">jobkey</span><span class="o">=</span><span class="n">topkey</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Combine jobname and jobkey to make a unique key</span>
+<span class="sd">        fullkey = &lt;jobkey&gt;@&lt;jobname&gt;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">@</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">jobkey</span><span class="p">,</span> <span class="n">jobname</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="JobDetails.split_fullkey"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobDetails.split_fullkey">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">split_fullkey</span><span class="p">(</span><span class="n">fullkey</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Split fullkey to make extract jobname, jobkey</span>
+<span class="sd">        fullkey = &lt;jobkey&gt;@&lt;jobname&gt;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">fullkey</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;@&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="JobDetails.make_tables"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobDetails.make_tables">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">make_tables</span><span class="p">(</span><span class="n">job_dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build and return an `astropy.table.Table&#39; to store `JobDetails`&quot;&quot;&quot;</span>
+        <span class="n">col_dbkey</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;dbkey&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">col_jobname</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;jobname&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;S64&#39;</span><span class="p">)</span>
+        <span class="n">col_jobkey</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;jobkey&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;S64&#39;</span><span class="p">)</span>
+        <span class="n">col_appname</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;appname&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;S64&#39;</span><span class="p">)</span>
+        <span class="n">col_logfile</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;logfile&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;S256&#39;</span><span class="p">)</span>
+        <span class="n">col_job_config</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;job_config&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="s1">&#39;S1024&#39;</span><span class="p">)</span>
+        <span class="n">col_timestamp</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;timestamp&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">col_infile_refs</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;infile_refs&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+        <span class="n">col_outfile_refs</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;outfile_refs&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+        <span class="n">col_rmfile_refs</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;rmfile_refs&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+        <span class="n">col_intfile_refs</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;intfile_refs&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+        <span class="n">col_status</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;status&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">col_dbkey</span><span class="p">,</span> <span class="n">col_jobname</span><span class="p">,</span> <span class="n">col_jobkey</span><span class="p">,</span> <span class="n">col_appname</span><span class="p">,</span>
+                   <span class="n">col_logfile</span><span class="p">,</span> <span class="n">col_job_config</span><span class="p">,</span> <span class="n">col_timestamp</span><span class="p">,</span>
+                   <span class="n">col_infile_refs</span><span class="p">,</span> <span class="n">col_outfile_refs</span><span class="p">,</span>
+                   <span class="n">col_rmfile_refs</span><span class="p">,</span> <span class="n">col_intfile_refs</span><span class="p">,</span>
+                   <span class="n">col_status</span><span class="p">]</span>
+
+        <span class="n">table</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
+
+        <span class="n">col_file_ids</span> <span class="o">=</span> <span class="n">Column</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;file_id&#39;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">table_ids</span> <span class="o">=</span> <span class="n">Table</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">col_file_ids</span><span class="p">])</span>
+
+        <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">job_dict</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">val</span><span class="o">.</span><span class="n">append_to_tables</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">table_ids</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">table</span><span class="p">,</span> <span class="n">table_ids</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">fullkey</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the fullkey for this job</span>
+<span class="sd">        fullkey = &lt;jobkey&gt;@&lt;jobname&gt;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">JobDetails</span><span class="o">.</span><span class="n">make_fullkey</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jobname</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">jobkey</span><span class="p">)</span>
+
+<div class="viewcode-block" id="JobDetails.get_file_ids"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobDetails.get_file_ids">[docs]</a>    <span class="k">def</span> <span class="nf">get_file_ids</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_archive</span><span class="p">,</span> <span class="n">creator</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="n">FileStatus</span><span class="o">.</span><span class="n">no_file</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fill the file id arrays from the file lists</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        file_archive : `FileArchive`</span>
+<span class="sd">            Used to look up file ids</span>
+
+<span class="sd">        creator : int</span>
+<span class="sd">            A unique key for the job that created these file</span>
+
+<span class="sd">        status   : `FileStatus`</span>
+<span class="sd">            Enumeration giving current status thse files</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">file_dict</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">file_dict</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub_file_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">file_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sub_file_dict</span><span class="o">.</span><span class="n">file_dict</span><span class="p">)</span>
+
+        <span class="n">infiles</span> <span class="o">=</span> <span class="n">file_dict</span><span class="o">.</span><span class="n">input_files</span>
+        <span class="n">outfiles</span> <span class="o">=</span> <span class="n">file_dict</span><span class="o">.</span><span class="n">output_files</span>
+        <span class="n">rmfiles</span> <span class="o">=</span> <span class="n">file_dict</span><span class="o">.</span><span class="n">temp_files</span>
+        <span class="n">int_files</span> <span class="o">=</span> <span class="n">file_dict</span><span class="o">.</span><span class="n">internal_files</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">infile_ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">infiles</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">infile_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">infiles</span><span class="p">)),</span> <span class="nb">int</span><span class="p">)</span>
+                <span class="n">filelist</span> <span class="o">=</span> <span class="n">file_archive</span><span class="o">.</span><span class="n">get_file_ids</span><span class="p">(</span>
+                    <span class="n">infiles</span><span class="p">,</span> <span class="n">creator</span><span class="p">,</span> <span class="n">FileStatus</span><span class="o">.</span><span class="n">expected</span><span class="p">,</span> <span class="n">file_dict</span><span class="p">)</span>
+                <span class="n">JobDetails</span><span class="o">.</span><span class="n">_fill_array_from_list</span><span class="p">(</span><span class="n">filelist</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">infile_ids</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">infile_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">outfile_ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">outfiles</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">outfile_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">outfiles</span><span class="p">)),</span> <span class="nb">int</span><span class="p">)</span>
+                <span class="n">filelist</span> <span class="o">=</span> <span class="n">file_archive</span><span class="o">.</span><span class="n">get_file_ids</span><span class="p">(</span>
+                    <span class="n">outfiles</span><span class="p">,</span> <span class="n">creator</span><span class="p">,</span> <span class="n">status</span><span class="p">,</span> <span class="n">file_dict</span><span class="p">)</span>
+                <span class="n">JobDetails</span><span class="o">.</span><span class="n">_fill_array_from_list</span><span class="p">(</span><span class="n">filelist</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">outfile_ids</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">outfile_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rmfile_ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">rmfiles</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">rmfile_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">rmfiles</span><span class="p">)),</span> <span class="nb">int</span><span class="p">)</span>
+                <span class="n">filelist</span> <span class="o">=</span> <span class="n">file_archive</span><span class="o">.</span><span class="n">get_file_ids</span><span class="p">(</span><span class="n">rmfiles</span><span class="p">)</span>
+                <span class="n">JobDetails</span><span class="o">.</span><span class="n">_fill_array_from_list</span><span class="p">(</span><span class="n">filelist</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rmfile_ids</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">rmfile_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">intfile_ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">int_files</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">intfile_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">int_files</span><span class="p">)),</span> <span class="nb">int</span><span class="p">)</span>
+                <span class="n">filelist</span> <span class="o">=</span> <span class="n">file_archive</span><span class="o">.</span><span class="n">get_file_ids</span><span class="p">(</span>
+                    <span class="n">int_files</span><span class="p">,</span> <span class="n">creator</span><span class="p">,</span> <span class="n">status</span><span class="p">)</span>
+                <span class="n">JobDetails</span><span class="o">.</span><span class="n">_fill_array_from_list</span><span class="p">(</span><span class="n">filelist</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">intfile_ids</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">intfile_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">0</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="JobDetails.get_file_paths"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobDetails.get_file_paths">[docs]</a>    <span class="k">def</span> <span class="nf">get_file_paths</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_archive</span><span class="p">,</span> <span class="n">file_id_array</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the full paths of the files used by this object from the the id arrays</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        file_archive : `FileArchive`</span>
+<span class="sd">            Used to look up file ids</span>
+
+<span class="sd">        file_id_array : `numpy.array`</span>
+<span class="sd">            Array that remaps the file indexes</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">full_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">status_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">full_list</span> <span class="o">+=</span> <span class="n">file_archive</span><span class="o">.</span><span class="n">get_file_paths</span><span class="p">(</span>
+            <span class="n">file_id_array</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">infile_ids</span><span class="p">])</span>
+        <span class="n">full_list</span> <span class="o">+=</span> <span class="n">file_archive</span><span class="o">.</span><span class="n">get_file_paths</span><span class="p">(</span>
+            <span class="n">file_id_array</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">outfile_ids</span><span class="p">])</span>
+        <span class="n">full_list</span> <span class="o">+=</span> <span class="n">file_archive</span><span class="o">.</span><span class="n">get_file_paths</span><span class="p">(</span>
+            <span class="n">file_id_array</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">rmfile_ids</span><span class="p">])</span>
+        <span class="n">full_list</span> <span class="o">+=</span> <span class="n">file_archive</span><span class="o">.</span><span class="n">get_file_paths</span><span class="p">(</span>
+            <span class="n">file_id_array</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">intfile_ids</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">filepath</span> <span class="ow">in</span> <span class="n">full_list</span><span class="p">:</span>
+            <span class="n">handle</span> <span class="o">=</span> <span class="n">file_archive</span><span class="o">.</span><span class="n">get_handle</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+            <span class="n">status_dict</span><span class="p">[</span><span class="n">filepath</span><span class="p">]</span> <span class="o">=</span> <span class="n">handle</span><span class="o">.</span><span class="n">status</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">file_dict</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">file_dict</span> <span class="o">=</span> <span class="n">FileDict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">file_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">status_dict</span><span class="p">)</span></div>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_fill_array_from_list</span><span class="p">(</span><span class="n">the_list</span><span class="p">,</span> <span class="n">the_array</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fill an `array` from a `list`&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">the_list</span><span class="p">):</span>
+            <span class="n">the_array</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">val</span>
+        <span class="k">return</span> <span class="n">the_array</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_fill_list_from_array</span><span class="p">(</span><span class="n">the_array</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fill a `list` from the nonzero members of an `array`&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">the_array</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()[</span><span class="mi">0</span><span class="p">]]</span>
+
+<div class="viewcode-block" id="JobDetails.make_dict"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobDetails.make_dict">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">make_dict</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">table</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build a dictionary map int to `JobDetails` from an `astropy.table.Table`&quot;&quot;&quot;</span>
+        <span class="n">ret_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">table</span><span class="p">:</span>
+            <span class="n">job_details</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">create_from_row</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+        <span class="n">ret_dict</span><span class="p">[</span><span class="n">job_details</span><span class="o">.</span><span class="n">dbkey</span><span class="p">]</span> <span class="o">=</span> <span class="n">job_details</span>
+        <span class="k">return</span> <span class="n">ret_dict</span></div>
+
+<div class="viewcode-block" id="JobDetails.create_from_row"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobDetails.create_from_row">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">create_from_row</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">table_row</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a `JobDetails` from an `astropy.table.row.Row` &quot;&quot;&quot;</span>
+        <span class="n">kwargs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">table_row</span><span class="o">.</span><span class="n">colnames</span><span class="p">:</span>
+            <span class="n">kwargs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">table_row</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+        <span class="n">infile_refs</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;infile_refs&#39;</span><span class="p">)</span>
+        <span class="n">outfile_refs</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;outfile_refs&#39;</span><span class="p">)</span>
+        <span class="n">rmfile_refs</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;rmfile_refs&#39;</span><span class="p">)</span>
+        <span class="n">intfile_refs</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;intfile_refs&#39;</span><span class="p">)</span>
+
+        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;infile_ids&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">infile_refs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">infile_refs</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;outfile_ids&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">outfile_refs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">outfile_refs</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;rmfile_ids&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">rmfile_refs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">rmfile_refs</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;intfile_ids&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">intfile_refs</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">intfile_refs</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="JobDetails.append_to_tables"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobDetails.append_to_tables">[docs]</a>    <span class="k">def</span> <span class="nf">append_to_tables</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table</span><span class="p">,</span> <span class="n">table_ids</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add this instance as a row on a `astropy.table.Table` &quot;&quot;&quot;</span>
+        <span class="n">infile_refs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="n">outfile_refs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="n">rmfile_refs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="n">intfile_refs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">2</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="n">f_ptr</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">table_ids</span><span class="p">[</span><span class="s1">&#39;file_id&#39;</span><span class="p">])</span>
+        <span class="n">infile_refs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">f_ptr</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">infile_ids</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">fid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">infile_ids</span><span class="p">:</span>
+                <span class="n">table_ids</span><span class="o">.</span><span class="n">add_row</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">file_id</span><span class="o">=</span><span class="n">fid</span><span class="p">))</span>
+                <span class="n">f_ptr</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">infile_refs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">f_ptr</span>
+        <span class="n">outfile_refs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">f_ptr</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">outfile_ids</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">fid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">outfile_ids</span><span class="p">:</span>
+                <span class="n">table_ids</span><span class="o">.</span><span class="n">add_row</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">file_id</span><span class="o">=</span><span class="n">fid</span><span class="p">))</span>
+                <span class="n">f_ptr</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">outfile_refs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">f_ptr</span>
+        <span class="n">rmfile_refs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">f_ptr</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">rmfile_ids</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">fid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rmfile_ids</span><span class="p">:</span>
+                <span class="n">table_ids</span><span class="o">.</span><span class="n">add_row</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">file_id</span><span class="o">=</span><span class="n">fid</span><span class="p">))</span>
+                <span class="n">f_ptr</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">rmfile_refs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">f_ptr</span>
+        <span class="n">intfile_refs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">f_ptr</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">intfile_ids</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">fid</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">intfile_ids</span><span class="p">:</span>
+                <span class="n">table_ids</span><span class="o">.</span><span class="n">add_row</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">file_id</span><span class="o">=</span><span class="n">fid</span><span class="p">))</span>
+                <span class="n">f_ptr</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">intfile_refs</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">f_ptr</span>
+
+        <span class="n">table</span><span class="o">.</span><span class="n">add_row</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">dbkey</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">dbkey</span><span class="p">,</span>
+                           <span class="n">jobname</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">jobname</span><span class="p">,</span>
+                           <span class="n">jobkey</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">jobkey</span><span class="p">,</span>
+                           <span class="n">appname</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">appname</span><span class="p">,</span>
+                           <span class="n">logfile</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">logfile</span><span class="p">,</span>
+                           <span class="n">job_config</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">job_config</span><span class="p">),</span>
+                           <span class="n">timestamp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span><span class="p">,</span>
+                           <span class="n">infile_refs</span><span class="o">=</span><span class="n">infile_refs</span><span class="p">,</span>
+                           <span class="n">outfile_refs</span><span class="o">=</span><span class="n">outfile_refs</span><span class="p">,</span>
+                           <span class="n">rmfile_refs</span><span class="o">=</span><span class="n">rmfile_refs</span><span class="p">,</span>
+                           <span class="n">intfile_refs</span><span class="o">=</span><span class="n">intfile_refs</span><span class="p">,</span>
+                           <span class="n">status</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">status</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="JobDetails.update_table_row"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobDetails.update_table_row">[docs]</a>    <span class="k">def</span> <span class="nf">update_table_row</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table</span><span class="p">,</span> <span class="n">row_idx</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add this instance as a row on a `astropy.table.Table` &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">table</span><span class="p">[</span><span class="n">row_idx</span><span class="p">][</span><span class="s1">&#39;timestamp&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestamp</span>
+            <span class="n">table</span><span class="p">[</span><span class="n">row_idx</span><span class="p">][</span><span class="s1">&#39;status&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span>
+        <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Index error&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="p">),</span> <span class="n">row_idx</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="JobDetails.check_status_logfile"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobDetails.check_status_logfile">[docs]</a>    <span class="k">def</span> <span class="nf">check_status_logfile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checker_func</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check on the status of this particular job using the logfile&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">checker_func</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logfile</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">status</span></div>
+
+    <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;String representation&quot;&quot;&quot;</span>
+        <span class="n">sout</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">sout</span> <span class="o">+=</span> <span class="s2">&quot;jobname   : </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jobname</span><span class="p">)</span>
+        <span class="n">sout</span> <span class="o">+=</span> <span class="s2">&quot;  jobkey  : </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jobkey</span><span class="p">)</span>
+        <span class="n">sout</span> <span class="o">+=</span> <span class="s2">&quot;  appname : </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">appname</span><span class="p">)</span>
+        <span class="n">sout</span> <span class="o">+=</span> <span class="s2">&quot;  logfile : </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logfile</span><span class="p">)</span>
+        <span class="n">sout</span> <span class="o">+=</span> <span class="s2">&quot;  status  : </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">JOB_STATUS_STRINGS</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span> <span class="n">status</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">sout</span></div>
+
+
+<div class="viewcode-block" id="JobArchive"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobArchive">[docs]</a><span class="k">class</span> <span class="nc">JobArchive</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class that keeps of all the jobs associated to an analysis.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    table_file   : str</span>
+<span class="sd">        Path to the file used to persist this `JobArchive`</span>
+<span class="sd">    table        : `astropy.table.Table`</span>
+<span class="sd">        Persistent representation of this `JobArchive`</span>
+<span class="sd">    table_ids    : `astropy.table.Table`</span>
+<span class="sd">        Ancillary table with information about file ids</span>
+<span class="sd">    file_archive : `FileArchive`</span>
+<span class="sd">        Archive with infomation about all this files used and produced by this analysis</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Singleton instance</span>
+    <span class="n">_archive</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;C&#39;tor</span>
+
+<span class="sd">        Reads kwargs[&#39;job_archive_table&#39;] and passes remain kwargs to self.file_archive</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_table_file</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_table_ids</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_table_id_array</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_file_archive</span> <span class="o">=</span> <span class="n">FileArchive</span><span class="o">.</span><span class="n">build_archive</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_read_table_file</span><span class="p">(</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;job_archive_table&#39;</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fullkey</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Return the `JobDetails` matching fullkey&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="n">fullkey</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">table_file</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the path to the file used to persist this `JobArchive` &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_file</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">table</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the persistent representation of this `JobArchive` &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">table_ids</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the rpersistent epresentation of the ancillary info of this `JobArchive` &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_ids</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">file_archive</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the `FileArchive` with infomation about all</span>
+<span class="sd">        the files used and produced by this analysis&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_archive</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">cache</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the transiet representation of this `JobArchive` &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span>
+
+    <span class="k">def</span> <span class="nf">_fill_cache</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fill the cache from the `astropy.table.Table`&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">irow</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="p">)):</span>
+            <span class="n">job_details</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_job_details</span><span class="p">(</span><span class="n">irow</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="n">job_details</span><span class="o">.</span><span class="n">fullkey</span><span class="p">]</span> <span class="o">=</span> <span class="n">job_details</span>
+
+    <span class="k">def</span> <span class="nf">_read_table_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">table_file</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Read an `astropy.table.Table` from table_file to set up the `JobArchive`&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_table_file</span> <span class="o">=</span> <span class="n">table_file</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_table_file</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_table</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_table_file</span><span class="p">,</span> <span class="n">hdu</span><span class="o">=</span><span class="s1">&#39;JOB_ARCHIVE&#39;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_table_ids</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_table_file</span><span class="p">,</span> <span class="n">hdu</span><span class="o">=</span><span class="s1">&#39;FILE_IDS&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_ids</span> <span class="o">=</span> <span class="n">JobDetails</span><span class="o">.</span><span class="n">make_tables</span><span class="p">({})</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_table_id_array</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_ids</span><span class="p">[</span><span class="s1">&#39;file_id&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fill_cache</span><span class="p">()</span>
+
+<div class="viewcode-block" id="JobArchive.make_job_details"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobArchive.make_job_details">[docs]</a>    <span class="k">def</span> <span class="nf">make_job_details</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">row_idx</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a `JobDetails` from an `astropy.table.row.Row` &quot;&quot;&quot;</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="p">[</span><span class="n">row_idx</span><span class="p">]</span>
+        <span class="n">job_details</span> <span class="o">=</span> <span class="n">JobDetails</span><span class="o">.</span><span class="n">create_from_row</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+        <span class="n">job_details</span><span class="o">.</span><span class="n">get_file_paths</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_file_archive</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_id_array</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="n">job_details</span><span class="o">.</span><span class="n">fullkey</span><span class="p">]</span> <span class="o">=</span> <span class="n">job_details</span>
+        <span class="k">return</span> <span class="n">job_details</span></div>
+
+<div class="viewcode-block" id="JobArchive.get_details"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobArchive.get_details">[docs]</a>    <span class="k">def</span> <span class="nf">get_details</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">jobname</span><span class="p">,</span> <span class="n">jobkey</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Get the `JobDetails` associated to a particular job instance&quot;&quot;&quot;</span>
+        <span class="n">fullkey</span> <span class="o">=</span> <span class="n">JobDetails</span><span class="o">.</span><span class="n">make_fullkey</span><span class="p">(</span><span class="n">jobname</span><span class="p">,</span> <span class="n">jobkey</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="n">fullkey</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="JobArchive.register_job"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobArchive.register_job">[docs]</a>    <span class="k">def</span> <span class="nf">register_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job_details</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Register a job in this `JobArchive` &quot;&quot;&quot;</span>
+        <span class="c1"># check to see if the job already exists</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">job_details_old</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_details</span><span class="p">(</span><span class="n">job_details</span><span class="o">.</span><span class="n">jobname</span><span class="p">,</span>
+                                               <span class="n">job_details</span><span class="o">.</span><span class="n">jobkey</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">job_details_old</span><span class="o">.</span><span class="n">status</span> <span class="o">&lt;=</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">running</span><span class="p">:</span>
+                <span class="n">job_details_old</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">job_details</span><span class="o">.</span><span class="n">status</span>
+                <span class="n">job_details_old</span><span class="o">.</span><span class="n">update_table_row</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="p">,</span> <span class="n">job_details_old</span><span class="o">.</span><span class="n">dbkey</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">job_details</span> <span class="o">=</span> <span class="n">job_details_old</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="n">job_details</span><span class="o">.</span><span class="n">dbkey</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="n">job_details</span><span class="o">.</span><span class="n">get_file_ids</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_file_archive</span><span class="p">,</span> <span class="n">creator</span><span class="o">=</span><span class="n">job_details</span><span class="o">.</span><span class="n">dbkey</span><span class="p">)</span>
+            <span class="n">job_details</span><span class="o">.</span><span class="n">append_to_tables</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_ids</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_table_id_array</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_ids</span><span class="p">[</span><span class="s1">&#39;file_id&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="n">job_details</span><span class="o">.</span><span class="n">fullkey</span><span class="p">]</span> <span class="o">=</span> <span class="n">job_details</span>
+        <span class="k">return</span> <span class="n">job_details</span></div>
+
+<div class="viewcode-block" id="JobArchive.register_jobs"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobArchive.register_jobs">[docs]</a>    <span class="k">def</span> <span class="nf">register_jobs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job_dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Register a bunch of jobs in this archive&quot;&quot;&quot;</span>
+        <span class="n">njobs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">job_dict</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Registering </span><span class="si">%i</span><span class="s2"> total jobs: &quot;</span> <span class="o">%</span> <span class="n">njobs</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">job_details</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">job_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">10</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">register_job</span><span class="p">(</span><span class="n">job_details</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;!</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="JobArchive.register_job_from_link"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobArchive.register_job_from_link">[docs]</a>    <span class="k">def</span> <span class="nf">register_job_from_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">link</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Register a job in the `JobArchive` from a `Link` object &quot;&quot;&quot;</span>
+        <span class="n">job_config</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;job_config&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">job_config</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">job_config</span> <span class="o">=</span> <span class="n">link</span><span class="o">.</span><span class="n">args</span>
+        <span class="n">status</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;status&#39;</span><span class="p">,</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">unknown</span><span class="p">)</span>
+        <span class="n">job_details</span> <span class="o">=</span> <span class="n">JobDetails</span><span class="p">(</span><span class="n">jobname</span><span class="o">=</span><span class="n">link</span><span class="o">.</span><span class="n">linkname</span><span class="p">,</span>
+                                 <span class="n">jobkey</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+                                 <span class="n">appname</span><span class="o">=</span><span class="n">link</span><span class="o">.</span><span class="n">appname</span><span class="p">,</span>
+                                 <span class="n">logfile</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;logfile&#39;</span><span class="p">),</span>
+                                 <span class="n">jobconfig</span><span class="o">=</span><span class="n">job_config</span><span class="p">,</span>
+                                 <span class="n">timestamp</span><span class="o">=</span><span class="n">get_timestamp</span><span class="p">(),</span>
+                                 <span class="n">file_dict</span><span class="o">=</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">link</span><span class="o">.</span><span class="n">files</span><span class="p">),</span>
+                                 <span class="n">sub_file_dict</span><span class="o">=</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">link</span><span class="o">.</span><span class="n">sub_files</span><span class="p">),</span>
+                                 <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">register_job</span><span class="p">(</span><span class="n">job_details</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">job_details</span></div>
+
+<div class="viewcode-block" id="JobArchive.update_job"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobArchive.update_job">[docs]</a>    <span class="k">def</span> <span class="nf">update_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job_details</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update a job in the `JobArchive` &quot;&quot;&quot;</span>
+        <span class="n">other</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_details</span><span class="p">(</span><span class="n">job_details</span><span class="o">.</span><span class="n">jobname</span><span class="p">,</span>
+                                 <span class="n">job_details</span><span class="o">.</span><span class="n">jobkey</span><span class="p">)</span>
+        <span class="n">other</span><span class="o">.</span><span class="n">timestamp</span> <span class="o">=</span> <span class="n">job_details</span><span class="o">.</span><span class="n">timestamp</span>
+        <span class="n">other</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">job_details</span><span class="o">.</span><span class="n">status</span>
+        <span class="n">other</span><span class="o">.</span><span class="n">update_table_row</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">dbkey</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">other</span></div>
+
+<div class="viewcode-block" id="JobArchive.remove_jobs"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobArchive.remove_jobs">[docs]</a>    <span class="k">def</span> <span class="nf">remove_jobs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mask</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Mark all jobs that match a mask as &#39;removed&#39; &quot;&quot;&quot;</span>
+        <span class="n">jobnames</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="p">[</span><span class="n">mask</span><span class="p">][</span><span class="s1">&#39;jobname&#39;</span><span class="p">]</span>
+        <span class="n">jobkey</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="p">[</span><span class="n">mask</span><span class="p">][</span><span class="s1">&#39;jobkey&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="p">[</span><span class="n">mask</span><span class="p">][</span><span class="s1">&#39;status&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">removed</span>
+        <span class="k">for</span> <span class="n">jobname</span><span class="p">,</span> <span class="n">jobkey</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">jobnames</span><span class="p">,</span> <span class="n">jobkey</span><span class="p">):</span>
+            <span class="n">fullkey</span> <span class="o">=</span> <span class="n">JobDetails</span><span class="o">.</span><span class="n">make_fullkey</span><span class="p">(</span><span class="n">jobname</span><span class="p">,</span> <span class="n">jobkey</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">fullkey</span><span class="p">)</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">removed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">write_table_file</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="JobArchive.build_temp_job_archive"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobArchive.build_temp_job_archive">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">build_temp_job_archive</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build and return a `JobArchive` using defualt locations of</span>
+<span class="sd">        persistent files. &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="s1">&#39;job_archive_temp.fits&#39;</span><span class="p">)</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="s1">&#39;file_archive_temp.fits&#39;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+        <span class="bp">cls</span><span class="o">.</span><span class="n">_archive</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">job_archive_table</span><span class="o">=</span><span class="s1">&#39;job_archive_temp.fits&#39;</span><span class="p">,</span>
+                           <span class="n">file_archive_table</span><span class="o">=</span><span class="s1">&#39;file_archive_temp.fits&#39;</span><span class="p">,</span>
+                           <span class="n">base_path</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;/&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_archive</span></div>
+
+<div class="viewcode-block" id="JobArchive.write_table_file"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobArchive.write_table_file">[docs]</a>    <span class="k">def</span> <span class="nf">write_table_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job_table_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">file_table_file</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Write the table to self._table_file&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;No table to write&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_ids</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;No ID table to write&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">job_table_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_table_file</span> <span class="o">=</span> <span class="n">job_table_file</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_file</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;No output file specified for table&quot;</span><span class="p">)</span>
+        <span class="n">write_tables_to_fits</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_table_file</span><span class="p">,</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table_ids</span><span class="p">],</span> <span class="n">clobber</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                             <span class="n">namelist</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;JOB_ARCHIVE&#39;</span><span class="p">,</span> <span class="s1">&#39;FILE_IDS&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_file_archive</span><span class="o">.</span><span class="n">write_table_file</span><span class="p">(</span><span class="n">file_table_file</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="JobArchive.update_job_status"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobArchive.update_job_status">[docs]</a>    <span class="k">def</span> <span class="nf">update_job_status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">checker_func</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update the status of all the jobs in the archive&quot;&quot;&quot;</span>
+        <span class="n">njobs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">status_vect</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">8</span><span class="p">),</span> <span class="nb">int</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Updating status of </span><span class="si">%i</span><span class="s2"> jobs: &quot;</span> <span class="o">%</span> <span class="n">njobs</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">key</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">200</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="n">job_details</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">job_details</span><span class="o">.</span><span class="n">status</span> <span class="ow">in</span> <span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">pending</span><span class="p">,</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">running</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">checker_func</span><span class="p">:</span>
+                    <span class="n">job_details</span><span class="o">.</span><span class="n">check_status_logfile</span><span class="p">(</span><span class="n">checker_func</span><span class="p">)</span>
+            <span class="n">job_details</span><span class="o">.</span><span class="n">update_table_row</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="p">,</span> <span class="n">job_details</span><span class="o">.</span><span class="n">dbkey</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">status_vect</span><span class="p">[</span><span class="n">job_details</span><span class="o">.</span><span class="n">status</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;!</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Summary:</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;  Unknown:   </span><span class="si">%i</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">status_vect</span><span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">unknown</span><span class="p">])</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;  Not Ready: </span><span class="si">%i</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span>
+                         <span class="n">status_vect</span><span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">not_ready</span><span class="p">])</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;  Ready:     </span><span class="si">%i</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">status_vect</span><span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">ready</span><span class="p">])</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;  Pending:   </span><span class="si">%i</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">status_vect</span><span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">pending</span><span class="p">])</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;  Running:   </span><span class="si">%i</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">status_vect</span><span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">running</span><span class="p">])</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;  Done:      </span><span class="si">%i</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">status_vect</span><span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">done</span><span class="p">])</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;  Failed:    </span><span class="si">%i</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">status_vect</span><span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">failed</span><span class="p">])</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;  Partial:   </span><span class="si">%i</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span>
+                         <span class="n">status_vect</span><span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">partial_failed</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="JobArchive.get_archive"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobArchive.get_archive">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_archive</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the singleton `JobArchive` instance &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_archive</span></div>
+
+<div class="viewcode-block" id="JobArchive.build_archive"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.JobArchive.build_archive">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">build_archive</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the singleton `JobArchive` instance, building it if needed &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_archive</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">cls</span><span class="o">.</span><span class="n">_archive</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_archive</span></div></div>
+
+
+<div class="viewcode-block" id="main_browse"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.job_archive.main_browse">[docs]</a><span class="k">def</span> <span class="nf">main_browse</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Entry point for command line use for browsing a JobArchive &quot;&quot;&quot;</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">usage</span><span class="o">=</span><span class="s2">&quot;job_archive.py [options]&quot;</span><span class="p">,</span>
+                                     <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Browse a job archive&quot;</span><span class="p">)</span>
+
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--jobs&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;job_archive_table&#39;</span><span class="p">,</span>
+                        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;job_archive_temp2.fits&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;Job archive file&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--files&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;file_archive_table&#39;</span><span class="p">,</span>
+                        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;file_archive_temp2.fits&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;File archive file&quot;</span><span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--base&#39;</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;base_path&#39;</span><span class="p">,</span>
+                        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">),</span> <span class="n">help</span><span class="o">=</span><span class="s2">&quot;File archive base path&quot;</span><span class="p">)</span>
+
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span>
+    <span class="n">job_ar</span> <span class="o">=</span> <span class="n">JobArchive</span><span class="o">.</span><span class="n">build_archive</span><span class="p">(</span><span class="o">**</span><span class="n">args</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">)</span>
+
+    <span class="n">job_ar</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">pprint</span><span class="p">()</span></div>
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s1">&#39;__main__&#39;</span><span class="p">:</span>
+    <span class="n">main_browse</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

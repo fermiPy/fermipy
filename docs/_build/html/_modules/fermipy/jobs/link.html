@@ -1,0 +1,1251 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fermipy.jobs.link &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../../fermipy.html">fermipy</a> &raquo;</li>
+        
+      <li>fermipy.jobs.link</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for fermipy.jobs.link</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module for class `Link`, which wraps a single command line application.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">argparse</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">abc</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span>
+
+<span class="kn">from</span> <span class="nn">fermipy.jobs.utils</span> <span class="k">import</span> <span class="n">is_null</span><span class="p">,</span> <span class="n">is_not_null</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.file_archive</span> <span class="k">import</span> <span class="n">FileDict</span><span class="p">,</span> <span class="n">FileStageManager</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.job_archive</span> <span class="k">import</span> <span class="n">get_timestamp</span><span class="p">,</span> <span class="n">JobStatus</span><span class="p">,</span> <span class="n">JobDetails</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.factory</span> <span class="k">import</span> <span class="n">LinkFactory</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.sys_interface</span> <span class="k">import</span> <span class="n">SysInterface</span>
+
+
+<span class="k">def</span> <span class="nf">extract_arguments</span><span class="p">(</span><span class="n">args</span><span class="p">,</span> <span class="n">defaults</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Extract a set of arguments from a large dictionary</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    args : dict</span>
+<span class="sd">        Dictionary with the arguments values to use</span>
+
+<span class="sd">    defaults : dict</span>
+<span class="sd">        Dictionary with all the argument to extract, and default values for each</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    out_dict : dict</span>
+<span class="sd">        A dictionary with only the extracted arguments</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">out_dict</span> <span class="o">=</span> <span class="n">convert_option_dict_to_dict</span><span class="p">(</span><span class="n">defaults</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">defaults</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="n">mapped_val</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mapped_val</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">out_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">mapped_val</span>
+    <span class="k">return</span> <span class="n">out_dict</span>
+
+
+<span class="k">def</span> <span class="nf">check_files</span><span class="p">(</span><span class="n">filelist</span><span class="p">,</span>
+                <span class="n">file_stage_manager</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">return_found</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">return_missing</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Check that all files in a list exist</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    filelist : list</span>
+<span class="sd">        The list of files we are checking for.</span>
+
+<span class="sd">    file_stage_manager : `fermipy.jobs.file_archive.FileStageManager`</span>
+<span class="sd">        A object that maps files to scratch space if needed.</span>
+
+<span class="sd">    return_found : list</span>
+<span class="sd">        A list with the paths of the files that were found.</span>
+
+<span class="sd">    return_missing : list</span>
+<span class="sd">        A list with the paths of the files that were missing.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    found : list</span>
+<span class="sd">        List of the found files, if requested, otherwise `None`</span>
+
+<span class="sd">    missing : list</span>
+<span class="sd">        List of the missing files, if requested, otherwise `None`</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">found</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">missing</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">none_count</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="n">filelist</span><span class="p">:</span>
+
+        <span class="k">if</span> <span class="n">fname</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">none_count</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">fname</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;@&#39;</span><span class="p">:</span>
+            <span class="n">fname</span> <span class="o">=</span> <span class="n">fname</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fname</span><span class="p">):</span>
+            <span class="n">found</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fname</span> <span class="o">+</span> <span class="s1">&#39;.gz&#39;</span><span class="p">):</span>
+            <span class="n">found</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">file_stage_manager</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fname</span> <span class="o">=</span> <span class="n">file_stage_manager</span><span class="o">.</span><span class="n">get_scratch_path</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">fname</span><span class="p">):</span>
+                <span class="n">found</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+                <span class="k">continue</span>
+        <span class="n">missing</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">return_found</span> <span class="ow">and</span> <span class="n">return_missing</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">found</span><span class="p">,</span> <span class="n">missing</span>
+    <span class="k">elif</span> <span class="n">return_found</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">found</span>
+    <span class="k">elif</span> <span class="n">return_missing</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">missing</span>
+    <span class="k">return</span> <span class="kc">None</span>
+
+
+<span class="k">def</span> <span class="nf">add_argument</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="n">dest</span><span class="p">,</span> <span class="n">info</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Add an argument to an `argparse.ArgumentParser` object</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    parser : `argparse.ArgumentParser`</span>
+<span class="sd">        The parser in question</span>
+
+<span class="sd">    dest : str</span>
+<span class="sd">        The destination for the argument</span>
+
+<span class="sd">    info : `tuple`</span>
+<span class="sd">        The information associated with the argument in question.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">default</span><span class="p">,</span> <span class="n">helpstr</span><span class="p">,</span> <span class="n">typeinfo</span> <span class="o">=</span> <span class="n">info</span>
+
+    <span class="k">if</span> <span class="n">dest</span> <span class="o">==</span> <span class="s1">&#39;args&#39;</span><span class="p">:</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;args&#39;</span><span class="p">,</span> <span class="n">nargs</span><span class="o">=</span><span class="s1">&#39;+&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="n">helpstr</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">typeinfo</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">dest</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;append&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="n">helpstr</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">typeinfo</span> <span class="o">==</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">dest</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="n">helpstr</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;--</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">dest</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store&#39;</span><span class="p">,</span> <span class="nb">type</span><span class="o">=</span><span class="n">typeinfo</span><span class="p">,</span>
+                            <span class="n">default</span><span class="o">=</span><span class="n">default</span><span class="p">,</span> <span class="n">help</span><span class="o">=</span><span class="n">helpstr</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">convert_value_to_option_tuple</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">helpstr</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert a value to a tuple of the form expected by `Link.options`</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    value :</span>
+<span class="sd">        The value we are converting</span>
+
+<span class="sd">    helpstr : str</span>
+<span class="sd">        The help string that will be associated to this option.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    option_info : tuple</span>
+<span class="sd">        A 3-tuple with default value, helpstring and type for this particular option.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">helpstr</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">helpstr</span> <span class="o">=</span> <span class="s2">&quot;Unknown&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">helpstr</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+
+
+<span class="k">def</span> <span class="nf">convert_dict_to_option_dict</span><span class="p">(</span><span class="n">input_dict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert a simple key-value dictionary to a dictionary of options tuples&quot;&quot;&quot;</span>
+    <span class="n">ret_dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">input_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">ret_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">convert_value_to_option_tuple</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ret_dict</span>
+
+
+<span class="k">def</span> <span class="nf">convert_option_dict_to_dict</span><span class="p">(</span><span class="n">option_dict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convert a dictionary of options tuples to a simple key-value dictionary&quot;&quot;&quot;</span>
+    <span class="n">ret_dict</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">option_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">is_null</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+            <span class="n">ret_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+            <span class="n">ret_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ret_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+    <span class="k">return</span> <span class="n">ret_dict</span>
+
+<span class="k">def</span> <span class="nf">reduce_by_keys</span><span class="p">(</span><span class="n">orig_dict</span><span class="p">,</span> <span class="n">keys</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Reduce a dictionary by selecting a set of keys &quot;&quot;&quot;</span>
+    <span class="n">ret</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys</span><span class="p">:</span>
+        <span class="n">ret</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">orig_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">default</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">ret</span>
+
+
+<div class="viewcode-block" id="Link"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link">[docs]</a><span class="k">class</span> <span class="nc">Link</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;A wrapper for a command line application.</span>
+
+<span class="sd">    This class keeps track for the arguments to pass to the application</span>
+<span class="sd">    as well as input and output files.</span>
+
+<span class="sd">    This can be used either with other `Link` objects to build a `Chain`,</span>
+<span class="sd">    or as standalone wrapper to pass configuration to the application.</span>
+
+<span class="sd">    Derived classes will need to override the appname and linkname-default</span>
+<span class="sd">    class parameters.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    appname : str</span>
+<span class="sd">        Name of the application run by this `Link`</span>
+
+<span class="sd">    linkname_default : str</span>
+<span class="sd">        Default name for `Link` of this type</span>
+
+<span class="sd">    default_options : dict</span>
+<span class="sd">        Dictionry with options, defaults, helpstring and types</span>
+<span class="sd">        for the parameters associated with the `Link`</span>
+
+<span class="sd">    default_file_args : dict</span>
+<span class="sd">        Dictionary specifying if particular parameters are associated</span>
+<span class="sd">        with input or output files.</span>
+
+<span class="sd">    linkname : str</span>
+<span class="sd">        Name of this `Link`, used as a key to find it in a `Chain`.</span>
+
+<span class="sd">    link_prefix : str</span>
+<span class="sd">        Optional prefix for this `Link`, used to distinguish between</span>
+<span class="sd">        similar `Link` objects on different `Chain` objects.</span>
+
+<span class="sd">    args : dict</span>
+<span class="sd">        Up-to-date dictionary with the arguments that will be passed to the application</span>
+
+<span class="sd">    _options : dict</span>
+<span class="sd">        Dictionary with the options that we are allowed to set and default values</span>
+
+<span class="sd">    files : `FileDict`</span>
+<span class="sd">        Object that keeps track of input and output files</span>
+
+<span class="sd">    jobs : `OrderedDict`</span>
+<span class="sd">        Dictionary mapping keys to `JobDetails`.  This contains information</span>
+<span class="sd">        about all the batch jobs associated to this `Link`</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">__metaclass__</span> <span class="o">=</span> <span class="n">abc</span><span class="o">.</span><span class="n">ABCMeta</span>
+    <span class="n">topkey</span> <span class="o">=</span> <span class="s1">&#39;__top__&#39;</span>
+
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;dummy&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;dummy&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span><span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Link to run </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">default_file_args</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;C&#39;tor</span>
+
+<span class="sd">        Keyword arguments</span>
+<span class="sd">        -----------------</span>
+
+<span class="sd">        linkname : str</span>
+<span class="sd">            Unique name of this particular link</span>
+
+<span class="sd">        link_prefix : str</span>
+<span class="sd">            Optional prefix for this `Link`, used to distinguish between</span>
+<span class="sd">            similar `Link` objects on different `Chain` objects.</span>
+
+<span class="sd">        interface : `fermipy.jobs.SysInterface`</span>
+<span class="sd">            Object that defines the interface to the batch farm.</span>
+
+<span class="sd">        file_stage : `FileStageManager`</span>
+<span class="sd">            Optional manager for staging files to and from a scratch area.</span>
+
+<span class="sd">        job_archive : `JobArchive`</span>
+<span class="sd">            Optional object that keeps a persistent record of jobs.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">linkname</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;linkname&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">linkname_default</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">link_prefix</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;link_prefix&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_interface</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;interface&#39;</span><span class="p">,</span> <span class="n">SysInterface</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_options</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">default_options</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_parser</span> <span class="o">=</span> <span class="n">argparse</span><span class="o">.</span><span class="n">ArgumentParser</span><span class="p">(</span><span class="n">usage</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">usage</span><span class="p">,</span>
+                                               <span class="n">description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">description</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fill_argparser</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_parser</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_file_stage</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;file_stage&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_job_archive</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;job_archive&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">args</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">convert_option_dict_to_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">files</span> <span class="o">=</span> <span class="n">FileDict</span><span class="p">(</span><span class="n">file_args</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">default_file_args</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sub_files</span> <span class="o">=</span> <span class="n">FileDict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">jobs</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+
+<div class="viewcode-block" id="Link.construct_docstring"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.construct_docstring">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">construct_docstring</span><span class="p">(</span><span class="n">options</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Construct a docstring for a set of options&quot;&quot;&quot;</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Parameters</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="n">s</span> <span class="o">+=</span> <span class="s2">&quot;----------</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">opt</span> <span class="ow">in</span> <span class="n">options</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">s</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> : </span><span class="si">%s</span><span class="se">\n</span><span class="s2">      </span><span class="si">%s</span><span class="s2"> [</span><span class="si">%s</span><span class="s2">]</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">opt</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span>
+                                               <span class="nb">str</span><span class="p">(</span><span class="n">opt</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="nb">str</span><span class="p">(</span><span class="n">opt</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="k">return</span> <span class="n">s</span></div>
+
+<div class="viewcode-block" id="Link.create"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.create">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build and return a `Link` &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Link.main"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.main">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">main</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Hook to run this `Link` from the command line &quot;&quot;&quot;</span>
+        <span class="n">link</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">create</span><span class="p">()</span>
+        <span class="n">link</span><span class="o">.</span><span class="n">run_analysis</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span></div>
+
+<div class="viewcode-block" id="Link.register_class"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.register_class">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">register_class</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Regsiter this class in the `LinkFactory` &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">cls</span><span class="o">.</span><span class="n">appname</span> <span class="ow">in</span> <span class="n">LinkFactory</span><span class="o">.</span><span class="n">_class_dict</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">LinkFactory</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">appname</span><span class="p">,</span> <span class="bp">cls</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">arg_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the list of arg names &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">full_linkname</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the linkname with the prefix attached</span>
+<span class="sd">        This is useful to distinguish between links on</span>
+<span class="sd">        different `Chain` objects.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">link_prefix</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">linkname</span>
+
+<div class="viewcode-block" id="Link.run_analysis"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.run_analysis">[docs]</a>    <span class="k">def</span> <span class="nf">run_analysis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">argv</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Implemented by sub-classes to run a particular analysis&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;run_analysis&#39;</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_make_argv</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate the vector of arguments for this `Link`.</span>
+
+<span class="sd">        This is exactly the &#39;argv&#39; generated for the</span>
+<span class="sd">        command as called from the Unix command line.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">command</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatted_command</span><span class="p">()</span>
+        <span class="n">tokens</span> <span class="o">=</span> <span class="n">command</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">tokens</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+
+    <span class="k">def</span> <span class="nf">_fill_argparser</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parser</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Fill an `argparser.ArgumentParser` with the options from this chain</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">add_argument</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_run_argparser</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">argv</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize a link with a set of arguments using an `argparser.ArgumentParser`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parser</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Link was not given a parser on initialization&#39;</span><span class="p">)</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_args</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">args</span>
+
+    <span class="k">def</span> <span class="nf">_latch_file_info</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Internal function to update the dictionaries</span>
+<span class="sd">        keeping track of input and output files</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="o">.</span><span class="n">file_dict</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="o">.</span><span class="n">latch_file_info</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_update_sub_file_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sub_files</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update a file dict with information from self&quot;&quot;&quot;</span>
+        <span class="n">sub_files</span><span class="o">.</span><span class="n">file_dict</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">job_details</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">jobs</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">job_details</span><span class="o">.</span><span class="n">file_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">sub_files</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">job_details</span><span class="o">.</span><span class="n">file_dict</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">job_details</span><span class="o">.</span><span class="n">sub_file_dict</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">sub_files</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">job_details</span><span class="o">.</span><span class="n">sub_file_dict</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_pre_run_checks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">dry_run</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Do some checks before running this link</span>
+
+<span class="sd">        This checks if input and output files are present.</span>
+
+<span class="sd">        If input files are missing this will raise `OSError` if dry_run is False</span>
+<span class="sd">        If all output files are present this return False.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        -----------</span>
+<span class="sd">        stream : `file`</span>
+<span class="sd">            Stream that this function will print to,</span>
+<span class="sd">            Must have &#39;write&#39; function</span>
+
+<span class="sd">        dry_run : bool</span>
+<span class="sd">            Print command but do not run it</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        status : bool</span>
+<span class="sd">            True if it is ok to proceed with running the link</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">input_missing</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_input_files</span><span class="p">(</span><span class="n">return_found</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">input_missing</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">dry_run</span><span class="p">:</span>                
+                <span class="n">stream</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Input files are missing: </span><span class="si">%s</span><span class="s2">: </span><span class="si">%i</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span>
+                             <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">linkname</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">input_missing</span><span class="p">)))</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="s2">&quot;Input files are missing: </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">input_missing</span><span class="p">)</span>
+
+        <span class="n">output_found</span><span class="p">,</span> <span class="n">output_missing</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_output_files</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">output_found</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">output_missing</span><span class="p">:</span>
+            <span class="n">stream</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;All output files for </span><span class="si">%s</span><span class="s2"> already exist: </span><span class="si">%i</span><span class="s2"> </span><span class="si">%i</span><span class="s2"> </span><span class="si">%i</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span>
+                         <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">linkname</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">output_found</span><span class="p">),</span>
+                          <span class="nb">len</span><span class="p">(</span><span class="n">output_missing</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="o">.</span><span class="n">output_files</span><span class="p">)))</span>
+            <span class="k">if</span> <span class="n">dry_run</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">pass</span>
+                <span class="c1"># return False</span>
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="k">def</span> <span class="nf">_set_file_stage</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_stage</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set this link to use a `FileStageManager` to copy files</span>
+<span class="sd">        to and from a scratch area</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_file_stage</span> <span class="o">=</span> <span class="n">file_stage</span>
+
+    <span class="k">def</span> <span class="nf">_create_job_details</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">job_config</span><span class="p">,</span> <span class="n">logfile</span><span class="p">,</span> <span class="n">status</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a `JobDetails` for a single job</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        key : str</span>
+<span class="sd">            Key used to identify this particular job</span>
+
+<span class="sd">        job_config : dict</span>
+<span class="sd">            Dictionary with arguements passed to this particular job</span>
+
+<span class="sd">        logfile : str</span>
+<span class="sd">            Name of the associated log file</span>
+
+<span class="sd">        status : int</span>
+<span class="sd">            Current status of the job</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        job_details : `fermipy.jobs.JobDetails`</span>
+<span class="sd">            Object with the details about a particular job.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">update_args</span><span class="p">(</span><span class="n">job_config</span><span class="p">)</span>
+        <span class="n">job_details</span> <span class="o">=</span> <span class="n">JobDetails</span><span class="p">(</span><span class="n">jobname</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">full_linkname</span><span class="p">,</span>
+                                 <span class="n">jobkey</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+                                 <span class="n">appname</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">appname</span><span class="p">,</span>
+                                 <span class="n">logfile</span><span class="o">=</span><span class="n">logfile</span><span class="p">,</span>
+                                 <span class="n">job_config</span><span class="o">=</span><span class="n">job_config</span><span class="p">,</span>
+                                 <span class="n">timestamp</span><span class="o">=</span><span class="n">get_timestamp</span><span class="p">(),</span>
+                                 <span class="n">file_dict</span><span class="o">=</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">),</span>
+                                 <span class="n">sub_file_dict</span><span class="o">=</span><span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sub_files</span><span class="p">),</span>
+                                 <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">job_details</span>
+
+    <span class="k">def</span> <span class="nf">_map_scratch_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build and return the mapping for copying files to and from scratch area&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_stage</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">({},</span> <span class="p">{})</span>
+        <span class="n">input_files</span> <span class="o">=</span> <span class="n">file_dict</span><span class="o">.</span><span class="n">input_files_to_stage</span>
+        <span class="n">output_files</span> <span class="o">=</span> <span class="n">file_dict</span><span class="o">.</span><span class="n">output_files_to_stage</span>
+        <span class="n">input_file_mapping</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_stage</span><span class="o">.</span><span class="n">map_files</span><span class="p">(</span><span class="n">input_files</span><span class="p">)</span>
+        <span class="n">output_file_mapping</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_stage</span><span class="o">.</span><span class="n">map_files</span><span class="p">(</span><span class="n">output_files</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_file_args</span><span class="p">(</span><span class="n">input_file_mapping</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_file_args</span><span class="p">(</span><span class="n">output_file_mapping</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">input_file_mapping</span><span class="p">,</span> <span class="n">output_file_mapping</span>
+
+    <span class="k">def</span> <span class="nf">_update_file_args</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_mapping</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Adjust the arguments to deal with staging files to the scratch area&quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">new_value</span> <span class="o">=</span> <span class="n">file_mapping</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">new_value</span> <span class="o">!=</span> <span class="n">value</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_value</span>
+
+    <span class="k">def</span> <span class="nf">_stage_input_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_mapping</span><span class="p">,</span> <span class="n">dry_run</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stage the input files to the scratch area and adjust the arguments accordingly&quot;&quot;&quot;</span>
+        <span class="c1"># print (&quot;Staging input &quot;, file_mapping)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_stage</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_file_stage</span><span class="o">.</span><span class="n">copy_to_scratch</span><span class="p">(</span><span class="n">file_mapping</span><span class="p">,</span> <span class="n">dry_run</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_stage_output_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">file_mapping</span><span class="p">,</span> <span class="n">dry_run</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Stage the output files to the scratch area and adjust the arguments accordingly&quot;&quot;&quot;</span>
+        <span class="c1"># print (&quot;Staging output &quot;, file_mapping)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_stage</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_file_stage</span><span class="o">.</span><span class="n">copy_from_scratch</span><span class="p">(</span><span class="n">file_mapping</span><span class="p">,</span> <span class="n">dry_run</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_run_link</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">dry_run</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                  <span class="n">stage_files</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">resubmit_failed</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Internal function that actually runs this link.</span>
+
+<span class="sd">        This checks if input and output files are present.</span>
+
+<span class="sd">        If input files are missing this will raise `OSError` if dry_run is False</span>
+<span class="sd">        If all output files are present this will skip execution.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        -----------</span>
+<span class="sd">        stream : `file`</span>
+<span class="sd">            Stream that this `Link` will print to,</span>
+<span class="sd">            must have &#39;write&#39; function.</span>
+
+<span class="sd">        dry_run : bool</span>
+<span class="sd">            Print command but do not run it.</span>
+
+<span class="sd">        stage_files : bool</span>
+<span class="sd">            Stage files to and from the scratch area.</span>
+
+<span class="sd">        resubmit_failed : bool</span>
+<span class="sd">            Resubmit failed jobs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_ok</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_pre_run_checks</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span> <span class="n">dry_run</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">check_ok</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_stage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">input_file_mapping</span><span class="p">,</span> <span class="n">output_file_mapping</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_map_scratch_files</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">stage_files</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_file_stage</span><span class="o">.</span><span class="n">make_scratch_dirs</span><span class="p">(</span><span class="n">input_file_mapping</span><span class="p">,</span> <span class="n">dry_run</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_file_stage</span><span class="o">.</span><span class="n">make_scratch_dirs</span><span class="p">(</span>
+                    <span class="n">output_file_mapping</span><span class="p">,</span> <span class="n">dry_run</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_stage_input_files</span><span class="p">(</span><span class="n">input_file_mapping</span><span class="p">,</span> <span class="n">dry_run</span><span class="p">)</span>
+
+        <span class="n">return_code</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_command</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span> <span class="n">dry_run</span><span class="p">)</span>
+        <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;return code &quot;</span><span class="p">,</span> <span class="n">return_code</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">return_code</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">done</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_stage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">stage_files</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_stage_output_files</span><span class="p">(</span><span class="n">output_file_mapping</span><span class="p">,</span> <span class="n">dry_run</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_finalize</span><span class="p">(</span><span class="n">dry_run</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">resubmit_failed</span><span class="p">:</span>
+                <span class="nb">print</span> <span class="p">(</span><span class="s2">&quot;Not resubmitting failed link </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">linkname</span><span class="p">))</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">failed</span>
+        <span class="k">if</span> <span class="n">dry_run</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_write_status_to_log</span><span class="p">(</span><span class="n">return_code</span><span class="p">,</span> <span class="n">stream</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_status_self</span><span class="p">(</span><span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_register_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">job_config</span><span class="p">,</span> <span class="n">logfile</span><span class="p">,</span> <span class="n">status</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a `JobDetails` for this link</span>
+<span class="sd">        and add it to the self.jobs dictionary.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        key : str</span>
+<span class="sd">            Key used to identify this particular job</span>
+
+<span class="sd">        job_config : dict</span>
+<span class="sd">            Dictionary with arguments passed to this particular job</span>
+
+<span class="sd">        logfile : str</span>
+<span class="sd">            Name of the associated log file</span>
+
+<span class="sd">        status : int</span>
+<span class="sd">            Current status of the job</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        job_details : `fermipy.jobs.JobDetails`</span>
+<span class="sd">            Object with the details about this particular job.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">job_details</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_job_details</span><span class="p">(</span>
+            <span class="n">key</span><span class="p">,</span> <span class="n">job_config</span><span class="p">,</span> <span class="n">logfile</span><span class="p">,</span> <span class="n">status</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">jobs</span><span class="p">[</span><span class="n">job_details</span><span class="o">.</span><span class="n">fullkey</span><span class="p">]</span> <span class="o">=</span> <span class="n">job_details</span>
+        <span class="k">return</span> <span class="n">job_details</span>
+
+    <span class="k">def</span> <span class="nf">_register_self</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">logfile</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">JobDetails</span><span class="o">.</span><span class="n">topkey</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">unknown</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Runs this link, captures output to logfile,</span>
+<span class="sd">        and records the job in self.jobs&quot;&quot;&quot;</span>
+        <span class="n">fullkey</span> <span class="o">=</span> <span class="n">JobDetails</span><span class="o">.</span><span class="n">make_fullkey</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">full_linkname</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">fullkey</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">jobs</span><span class="p">:</span>
+            <span class="n">job_details</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">jobs</span><span class="p">[</span><span class="n">fullkey</span><span class="p">]</span>
+            <span class="n">job_details</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">status</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">job_details</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_register_job</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="p">,</span> <span class="n">logfile</span><span class="p">,</span> <span class="n">status</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_archive_self</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">logfile</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">JobDetails</span><span class="o">.</span><span class="n">topkey</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">unknown</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Write info about a job run by this `Link` to the job archive&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_register_self</span><span class="p">(</span><span class="n">logfile</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">status</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_job_archive</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_job_archive</span><span class="o">.</span><span class="n">register_jobs</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_jobs</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="nf">_set_status_self</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">JobDetails</span><span class="o">.</span><span class="n">topkey</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">unknown</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Set the status of this job, both in self.jobs and</span>
+<span class="sd">        in the `JobArchive` if it is present. &quot;&quot;&quot;</span>
+        <span class="n">fullkey</span> <span class="o">=</span> <span class="n">JobDetails</span><span class="o">.</span><span class="n">make_fullkey</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">full_linkname</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">fullkey</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">jobs</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">jobs</span><span class="p">[</span><span class="n">fullkey</span><span class="p">]</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">status</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_job_archive</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_job_archive</span><span class="o">.</span><span class="n">register_job</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jobs</span><span class="p">[</span><span class="n">fullkey</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_register_self</span><span class="p">(</span><span class="s1">&#39;dummy.log&#39;</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">status</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_write_status_to_log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">return_code</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Write the status of this job to a log stream.</span>
+<span class="sd">        This is used to check on job completion.&quot;&quot;&quot;</span>
+        <span class="n">stream</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;Timestamp: </span><span class="si">%i</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">get_timestamp</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">return_code</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">stream</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interface</span><span class="o">.</span><span class="n">string_successful</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">stream</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> </span><span class="si">%i</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span>
+                         <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_interface</span><span class="o">.</span><span class="n">string_exited</span><span class="p">,</span> <span class="n">return_code</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_finalize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dry_run</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Remove / compress files as requested &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">rmfile</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="o">.</span><span class="n">temp_files</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">dry_run</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;remove </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">rmfile</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">rmfile</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">gzfile</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="o">.</span><span class="n">gzip_files</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">dry_run</span><span class="p">:</span>
+                <span class="c1"># print (&quot;gzip %s&quot; % gzfile)</span>
+                <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s1">&#39;gzip -9 </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">gzfile</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Link.update_args"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.update_args">[docs]</a>    <span class="k">def</span> <span class="nf">update_args</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">override_args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Update the argument used to invoke the application</span>
+
+<span class="sd">        Note that this will also update the dictionary of input and output files.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        -----------</span>
+
+<span class="sd">        override_args : dict</span>
+<span class="sd">            Dictionary of arguments to override the current values</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">args</span> <span class="o">=</span> <span class="n">extract_arguments</span><span class="p">(</span><span class="n">override_args</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_latch_file_info</span><span class="p">()</span>
+        <span class="n">scratch_dir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;scratch&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">is_not_null</span><span class="p">(</span><span class="n">scratch_dir</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_file_stage</span> <span class="o">=</span> <span class="n">FileStageManager</span><span class="p">(</span><span class="n">scratch_dir</span><span class="p">,</span> <span class="s1">&#39;.&#39;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Link.get_failed_jobs"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.get_failed_jobs">[docs]</a>    <span class="k">def</span> <span class="nf">get_failed_jobs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fail_running</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">fail_pending</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a dictionary with the subset of jobs that are marked as failed</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fail_running : `bool`</span>
+<span class="sd">            If True, consider running jobs as failed</span>
+
+<span class="sd">        fail_pending : `bool`</span>
+<span class="sd">            If True, consider pending jobs as failed</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        failed_jobs : dict</span>
+<span class="sd">            Dictionary mapping from job key to `JobDetails` for the failed jobs.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">failed_jobs</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">job_key</span><span class="p">,</span> <span class="n">job_details</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">jobs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">job_details</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">failed</span><span class="p">:</span>
+                <span class="n">failed_jobs</span><span class="p">[</span><span class="n">job_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">job_details</span>
+            <span class="k">elif</span> <span class="n">job_details</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">partial_failed</span><span class="p">:</span>
+                <span class="n">failed_jobs</span><span class="p">[</span><span class="n">job_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">job_details</span>
+            <span class="k">elif</span> <span class="n">fail_running</span> <span class="ow">and</span> <span class="n">job_details</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">running</span><span class="p">:</span>
+                <span class="n">failed_jobs</span><span class="p">[</span><span class="n">job_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">job_details</span>
+            <span class="k">elif</span> <span class="n">fail_pending</span> <span class="ow">and</span> <span class="n">job_details</span><span class="o">.</span><span class="n">status</span> <span class="o">&lt;=</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">pending</span><span class="p">:</span>
+                <span class="n">failed_jobs</span><span class="p">[</span><span class="n">job_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">job_details</span>
+        <span class="k">return</span> <span class="n">failed_jobs</span></div>
+
+<div class="viewcode-block" id="Link.check_job_status"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.check_job_status">[docs]</a>    <span class="k">def</span> <span class="nf">check_job_status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="n">JobDetails</span><span class="o">.</span><span class="n">topkey</span><span class="p">,</span>
+                         <span class="n">fail_running</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                         <span class="n">fail_pending</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                         <span class="n">force_check</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check the status of a particular job</span>
+
+<span class="sd">        By default this checks the status of the top-level job, but</span>
+<span class="sd">        can by made to drill into the sub-jobs.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        key : str</span>
+<span class="sd">            Key associated to the job in question</span>
+
+<span class="sd">        fail_running : `bool`</span>
+<span class="sd">            If True, consider running jobs as failed</span>
+
+<span class="sd">        fail_pending : `bool`</span>
+<span class="sd">            If True, consider pending jobs as failed</span>
+
+<span class="sd">        force_check : `bool`</span>
+<span class="sd">            Drill into status of individual jobs` instead of using top level job only</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        status : `JobStatus`</span>
+<span class="sd">            Job status flag</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">jobs</span><span class="p">:</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">jobs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">status</span>
+            <span class="k">if</span> <span class="n">status</span> <span class="ow">in</span> <span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">unknown</span><span class="p">,</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">ready</span><span class="p">,</span>
+                          <span class="n">JobStatus</span><span class="o">.</span><span class="n">pending</span><span class="p">,</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">running</span><span class="p">]</span> <span class="ow">or</span> <span class="n">force_check</span><span class="p">:</span>
+                <span class="n">status</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_interface</span><span class="o">.</span><span class="n">check_job</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jobs</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">running</span> <span class="ow">and</span> <span class="n">fail_running</span><span class="p">:</span>
+                <span class="n">status</span> <span class="o">=</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">failed</span>
+            <span class="k">if</span> <span class="n">status</span> <span class="o">==</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">pending</span> <span class="ow">and</span> <span class="n">fail_pending</span><span class="p">:</span>
+                <span class="n">status</span> <span class="o">=</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">failed</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">jobs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">status</span> <span class="o">=</span> <span class="n">status</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_job_archive</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_job_archive</span><span class="o">.</span><span class="n">register_job</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">jobs</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">status</span> <span class="o">=</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">no_job</span>
+
+        <span class="k">return</span> <span class="n">status</span></div>
+
+<div class="viewcode-block" id="Link.check_jobs_status"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.check_jobs_status">[docs]</a>    <span class="k">def</span> <span class="nf">check_jobs_status</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                          <span class="n">fail_running</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                          <span class="n">fail_pending</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check the status of all the jobs run from this link</span>
+<span class="sd">        and return a status flag that summarizes that.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        fail_running : `bool`</span>
+<span class="sd">            If True, consider running jobs as failed</span>
+
+<span class="sd">        fail_pending : `bool`</span>
+<span class="sd">            If True, consider pending jobs as failed</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        status : `JobStatus`</span>
+<span class="sd">            Job status flag that summarizes the status of all the jobs,</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">n_failed</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">n_partial</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">n_passed</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">n_total</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">job_details</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">jobs</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">n_total</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">if</span> <span class="n">job_details</span><span class="o">.</span><span class="n">status</span> <span class="ow">in</span> <span class="p">[</span><span class="n">JobStatus</span><span class="o">.</span><span class="n">failed</span><span class="p">,</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">partial_failed</span><span class="p">]:</span>
+                <span class="n">n_failed</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">fail_running</span> <span class="ow">and</span> <span class="n">job_details</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">running</span><span class="p">:</span>
+                <span class="n">n_failed</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">fail_pending</span> <span class="ow">and</span> <span class="n">job_details</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">pending</span><span class="p">:</span>
+                <span class="n">n_failed</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">job_details</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">done</span><span class="p">:</span>
+                <span class="n">n_passed</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="k">if</span> <span class="n">n_failed</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">failed</span>
+        <span class="k">elif</span> <span class="n">n_passed</span> <span class="o">==</span> <span class="n">n_total</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">done</span>
+        <span class="k">elif</span> <span class="n">n_passed</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">running</span>
+
+        <span class="k">return</span> <span class="n">JobStatus</span><span class="o">.</span><span class="n">pending</span></div>
+
+<div class="viewcode-block" id="Link.clear_jobs"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.clear_jobs">[docs]</a>    <span class="k">def</span> <span class="nf">clear_jobs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Clear the self.jobs dictionary that contains information</span>
+<span class="sd">        about jobs associated with this `Link`.</span>
+
+<span class="sd">        For sub-classes, if recursive is True this also clean jobs</span>
+<span class="sd">        from any internal `Link`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">jobs</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="Link.clean_jobs"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.clean_jobs">[docs]</a>    <span class="k">def</span> <span class="nf">clean_jobs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Clean out all of the jobs associated to this link.</span>
+
+<span class="sd">        For sub-classes, if recursive is True this also clean jobs</span>
+<span class="sd">        from any internal `Link`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_interface</span><span class="o">.</span><span class="n">clean_jobs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Link.get_jobs"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.get_jobs">[docs]</a>    <span class="k">def</span> <span class="nf">get_jobs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">recursive</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a dictionary with all the jobs</span>
+
+<span class="sd">        For sub-classes, if recursive is True this will include jobs</span>
+<span class="sd">        from any internal `Link`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">recursive</span><span class="p">:</span>
+            <span class="n">ret_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">jobs</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">ret_dict</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">jobs</span></div>
+
+<div class="viewcode-block" id="Link.check_input_files"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.check_input_files">[docs]</a>    <span class="k">def</span> <span class="nf">check_input_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                          <span class="n">return_found</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                          <span class="n">return_missing</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check if input files exist.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        return_found : list</span>
+<span class="sd">            A list with the paths of the files that were found.</span>
+
+<span class="sd">        return_missing : list</span>
+<span class="sd">            A list with the paths of the files that were missing.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        found : list</span>
+<span class="sd">            List of the found files, if requested, otherwise `None`</span>
+
+<span class="sd">        missing : list</span>
+<span class="sd">            List of the missing files, if requested, otherwise `None`</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">all_input_files</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="o">.</span><span class="n">chain_input_files</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">sub_files</span><span class="o">.</span><span class="n">chain_input_files</span>
+        <span class="k">return</span> <span class="n">check_files</span><span class="p">(</span><span class="n">all_input_files</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_stage</span><span class="p">,</span>
+                           <span class="n">return_found</span><span class="p">,</span> <span class="n">return_missing</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Link.check_output_files"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.check_output_files">[docs]</a>    <span class="k">def</span> <span class="nf">check_output_files</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span>
+                           <span class="n">return_found</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                           <span class="n">return_missing</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check if output files exist.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        return_found : list</span>
+<span class="sd">            A list with the paths of the files that were found.</span>
+
+<span class="sd">        return_missing : list</span>
+<span class="sd">            A list with the paths of the files that were missing.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        found : list</span>
+<span class="sd">            List of the found files, if requested, otherwise `None`</span>
+
+<span class="sd">        missing : list</span>
+<span class="sd">            List of the missing files, if requested, otherwise `None`</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">all_output_files</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">files</span><span class="o">.</span><span class="n">chain_output_files</span> <span class="o">+</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">sub_files</span><span class="o">.</span><span class="n">chain_output_files</span>
+        <span class="k">return</span> <span class="n">check_files</span><span class="p">(</span><span class="n">all_output_files</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_file_stage</span><span class="p">,</span>
+                           <span class="n">return_found</span><span class="p">,</span> <span class="n">return_missing</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Link.missing_input_files"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.missing_input_files">[docs]</a>    <span class="k">def</span> <span class="nf">missing_input_files</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Make and return a dictionary of the missing input files.</span>
+
+<span class="sd">        This returns a dictionary mapping</span>
+<span class="sd">        filepath to list of `Link` that use the file as input.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">missing</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_input_files</span><span class="p">(</span><span class="n">return_found</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">ret_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">miss_file</span> <span class="ow">in</span> <span class="n">missing</span><span class="p">:</span>
+            <span class="n">ret_dict</span><span class="p">[</span><span class="n">miss_file</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">linkname</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">ret_dict</span></div>
+
+<div class="viewcode-block" id="Link.missing_output_files"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.missing_output_files">[docs]</a>    <span class="k">def</span> <span class="nf">missing_output_files</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Make and return a dictionary of the missing output files.</span>
+
+<span class="sd">        This returns a dictionary mapping</span>
+<span class="sd">        filepath to list of links that produce the file as output.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">missing</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_output_files</span><span class="p">(</span><span class="n">return_found</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">ret_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">miss_file</span> <span class="ow">in</span> <span class="n">missing</span><span class="p">:</span>
+            <span class="n">ret_dict</span><span class="p">[</span><span class="n">miss_file</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">linkname</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">ret_dict</span></div>
+
+<div class="viewcode-block" id="Link.formatted_command"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.formatted_command">[docs]</a>    <span class="k">def</span> <span class="nf">formatted_command</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build and return the formatted command for this `Link`.</span>
+
+<span class="sd">        This is exactly the command as called from the Unix command line.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># FIXME, this isn&#39;t really great as it force you to have all the arguments</span>
+        <span class="n">command_template</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">command_template</span><span class="p">()</span>
+        <span class="n">format_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">format_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="c1"># protect whitespace</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                <span class="n">outstr</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;args&#39;</span><span class="p">:</span>
+                    <span class="n">outkey</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">outkey</span> <span class="o">=</span> <span class="s2">&quot;--</span><span class="si">%s</span><span class="s2"> &quot;</span>
+                <span class="k">for</span> <span class="n">lval</span> <span class="ow">in</span> <span class="n">value</span><span class="p">:</span>
+                    <span class="n">outstr</span> <span class="o">+=</span> <span class="s1">&#39; &#39;</span>
+                    <span class="n">outstr</span> <span class="o">+=</span> <span class="n">outkey</span>
+                    <span class="n">outstr</span> <span class="o">+=</span> <span class="n">lval</span>
+                <span class="n">format_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;&quot;</span><span class="si">%s</span><span class="s1">&quot;&#39;</span> <span class="o">%</span> <span class="n">outstr</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">key</span> <span class="o">!=</span> <span class="s1">&#39;args&#39;</span><span class="p">:</span>
+                <span class="n">format_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;&quot;</span><span class="si">%s</span><span class="s1">&quot;&#39;</span> <span class="o">%</span> <span class="n">value</span>
+            <span class="k">elif</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">format_dict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;none&#39;</span>
+
+        <span class="n">command</span> <span class="o">=</span> <span class="n">command_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">format_dict</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">command</span></div>
+
+<div class="viewcode-block" id="Link.run_command"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.run_command">[docs]</a>    <span class="k">def</span> <span class="nf">run_command</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">dry_run</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Runs the command for this link.  This method can be overridden by</span>
+<span class="sd">        sub-classes to invoke a different command</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        stream : `file`</span>
+<span class="sd">            Stream that this `Link` will print to,</span>
+<span class="sd">            Must have &#39;write&#39; function</span>
+
+<span class="sd">        dry_run : bool</span>
+<span class="sd">            Print command but do not run it</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        code : int</span>
+<span class="sd">            Return code from sub-process</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">command</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">formatted_command</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">dry_run</span><span class="p">:</span>
+            <span class="n">stream</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">command</span><span class="p">)</span>
+            <span class="n">stream</span><span class="o">.</span><span class="n">flush</span><span class="p">()</span>
+            <span class="k">return</span> <span class="mi">0</span>
+        <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span><span class="n">command</span><span class="o">.</span><span class="n">split</span><span class="p">(),</span>
+                                <span class="n">stderr</span><span class="o">=</span><span class="n">stream</span><span class="p">,</span>
+                                <span class="n">stdout</span><span class="o">=</span><span class="n">stream</span><span class="p">)</span>
+        <span class="n">proc</span><span class="o">.</span><span class="n">communicate</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">proc</span><span class="o">.</span><span class="n">returncode</span></div>
+
+<div class="viewcode-block" id="Link.run"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.run">[docs]</a>    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">dry_run</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">stage_files</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">resubmit_failed</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Runs this `Link`.</span>
+
+<span class="sd">        This version is intended to be overwritten by sub-classes so</span>
+<span class="sd">        as to provide a single function that behaves the same</span>
+<span class="sd">        for all version of `Link`</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        -----------</span>
+<span class="sd">        stream : `file`</span>
+<span class="sd">            Stream that this `Link` will print to,</span>
+<span class="sd">            Must have &#39;write&#39; function</span>
+
+<span class="sd">        dry_run : bool</span>
+<span class="sd">            Print command but do not run it.</span>
+
+<span class="sd">        stage_files : bool</span>
+<span class="sd">            Copy files to and from scratch staging area.</span>
+
+<span class="sd">        resubmit_failed : bool</span>
+<span class="sd">            Flag for sub-classes to resubmit failed jobs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_run_link</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span> <span class="n">dry_run</span><span class="p">,</span> <span class="n">stage_files</span><span class="p">,</span> <span class="n">resubmit_failed</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Link.run_with_log"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.run_with_log">[docs]</a>    <span class="k">def</span> <span class="nf">run_with_log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dry_run</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">stage_files</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">resubmit_failed</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Runs this link with output sent to a pre-defined logfile</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        -----------</span>
+<span class="sd">        dry_run : bool</span>
+<span class="sd">            Print command but do not run it.</span>
+
+<span class="sd">        stage_files : bool</span>
+<span class="sd">            Copy files to and from scratch staging area.</span>
+
+<span class="sd">        resubmit_failed : bool</span>
+<span class="sd">            Flag for sub-classes to resubmit failed jobs.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">fullkey</span> <span class="o">=</span> <span class="n">JobDetails</span><span class="o">.</span><span class="n">make_fullkey</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">full_linkname</span><span class="p">)</span>
+        <span class="n">job_details</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">jobs</span><span class="p">[</span><span class="n">fullkey</span><span class="p">]</span>
+        <span class="n">odir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">job_details</span><span class="o">.</span><span class="n">logfile</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">odir</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="n">ostream</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">job_details</span><span class="o">.</span><span class="n">logfile</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">ostream</span><span class="p">,</span> <span class="n">dry_run</span><span class="p">,</span> <span class="n">stage_files</span><span class="p">,</span> <span class="n">resubmit_failed</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Link.command_template"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.command_template">[docs]</a>    <span class="k">def</span> <span class="nf">command_template</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build and return a string that can be used as a template invoking</span>
+<span class="sd">        this chain from the command line.</span>
+
+<span class="sd">        The actual command can be obtainted by using</span>
+<span class="sd">        `self.command_template().format(**self.args)`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">com_out</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">appname</span>
+        <span class="n">arg_string</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">flag_string</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="c1"># Loop over the key, value pairs in self.args</span>
+
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">args</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="c1"># Check if the value is set in self._options</span>
+            <span class="c1"># If so, get the value from there</span>
+            <span class="k">if</span> <span class="n">val</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">opt_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">opt_val</span> <span class="o">=</span> <span class="n">val</span>
+            <span class="n">opt_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="o">==</span> <span class="s1">&#39;args&#39;</span><span class="p">:</span>
+                <span class="c1"># &#39;args&#39; is special, pull it out and move it to the back</span>
+                <span class="n">arg_string</span> <span class="o">+=</span> <span class="s1">&#39; {</span><span class="si">%s</span><span class="s1">}&#39;</span> <span class="o">%</span> <span class="n">key</span>
+            <span class="k">elif</span> <span class="n">opt_type</span> <span class="ow">is</span> <span class="nb">bool</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">opt_val</span><span class="p">:</span>
+                    <span class="n">flag_string</span> <span class="o">+=</span> <span class="s1">&#39; --</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">opt_type</span> <span class="ow">is</span> <span class="nb">list</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">is_null</span><span class="p">(</span><span class="n">opt_val</span><span class="p">):</span>
+                    <span class="k">continue</span>
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">opt_val</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                    <span class="n">com_out</span> <span class="o">+=</span> <span class="s1">&#39; --</span><span class="si">%s</span><span class="s1"> </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">opt_val</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">opt_val</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">arg_val</span> <span class="ow">in</span> <span class="n">opt_val</span><span class="p">:</span>
+                        <span class="n">com_out</span> <span class="o">+=</span> <span class="s1">&#39; --</span><span class="si">%s</span><span class="s1"> </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">arg_val</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">com_out</span> <span class="o">+=</span> <span class="s1">&#39; --</span><span class="si">%s</span><span class="s1"> {</span><span class="si">%s</span><span class="s1">}&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+        <span class="n">com_out</span> <span class="o">+=</span> <span class="n">flag_string</span>
+        <span class="n">com_out</span> <span class="o">+=</span> <span class="n">arg_string</span>
+        <span class="k">return</span> <span class="n">com_out</span></div>
+
+
+<div class="viewcode-block" id="Link.print_summary"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.link.Link.print_summary">[docs]</a>    <span class="k">def</span> <span class="nf">print_summary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">recurse_level</span><span class="o">=</span><span class="mi">2</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Print a summary of the activity done by this `Link`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        -----------</span>
+<span class="sd">        stream : `file`</span>
+<span class="sd">            Stream to print to, must have &#39;write&#39; method.</span>
+
+<span class="sd">        indent : str</span>
+<span class="sd">            Indentation at start of line</span>
+
+<span class="sd">        recurse_level : int</span>
+<span class="sd">            Number of recursion levels to print</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">recurse_level</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="n">stream</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">Link: </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">indent</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">linkname</span><span class="p">))</span>
+        <span class="n">stream</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">N_jobs: </span><span class="si">%s</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">indent</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_jobs</span><span class="p">())))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sub_files</span><span class="o">.</span><span class="n">print_chain_summary</span><span class="p">(</span><span class="n">stream</span><span class="p">,</span> <span class="n">indent</span><span class="p">)</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

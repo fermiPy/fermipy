@@ -1,0 +1,907 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fermipy.extension &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../fermipy.html">fermipy</a> &raquo;</li>
+        
+      <li>fermipy.extension</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for fermipy.extension</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">pprint</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">astropy.io</span> <span class="k">import</span> <span class="n">fits</span>
+<span class="kn">from</span> <span class="nn">astropy.table</span> <span class="k">import</span> <span class="n">Table</span><span class="p">,</span> <span class="n">Column</span>
+<span class="kn">from</span> <span class="nn">astropy.coordinates</span> <span class="k">import</span> <span class="n">SkyCoord</span>
+<span class="kn">import</span> <span class="nn">fermipy.config</span>
+<span class="kn">from</span> <span class="nn">fermipy</span> <span class="k">import</span> <span class="n">utils</span>
+<span class="kn">from</span> <span class="nn">fermipy</span> <span class="k">import</span> <span class="n">defaults</span>
+<span class="kn">from</span> <span class="nn">fermipy.config</span> <span class="k">import</span> <span class="n">ConfigSchema</span>
+<span class="kn">from</span> <span class="nn">fermipy.gtutils</span> <span class="k">import</span> <span class="n">SourceMapState</span><span class="p">,</span> <span class="n">FreeParameterState</span>
+<span class="kn">from</span> <span class="nn">fermipy.timing</span> <span class="k">import</span> <span class="n">Timer</span>
+<span class="kn">from</span> <span class="nn">fermipy.data_struct</span> <span class="k">import</span> <span class="n">MutableNamedTuple</span>
+<span class="kn">from</span> <span class="nn">fermipy</span> <span class="k">import</span> <span class="n">fits_utils</span>
+<span class="kn">from</span> <span class="nn">LikelihoodState</span> <span class="k">import</span> <span class="n">LikelihoodState</span>
+
+
+<span class="k">class</span> <span class="nc">ExtensionFit</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Mixin class which provides extension fitting to</span>
+<span class="sd">    `~fermipy.gtanalysis.GTAnalysis`.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">extension</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Test this source for spatial extension with the likelihood</span>
+<span class="sd">        ratio method (TS_ext).  This method will substitute an</span>
+<span class="sd">        extended spatial model for the given source and perform a</span>
+<span class="sd">        one-dimensional scan of the spatial extension parameter over</span>
+<span class="sd">        the range specified with the width parameters.  The 1-D</span>
+<span class="sd">        profile likelihood is then used to compute the best-fit value,</span>
+<span class="sd">        upper limit, and TS for extension.  The nuisance parameters</span>
+<span class="sd">        that will be simultaneously fit when performing the spatial</span>
+<span class="sd">        scan can be controlled with the ``fix_shape``,</span>
+<span class="sd">        ``free_background``, and ``free_radius`` options.  By default</span>
+<span class="sd">        the position of the source will be fixed to its current</span>
+<span class="sd">        position.  A simultaneous fit to position and extension can be</span>
+<span class="sd">        performed by setting ``fit_position`` to True.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        name : str</span>
+<span class="sd">            Source name.</span>
+
+<span class="sd">        {options}</span>
+
+<span class="sd">        optimizer : dict</span>
+<span class="sd">            Dictionary that overrides the default optimizer settings.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        extension : dict</span>
+<span class="sd">            Dictionary containing results of the extension analysis.  The same</span>
+<span class="sd">            dictionary is also saved to the dictionary of this source under</span>
+<span class="sd">            &#39;extension&#39;.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">timer</span> <span class="o">=</span> <span class="n">Timer</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">get_source_by_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>
+
+        <span class="n">schema</span> <span class="o">=</span> <span class="n">ConfigSchema</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">defaults</span><span class="p">[</span><span class="s1">&#39;extension&#39;</span><span class="p">],</span>
+                              <span class="n">optimizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">defaults</span><span class="p">[</span><span class="s1">&#39;optimizer&#39;</span><span class="p">])</span>
+        <span class="n">schema</span><span class="o">.</span><span class="n">add_option</span><span class="p">(</span><span class="s1">&#39;prefix&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">schema</span><span class="o">.</span><span class="n">add_option</span><span class="p">(</span><span class="s1">&#39;outfile&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">create_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;extension&#39;</span><span class="p">],</span>
+                                   <span class="n">optimizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;optimizer&#39;</span><span class="p">])</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">create_config</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Running extension fit for </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+
+        <span class="n">free_state</span> <span class="o">=</span> <span class="n">FreeParameterState</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">ext</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">config</span><span class="p">)</span>
+        <span class="n">free_state</span><span class="o">.</span><span class="n">restore</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Finished extension fit.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;make_plots&#39;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_plotter</span><span class="o">.</span><span class="n">make_extension_plots</span><span class="p">(</span><span class="n">ext</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="p">,</span>
+                                               <span class="n">prefix</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;prefix&#39;</span><span class="p">])</span>
+
+        <span class="n">outfile</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;outfile&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">outfile</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">outfile</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">format_filename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">workdir</span><span class="p">,</span> <span class="s1">&#39;ext&#39;</span><span class="p">,</span>
+                                            <span class="n">prefix</span><span class="o">=</span><span class="p">[</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;prefix&#39;</span><span class="p">],</span>
+                                                    <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">outfile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">workdir</span><span class="p">,</span>
+                                   <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">outfile</span><span class="p">)[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;write_fits&#39;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_make_extension_fits</span><span class="p">(</span><span class="n">ext</span><span class="p">,</span> <span class="n">outfile</span> <span class="o">+</span> <span class="s1">&#39;.fits&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;write_npy&#39;</span><span class="p">]:</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">outfile</span> <span class="o">+</span> <span class="s1">&#39;.npy&#39;</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">ext</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Execution time: </span><span class="si">%.2f</span><span class="s1"> s&#39;</span><span class="p">,</span> <span class="n">timer</span><span class="o">.</span><span class="n">elapsed_time</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ext</span>
+
+    <span class="k">def</span> <span class="nf">_extension</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">spatial_model</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;spatial_model&#39;</span><span class="p">]</span>
+        <span class="n">width_min</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;width_min&#39;</span><span class="p">]</span>
+        <span class="n">width_max</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;width_max&#39;</span><span class="p">]</span>
+        <span class="n">width_nstep</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;width_nstep&#39;</span><span class="p">]</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;width&#39;</span><span class="p">]</span>
+        <span class="n">free_background</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;free_background&#39;</span><span class="p">]</span>
+        <span class="n">free_radius</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;free_radius&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">fix_shape</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;fix_shape&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">make_tsmap</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;make_tsmap&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">tsmap_fitter</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;tsmap_fitter&#39;</span><span class="p">,</span> <span class="s1">&#39;tsmap&#39;</span><span class="p">)</span>
+        <span class="n">update</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;update&#39;</span><span class="p">]</span>
+        <span class="n">sqrt_ts_threshold</span> <span class="o">=</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;sqrt_ts_threshold&#39;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;psf_scale_fn&#39;</span><span class="p">]:</span>
+            <span class="k">def</span> <span class="nf">psf_scale_fn</span><span class="p">(</span><span class="n">t</span><span class="p">):</span> <span class="k">return</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">t</span><span class="p">),</span>
+                                                        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;psf_scale_fn&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                                                        <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;psf_scale_fn&#39;</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">psf_scale_fn</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="n">saved_state</span> <span class="o">=</span> <span class="n">LikelihoodState</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">like</span><span class="p">)</span>
+        <span class="n">loglike_init</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">like</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Initial Model Log-Likelihood: </span><span class="si">%f</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">loglike_init</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">free_background</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">free_sources</span><span class="p">(</span><span class="n">free</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">free_radius</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">diff_sources</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">sources</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">diffuse</span><span class="p">]</span>
+            <span class="n">skydir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">skydir</span>
+            <span class="n">free_srcs</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">get_sources</span><span class="p">(</span><span class="n">skydir</span><span class="o">=</span><span class="n">skydir</span><span class="p">,</span>
+                                              <span class="n">distance</span><span class="o">=</span><span class="n">free_radius</span><span class="p">,</span>
+                                              <span class="n">exclude</span><span class="o">=</span><span class="n">diff_sources</span><span class="p">)]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">free_sources_by_name</span><span class="p">(</span><span class="n">free_srcs</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="s1">&#39;norm&#39;</span><span class="p">,</span>
+                                      <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+        <span class="c1"># Fit baseline model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">free_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">fix_shape</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">free_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">free</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="s1">&#39;shape&#39;</span><span class="p">,</span>
+                             <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+        <span class="n">fit_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;optimizer&#39;</span><span class="p">])</span>
+        <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">copy_source</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="c1"># Save likelihood value for baseline fit</span>
+        <span class="n">saved_state_base</span> <span class="o">=</span> <span class="n">LikelihoodState</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">like</span><span class="p">)</span>
+        <span class="n">loglike_base</span> <span class="o">=</span> <span class="n">fit_output</span><span class="p">[</span><span class="s1">&#39;loglike&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Baseline Model Log-Likelihood: </span><span class="si">%f</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">loglike_base</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">width</span><span class="p">:</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">width_min</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">width_max</span><span class="p">),</span>
+                                <span class="n">width_nstep</span><span class="p">)</span>
+
+        <span class="n">width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">width</span><span class="p">)</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="n">width</span><span class="p">[</span><span class="n">width</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(([</span><span class="mf">0.0</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">width</span><span class="p">)))</span>
+
+        <span class="n">o</span> <span class="o">=</span> <span class="n">defaults</span><span class="o">.</span><span class="n">make_default_tuple</span><span class="p">(</span><span class="n">defaults</span><span class="o">.</span><span class="n">extension_output</span><span class="p">)</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">width</span> <span class="o">=</span> <span class="n">width</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">dloglike</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">width</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">loglike</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">width</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">loglike_base</span> <span class="o">=</span> <span class="n">loglike_base</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">loglike_init</span> <span class="o">=</span> <span class="n">loglike_init</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">kwargs</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">ebin_ext</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">enumbins</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">ebin_ext_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">enumbins</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">ebin_ext_err_lo</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">enumbins</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">ebin_ext_err_hi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">enumbins</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">ebin_ext_ul95</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">enumbins</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">ebin_ts_ext</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">enumbins</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">ebin_loglike</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">enumbins</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">width</span><span class="p">)))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">ebin_dloglike</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">enumbins</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">width</span><span class="p">)))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">ebin_loglike_ptsrc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">enumbins</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">ebin_loglike_ext</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">enumbins</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">ebin_e_min</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">energies</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">ebin_e_max</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">energies</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">ebin_e_ctr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">ebin_e_min</span> <span class="o">*</span> <span class="n">o</span><span class="o">.</span><span class="n">ebin_e_max</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Width scan vector:</span><span class="se">\n</span><span class="s1"> </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">width</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;fit_position&#39;</span><span class="p">]:</span>
+            <span class="n">ext_fit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_extension_full</span><span class="p">(</span><span class="n">name</span><span class="p">,</span>
+                                               <span class="n">spatial_model</span><span class="o">=</span><span class="n">spatial_model</span><span class="p">,</span>
+                                               <span class="n">optimizer</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;optimizer&#39;</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ext_fit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_extension</span><span class="p">(</span><span class="n">name</span><span class="p">,</span>
+                                          <span class="n">spatial_model</span><span class="o">=</span><span class="n">spatial_model</span><span class="p">,</span>
+                                          <span class="n">optimizer</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;optimizer&#39;</span><span class="p">],</span>
+                                          <span class="n">psf_scale_fn</span><span class="o">=</span><span class="n">psf_scale_fn</span><span class="p">)</span>
+
+        <span class="n">o</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">ext_fit</span><span class="p">)</span>
+
+        <span class="c1"># Fit with the best-fit extension model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Fitting extended-source model.&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_source_morphology</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">spatial_model</span><span class="o">=</span><span class="n">spatial_model</span><span class="p">,</span>
+                                   <span class="n">spatial_pars</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;ra&#39;</span><span class="p">:</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;ra&#39;</span><span class="p">],</span> <span class="s1">&#39;dec&#39;</span><span class="p">:</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;dec&#39;</span><span class="p">],</span>
+                                                 <span class="s1">&#39;SpatialWidth&#39;</span><span class="p">:</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;ext&#39;</span><span class="p">]},</span>
+                                   <span class="n">use_pylike</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                   <span class="n">psf_scale_fn</span><span class="o">=</span><span class="n">psf_scale_fn</span><span class="p">)</span>
+
+        <span class="c1"># Perform scan over width parameter</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">loglike</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scan_extension</span><span class="p">(</span><span class="n">name</span><span class="p">,</span>
+                                         <span class="n">spatial_model</span><span class="o">=</span><span class="n">spatial_model</span><span class="p">,</span>
+                                         <span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span>
+                                         <span class="n">optimizer</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;optimizer&#39;</span><span class="p">],</span>
+                                         <span class="n">psf_scale_fn</span><span class="o">=</span><span class="n">psf_scale_fn</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_source_morphology</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">spatial_model</span><span class="o">=</span><span class="n">spatial_model</span><span class="p">,</span>
+                                   <span class="n">spatial_pars</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;ra&#39;</span><span class="p">:</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;ra&#39;</span><span class="p">],</span> <span class="s1">&#39;dec&#39;</span><span class="p">:</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;dec&#39;</span><span class="p">],</span>
+                                                 <span class="s1">&#39;SpatialWidth&#39;</span><span class="p">:</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;ext&#39;</span><span class="p">]},</span>
+                                   <span class="n">use_pylike</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                   <span class="n">psf_scale_fn</span><span class="o">=</span><span class="n">psf_scale_fn</span><span class="p">)</span>
+
+        <span class="n">fit_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                               <span class="o">**</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;optimizer&#39;</span><span class="p">])</span>
+
+        <span class="n">o</span><span class="o">.</span><span class="n">source_fit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_src_model</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">reoptimize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                          <span class="n">optimizer</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;optimizer&#39;</span><span class="p">])</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">loglike_ext</span> <span class="o">=</span> <span class="n">fit_output</span><span class="p">[</span><span class="s1">&#39;loglike&#39;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;fit_ebin&#39;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_fit_extension_ebin</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">o</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;save_model_map&#39;</span><span class="p">]:</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">ext_tot_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_counts_map</span><span class="p">()</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">ext_src_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_counts_map</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">ext_bkg_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_counts_map</span><span class="p">(</span><span class="n">exclude</span><span class="o">=</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">make_tsmap</span><span class="p">:</span>
+            <span class="n">tsmap_model</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;SpatialModel&#39;</span><span class="p">:</span> <span class="s1">&#39;RadialDisk&#39;</span><span class="p">,</span>
+                           <span class="s1">&#39;SpatialWidth&#39;</span><span class="p">:</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="mf">0.8246211251235321</span><span class="p">}</span>
+            <span class="n">tsmap_model</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">spectral_pars</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Generating TS map.&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">tsmap_fitter</span> <span class="o">==</span> <span class="s1">&#39;tsmap&#39;</span><span class="p">:</span>
+                <span class="n">tsmap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tsmap</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">tsmap_model</span><span class="p">,</span>
+                                   <span class="n">map_skydir</span><span class="o">=</span><span class="n">SkyCoord</span><span class="p">(</span><span class="n">o</span><span class="p">[</span><span class="s1">&#39;ra&#39;</span><span class="p">],</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;dec&#39;</span><span class="p">],</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;deg&#39;</span><span class="p">),</span>
+                                   <span class="n">map_size</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">4.0</span> <span class="o">*</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;ext&#39;</span><span class="p">]),</span>
+                                   <span class="n">exclude</span><span class="o">=</span><span class="p">[</span><span class="n">name</span><span class="p">],</span>
+                                   <span class="n">write_fits</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                   <span class="n">write_npy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                   <span class="n">use_pylike</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                   <span class="n">make_plots</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                   <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+                <span class="n">o</span><span class="o">.</span><span class="n">tsmap</span> <span class="o">=</span> <span class="n">tsmap</span><span class="p">[</span><span class="s1">&#39;ts&#39;</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="n">tsmap_fitter</span> <span class="o">==</span> <span class="s1">&#39;tscube&#39;</span><span class="p">:</span>
+                <span class="n">tscube</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tscube</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">tsmap_model</span><span class="p">,</span>
+                                     <span class="n">map_skydir</span><span class="o">=</span><span class="n">SkyCoord</span><span class="p">(</span><span class="n">o</span><span class="p">[</span><span class="s1">&#39;ra&#39;</span><span class="p">],</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;dec&#39;</span><span class="p">],</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;deg&#39;</span><span class="p">),</span>
+                                     <span class="n">map_size</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">4.0</span> <span class="o">*</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;ext&#39;</span><span class="p">]),</span>
+                                     <span class="n">do_sed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                     <span class="n">write_fits</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                     <span class="n">write_npy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                     <span class="n">make_plots</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                     <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+                <span class="n">o</span><span class="o">.</span><span class="n">tsmap</span> <span class="o">=</span> <span class="n">tscube</span><span class="p">[</span><span class="s1">&#39;ts&#39;</span><span class="p">]</span>
+               
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Testing point-source model.&#39;</span><span class="p">)</span>
+        <span class="c1"># Test point-source hypothesis</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_source_morphology</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">spatial_model</span><span class="o">=</span><span class="s1">&#39;PointSource&#39;</span><span class="p">,</span>
+                                   <span class="n">use_pylike</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                   <span class="n">psf_scale_fn</span><span class="o">=</span><span class="n">psf_scale_fn</span><span class="p">)</span>
+
+        <span class="c1"># Fit a point-source</span>
+        <span class="n">saved_state_base</span><span class="o">.</span><span class="n">restore</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Fitting point-source model.&#39;</span><span class="p">)</span>
+        <span class="n">fit_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;optimizer&#39;</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">src</span><span class="p">[</span><span class="s1">&#39;SpatialModel&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;PointSource&#39;</span> <span class="ow">and</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;fit_position&#39;</span><span class="p">]:</span>
+            <span class="n">loc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">localize</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">loglike_ptsrc</span> <span class="o">=</span> <span class="n">loc</span><span class="p">[</span><span class="s1">&#39;loglike_loc&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">loglike_ptsrc</span> <span class="o">=</span> <span class="n">fit_output</span><span class="p">[</span><span class="s1">&#39;loglike&#39;</span><span class="p">]</span>
+
+        <span class="n">o</span><span class="o">.</span><span class="n">dloglike</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">loglike</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">loglike_ptsrc</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">ts_ext</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">loglike_ext</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">loglike_ptsrc</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Point-Source Model Likelihood: </span><span class="si">%f</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">loglike_ptsrc</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;save_model_map&#39;</span><span class="p">]:</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">ptsrc_tot_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_counts_map</span><span class="p">()</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">ptsrc_src_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_counts_map</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">ptsrc_bkg_map</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model_counts_map</span><span class="p">(</span><span class="n">exclude</span><span class="o">=</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">update</span> <span class="ow">and</span> <span class="p">(</span><span class="n">sqrt_ts_threshold</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span>
+                       <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">o</span><span class="p">[</span><span class="s1">&#39;ts_ext&#39;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="n">sqrt_ts_threshold</span><span class="p">):</span>
+            <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">delete_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+            <span class="n">src</span><span class="o">.</span><span class="n">set_spatial_model</span><span class="p">(</span><span class="n">spatial_model</span><span class="p">,</span>
+                                  <span class="p">{</span><span class="s1">&#39;ra&#39;</span><span class="p">:</span> <span class="n">o</span><span class="o">.</span><span class="n">ra</span><span class="p">,</span> <span class="s1">&#39;dec&#39;</span><span class="p">:</span> <span class="n">o</span><span class="o">.</span><span class="n">dec</span><span class="p">,</span>
+                                   <span class="s1">&#39;SpatialWidth&#39;</span><span class="p">:</span> <span class="n">o</span><span class="o">.</span><span class="n">ext</span><span class="p">})</span>
+            <span class="c1"># FIXME: Issue with source map cache with source is</span>
+            <span class="c1"># initialized as fixed.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">free</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">free_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">fix_shape</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">free_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">free</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="s1">&#39;shape&#39;</span><span class="p">,</span>
+                                 <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+            <span class="n">fit_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span>
+                                  <span class="o">**</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;optimizer&#39;</span><span class="p">])</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">loglike_ext</span> <span class="o">=</span> <span class="n">fit_output</span><span class="p">[</span><span class="s1">&#39;loglike&#39;</span><span class="p">]</span>
+
+            <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">get_source_by_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;fit_position&#39;</span><span class="p">]:</span>
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;ra_err&#39;</span><span class="p">,</span> <span class="s1">&#39;dec_err&#39;</span><span class="p">,</span> <span class="s1">&#39;glon_err&#39;</span><span class="p">,</span> <span class="s1">&#39;glat_err&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;pos_err&#39;</span><span class="p">,</span> <span class="s1">&#39;pos_err_semimajor&#39;</span><span class="p">,</span> <span class="s1">&#39;pos_err_semiminor&#39;</span><span class="p">,</span>
+                          <span class="s1">&#39;pos_r68&#39;</span><span class="p">,</span> <span class="s1">&#39;pos_r95&#39;</span><span class="p">,</span> <span class="s1">&#39;pos_r99&#39;</span><span class="p">,</span> <span class="s1">&#39;pos_angle&#39;</span><span class="p">]:</span>
+                    <span class="n">src</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_source_morphology</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">spatial_model</span><span class="o">=</span><span class="n">src</span><span class="p">[</span><span class="s1">&#39;SpatialModel&#39;</span><span class="p">],</span>
+                                       <span class="n">spatial_pars</span><span class="o">=</span><span class="n">src</span><span class="o">.</span><span class="n">spatial_pars</span><span class="p">,</span>
+                                       <span class="n">update_source</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="c1"># Restore ROI to previous state</span>
+            <span class="n">saved_state</span><span class="o">.</span><span class="n">restore</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sync_params</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_roi</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Best-fit extension: </span><span class="si">%6.4f</span><span class="s1"> + </span><span class="si">%6.4f</span><span class="s1"> - </span><span class="si">%6.4f</span><span class="s1">&#39;</span>
+                         <span class="o">%</span> <span class="p">(</span><span class="n">o</span><span class="p">[</span><span class="s1">&#39;ext&#39;</span><span class="p">],</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;ext_err_hi&#39;</span><span class="p">],</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;ext_err_lo&#39;</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;TS_ext:        </span><span class="si">%.3f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;ts_ext&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Extension UL: </span><span class="si">%6.4f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;ext_ul95&#39;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;LogLike: </span><span class="si">%12.3f</span><span class="s1"> DeltaLogLike: </span><span class="si">%12.3f</span><span class="s1">&#39;</span><span class="p">,</span>
+                         <span class="n">o</span><span class="o">.</span><span class="n">loglike_ext</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">loglike_ext</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">loglike_init</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;fit_position&#39;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Position:</span><span class="se">\n</span><span class="s1">&#39;</span>
+                             <span class="s1">&#39;(  ra, dec) = (</span><span class="si">%10.4f</span><span class="s1"> +/- </span><span class="si">%8.4f</span><span class="s1">,</span><span class="si">%10.4f</span><span class="s1"> +/- </span><span class="si">%8.4f</span><span class="s1">)</span><span class="se">\n</span><span class="s1">&#39;</span>
+                             <span class="s1">&#39;(glon,glat) = (</span><span class="si">%10.4f</span><span class="s1"> +/- </span><span class="si">%8.4f</span><span class="s1">,</span><span class="si">%10.4f</span><span class="s1"> +/- </span><span class="si">%8.4f</span><span class="s1">)</span><span class="se">\n</span><span class="s1">&#39;</span>
+                             <span class="s1">&#39;offset = </span><span class="si">%8.4f</span><span class="s1"> r68 = </span><span class="si">%8.4f</span><span class="s1"> r95 = </span><span class="si">%8.4f</span><span class="s1"> r99 = </span><span class="si">%8.4f</span><span class="s1">&#39;</span><span class="p">,</span>
+                             <span class="n">o</span><span class="o">.</span><span class="n">ra</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">ra_err</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">dec</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">dec_err</span><span class="p">,</span>
+                             <span class="n">o</span><span class="o">.</span><span class="n">glon</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">glon_err</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">glat</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">glat_err</span><span class="p">,</span>
+                             <span class="n">o</span><span class="o">.</span><span class="n">pos_offset</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_r68</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_r95</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_r99</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">o</span>
+
+    <span class="k">def</span> <span class="nf">_make_extension_fits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ext</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">maps</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;EXT_TOT_MAP&#39;</span><span class="p">:</span> <span class="n">ext</span><span class="p">[</span><span class="s1">&#39;ext_tot_map&#39;</span><span class="p">],</span>
+                <span class="s1">&#39;EXT_SRC_MAP&#39;</span><span class="p">:</span> <span class="n">ext</span><span class="p">[</span><span class="s1">&#39;ext_src_map&#39;</span><span class="p">],</span>
+                <span class="s1">&#39;EXT_BKG_MAP&#39;</span><span class="p">:</span> <span class="n">ext</span><span class="p">[</span><span class="s1">&#39;ext_bkg_map&#39;</span><span class="p">],</span>
+                <span class="s1">&#39;PTSRC_TOT_MAP&#39;</span><span class="p">:</span> <span class="n">ext</span><span class="p">[</span><span class="s1">&#39;ptsrc_tot_map&#39;</span><span class="p">],</span>
+                <span class="s1">&#39;PTSRC_SRC_MAP&#39;</span><span class="p">:</span> <span class="n">ext</span><span class="p">[</span><span class="s1">&#39;ptsrc_src_map&#39;</span><span class="p">],</span>
+                <span class="s1">&#39;PTSRC_BKG_MAP&#39;</span><span class="p">:</span> <span class="n">ext</span><span class="p">[</span><span class="s1">&#39;ptsrc_bkg_map&#39;</span><span class="p">]}</span>
+
+        <span class="n">hdu_images</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">maps</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">hdu_images</span> <span class="o">+=</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">make_hdu</span><span class="p">(</span><span class="n">k</span><span class="p">)]</span>
+
+        <span class="n">tab</span> <span class="o">=</span> <span class="n">fits_utils</span><span class="o">.</span><span class="n">dict_to_table</span><span class="p">(</span><span class="n">ext</span><span class="p">)</span>
+        <span class="n">hdu_data</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">table_to_hdu</span><span class="p">(</span><span class="n">tab</span><span class="p">)</span>
+        <span class="n">hdu_data</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;EXT_DATA&#39;</span>
+
+        <span class="k">if</span> <span class="n">ext</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;tsmap&#39;</span><span class="p">):</span>
+            <span class="n">hdus</span> <span class="o">=</span> <span class="p">[</span><span class="n">ext</span><span class="p">[</span><span class="s1">&#39;tsmap&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">make_hdu</span><span class="p">(</span><span class="n">hdu</span><span class="o">=</span><span class="s1">&#39;PRIMARY&#39;</span><span class="p">)]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">hdus</span> <span class="o">=</span> <span class="p">[</span><span class="n">fits</span><span class="o">.</span><span class="n">PrimaryHDU</span><span class="p">()]</span>
+
+        <span class="n">hdus</span> <span class="o">+=</span> <span class="p">[</span><span class="n">hdu_data</span><span class="p">]</span> <span class="o">+</span> <span class="n">hdu_images</span>
+        <span class="n">hdus</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;CONFIG&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">tolist</span><span class="p">(</span><span class="n">ext</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">]))</span>
+        <span class="n">hdus</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;CONFIG&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">tolist</span><span class="p">(</span><span class="n">ext</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">]))</span>
+        <span class="n">fits_utils</span><span class="o">.</span><span class="n">write_hdus</span><span class="p">(</span><span class="n">hdus</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span>
+                              <span class="n">keywords</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;SRCNAME&#39;</span><span class="p">:</span> <span class="n">ext</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]})</span>
+
+    <span class="k">def</span> <span class="nf">_fit_extension_ebin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">o</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">optimizer</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;optimizer&#39;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">spatial_model</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;spatial_model&#39;</span><span class="p">)</span>
+        <span class="n">psf_scale_fn</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;psf_scale_fn&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">reoptimize</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;reoptimize&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">copy_source</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_source_morphology</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">spatial_model</span><span class="o">=</span><span class="s1">&#39;PointSource&#39;</span><span class="p">,</span>
+                                   <span class="n">use_pylike</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                   <span class="n">psf_scale_fn</span><span class="o">=</span><span class="n">psf_scale_fn</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">logemin</span><span class="p">,</span> <span class="n">logemax</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_energies</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                                                   <span class="bp">self</span><span class="o">.</span><span class="n">log_energies</span><span class="p">[</span><span class="mi">1</span><span class="p">:])):</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_energy_range</span><span class="p">(</span><span class="n">logemin</span><span class="p">,</span> <span class="n">logemax</span><span class="p">)</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">ebin_loglike_ptsrc</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">like</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_energy_range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_energies</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_energies</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_source_morphology</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">spatial_model</span><span class="o">=</span><span class="n">src</span><span class="p">[</span><span class="s1">&#39;SpatialModel&#39;</span><span class="p">],</span>
+                                   <span class="n">spatial_pars</span><span class="o">=</span><span class="n">src</span><span class="o">.</span><span class="n">spatial_pars</span><span class="p">,</span>
+                                   <span class="n">psf_scale_fn</span><span class="o">=</span><span class="n">psf_scale_fn</span><span class="p">,</span>
+                                   <span class="n">use_pylike</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="n">o</span><span class="o">.</span><span class="n">ebin_loglike</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scan_extension_fast_ebin</span><span class="p">(</span><span class="n">name</span><span class="p">,</span>
+                                                        <span class="n">spatial_model</span><span class="o">=</span><span class="n">spatial_model</span><span class="p">,</span>
+                                                        <span class="n">width</span><span class="o">=</span><span class="n">o</span><span class="o">.</span><span class="n">width</span><span class="p">,</span>
+                                                        <span class="n">optimizer</span><span class="o">=</span><span class="n">kwargs</span><span class="p">[</span>
+                                                            <span class="s1">&#39;optimizer&#39;</span><span class="p">],</span>
+                                                        <span class="n">psf_scale_fn</span><span class="o">=</span><span class="n">psf_scale_fn</span><span class="p">,</span>
+                                                        <span class="n">reoptimize</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="p">(</span><span class="n">logemin</span><span class="p">,</span> <span class="n">logemax</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_energies</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                                                   <span class="bp">self</span><span class="o">.</span><span class="n">log_energies</span><span class="p">[</span><span class="mi">1</span><span class="p">:])):</span>
+            <span class="n">ul_data</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">get_parameter_limits</span><span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">width</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">ebin_loglike</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">ebin_ext</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">ul_data</span><span class="p">[</span><span class="s1">&#39;x0&#39;</span><span class="p">],</span> <span class="mi">10</span><span class="o">**-</span><span class="mf">2.5</span><span class="p">)</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">ebin_ext_err</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ul_data</span><span class="p">[</span><span class="s1">&#39;err&#39;</span><span class="p">]</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">ebin_ext_err_lo</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ul_data</span><span class="p">[</span><span class="s1">&#39;err_lo&#39;</span><span class="p">]</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">ebin_ext_err_hi</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ul_data</span><span class="p">[</span><span class="s1">&#39;err_hi&#39;</span><span class="p">]</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">ebin_ext_ul95</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ul_data</span><span class="p">[</span><span class="s1">&#39;ul&#39;</span><span class="p">]</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">ebin_loglike_ext</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">ul_data</span><span class="p">[</span><span class="s1">&#39;lnlmax&#39;</span><span class="p">]</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">ebin_ts_ext</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> \
+                <span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">ebin_loglike_ext</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">ebin_loglike_ptsrc</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+
+        <span class="n">o</span><span class="o">.</span><span class="n">ebin_dloglike</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">ebin_loglike</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">ebin_loglike_ptsrc</span><span class="p">[:,</span> <span class="kc">None</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_source_morphology</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">spatial_model</span><span class="o">=</span><span class="n">src</span><span class="p">[</span><span class="s1">&#39;SpatialModel&#39;</span><span class="p">],</span>
+                                   <span class="n">spatial_pars</span><span class="o">=</span><span class="n">src</span><span class="o">.</span><span class="n">spatial_pars</span><span class="p">,</span>
+                                   <span class="n">use_pylike</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_scan_extension</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">saved_state</span> <span class="o">=</span> <span class="n">LikelihoodState</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">like</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">like</span><span class="o">.</span><span class="n">logLike</span><span class="p">,</span> <span class="s1">&#39;setSourceMapImage&#39;</span><span class="p">):</span>
+            <span class="n">loglike</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scan_extension_pylike</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">loglike</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scan_extension_fast</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="n">saved_state</span><span class="o">.</span><span class="n">restore</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">loglike</span>
+
+    <span class="k">def</span> <span class="nf">_scan_extension_fast</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">state</span> <span class="o">=</span> <span class="n">SourceMapState</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">like</span><span class="p">,</span> <span class="p">[</span><span class="n">name</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">free_norm</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="n">optimizer</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;optimizer&#39;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;width&#39;</span><span class="p">)</span>
+        <span class="n">spatial_model</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;spatial_model&#39;</span><span class="p">)</span>
+        <span class="n">skydir</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;skydir&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">skydir</span><span class="p">)</span>
+        <span class="n">psf_scale_fn</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;psf_scale_fn&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">reoptimize</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;reoptimize&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">copy_source</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">spatial_pars</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ra&#39;</span><span class="p">:</span> <span class="n">skydir</span><span class="o">.</span><span class="n">ra</span><span class="o">.</span><span class="n">deg</span><span class="p">,</span> <span class="s1">&#39;dec&#39;</span><span class="p">:</span> <span class="n">skydir</span><span class="o">.</span><span class="n">dec</span><span class="o">.</span><span class="n">deg</span><span class="p">}</span>
+
+        <span class="n">loglike</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">width</span><span class="p">):</span>
+
+            <span class="n">spatial_pars</span><span class="p">[</span><span class="s1">&#39;SpatialWidth&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="mf">0.00316</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_source_morphology</span><span class="p">(</span><span class="n">name</span><span class="p">,</span>
+                                       <span class="n">spatial_model</span><span class="o">=</span><span class="n">spatial_model</span><span class="p">,</span>
+                                       <span class="n">spatial_pars</span><span class="o">=</span><span class="n">spatial_pars</span><span class="p">,</span>
+                                       <span class="n">use_pylike</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                       <span class="n">psf_scale_fn</span><span class="o">=</span><span class="n">psf_scale_fn</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">reoptimize</span><span class="p">:</span>
+                <span class="n">fit_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span> <span class="o">**</span><span class="n">optimizer</span><span class="p">)</span>
+                <span class="n">loglike</span> <span class="o">+=</span> <span class="p">[</span><span class="n">fit_output</span><span class="p">[</span><span class="s1">&#39;loglike&#39;</span><span class="p">]]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">loglike</span> <span class="o">+=</span> <span class="p">[</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">like</span><span class="p">()]</span>
+
+        <span class="n">state</span><span class="o">.</span><span class="n">restore</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">loglike</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_scan_extension_fast_ebin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">state</span> <span class="o">=</span> <span class="n">SourceMapState</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">like</span><span class="p">,</span> <span class="p">[</span><span class="n">name</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">free_norm</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">optimizer</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;optimizer&#39;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;width&#39;</span><span class="p">)</span>
+        <span class="n">spatial_model</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;spatial_model&#39;</span><span class="p">)</span>
+        <span class="n">skydir</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;skydir&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">skydir</span><span class="p">)</span>
+        <span class="n">psf_scale_fn</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;psf_scale_fn&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">reoptimize</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;reoptimize&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">copy_source</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">spatial_pars</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ra&#39;</span><span class="p">:</span> <span class="n">skydir</span><span class="o">.</span><span class="n">ra</span><span class="o">.</span><span class="n">deg</span><span class="p">,</span> <span class="s1">&#39;dec&#39;</span><span class="p">:</span> <span class="n">skydir</span><span class="o">.</span><span class="n">dec</span><span class="o">.</span><span class="n">deg</span><span class="p">}</span>
+
+        <span class="n">loglike</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">enumbins</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">width</span><span class="p">)))</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">width</span><span class="p">):</span>
+
+            <span class="n">spatial_pars</span><span class="p">[</span><span class="s1">&#39;SpatialWidth&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="mf">0.00316</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_source_morphology</span><span class="p">(</span><span class="n">name</span><span class="p">,</span>
+                                       <span class="n">spatial_model</span><span class="o">=</span><span class="n">spatial_model</span><span class="p">,</span>
+                                       <span class="n">spatial_pars</span><span class="o">=</span><span class="n">spatial_pars</span><span class="p">,</span>
+                                       <span class="n">use_pylike</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                       <span class="n">psf_scale_fn</span><span class="o">=</span><span class="n">psf_scale_fn</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">j</span><span class="p">,</span> <span class="p">(</span><span class="n">logemin</span><span class="p">,</span> <span class="n">logemax</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_energies</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                                                       <span class="bp">self</span><span class="o">.</span><span class="n">log_energies</span><span class="p">[</span><span class="mi">1</span><span class="p">:])):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">set_energy_range</span><span class="p">(</span><span class="n">logemin</span><span class="p">,</span> <span class="n">logemax</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">reoptimize</span><span class="p">:</span>
+                    <span class="n">fit_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span> <span class="o">**</span><span class="n">optimizer</span><span class="p">)</span>
+                    <span class="n">loglike</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">fit_output</span><span class="p">[</span><span class="s1">&#39;loglike&#39;</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">loglike</span><span class="p">[</span><span class="n">j</span><span class="p">,</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">like</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_energy_range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">log_energies</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_energies</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="n">state</span><span class="o">.</span><span class="n">restore</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">loglike</span>
+
+    <span class="k">def</span> <span class="nf">_scan_extension_pylike</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">optimizer</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;optimizer&#39;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">width</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;width&#39;</span><span class="p">)</span>
+        <span class="n">spatial_model</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;spatial_model&#39;</span><span class="p">)</span>
+        <span class="n">skydir</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;skydir&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">skydir</span><span class="p">)</span>
+
+        <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">copy_source</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_fitcache</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="n">spatial_pars</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ra&#39;</span><span class="p">:</span> <span class="n">skydir</span><span class="o">.</span><span class="n">ra</span><span class="o">.</span><span class="n">deg</span><span class="p">,</span> <span class="s1">&#39;dec&#39;</span><span class="p">:</span> <span class="n">skydir</span><span class="o">.</span><span class="n">dec</span><span class="o">.</span><span class="n">deg</span><span class="p">}</span>
+
+        <span class="n">loglike</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">width</span><span class="p">):</span>
+
+            <span class="n">spatial_pars</span><span class="p">[</span><span class="s1">&#39;SpatialWidth&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="mf">0.00316</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_source_morphology</span><span class="p">(</span><span class="n">name</span><span class="p">,</span>
+                                       <span class="n">spatial_model</span><span class="o">=</span><span class="n">spatial_model</span><span class="p">,</span>
+                                       <span class="n">spatial_pars</span><span class="o">=</span><span class="n">spatial_pars</span><span class="p">,</span>
+                                       <span class="n">use_pylike</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">fit_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span> <span class="o">**</span><span class="n">optimizer</span><span class="p">)</span>
+            <span class="n">loglike</span> <span class="o">+=</span> <span class="p">[</span><span class="n">fit_output</span><span class="p">[</span><span class="s1">&#39;loglike&#39;</span><span class="p">]]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_source_morphology</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">spatial_model</span><span class="o">=</span><span class="n">src</span><span class="p">[</span><span class="s1">&#39;SpatialModel&#39;</span><span class="p">],</span>
+                                   <span class="n">spatial_pars</span><span class="o">=</span><span class="n">src</span><span class="o">.</span><span class="n">spatial_pars</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">loglike</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_fit_extension</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">spatial_model</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;spatial_model&#39;</span><span class="p">,</span> <span class="s1">&#39;RadialGaussian&#39;</span><span class="p">)</span>
+        <span class="n">optimizer</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;optimizer&#39;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">fit_position</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;fit_position&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">skydir</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;skydir&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">skydir</span><span class="p">)</span>
+        <span class="n">psf_scale_fn</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;psf_scale_fn&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">reoptimize</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;reoptimize&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">copy_source</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="c1"># If the source is extended split the likelihood scan into two</span>
+        <span class="c1"># parts centered on the best-fit value -- this ensures better</span>
+        <span class="c1"># fit stability</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">src</span><span class="p">[</span><span class="s1">&#39;SpatialModel&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;RadialGaussian&#39;</span><span class="p">,</span> <span class="s1">&#39;RadialDisk&#39;</span><span class="p">]</span> <span class="ow">and</span>
+                <span class="n">src</span><span class="p">[</span><span class="s1">&#39;SpatialWidth&#39;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.1</span><span class="p">):</span>
+            <span class="n">width_lo</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="o">-</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">src</span><span class="p">[</span><span class="s1">&#39;SpatialWidth&#39;</span><span class="p">]),</span> <span class="mi">11</span><span class="p">)</span>
+            <span class="n">width_hi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">src</span><span class="p">[</span><span class="s1">&#39;SpatialWidth&#39;</span><span class="p">]),</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mi">11</span><span class="p">)</span>
+            <span class="n">loglike_lo</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scan_extension</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">spatial_model</span><span class="o">=</span><span class="n">spatial_model</span><span class="p">,</span>
+                                              <span class="n">width</span><span class="o">=</span><span class="n">width_lo</span><span class="p">[::</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>
+                                              <span class="n">optimizer</span><span class="o">=</span><span class="n">optimizer</span><span class="p">,</span>
+                                              <span class="n">skydir</span><span class="o">=</span><span class="n">skydir</span><span class="p">,</span>
+                                              <span class="n">psf_scale_fn</span><span class="o">=</span><span class="n">psf_scale_fn</span><span class="p">,</span>
+                                              <span class="n">reoptimize</span><span class="o">=</span><span class="n">reoptimize</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">loglike_hi</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scan_extension</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">spatial_model</span><span class="o">=</span><span class="n">spatial_model</span><span class="p">,</span>
+                                              <span class="n">width</span><span class="o">=</span><span class="n">width_hi</span><span class="p">,</span>
+                                              <span class="n">optimizer</span><span class="o">=</span><span class="n">optimizer</span><span class="p">,</span>
+                                              <span class="n">skydir</span><span class="o">=</span><span class="n">skydir</span><span class="p">,</span>
+                                              <span class="n">psf_scale_fn</span><span class="o">=</span><span class="n">psf_scale_fn</span><span class="p">,</span>
+                                              <span class="n">reoptimize</span><span class="o">=</span><span class="n">reoptimize</span><span class="p">)</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">width_lo</span><span class="p">,</span> <span class="n">width_hi</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span>
+            <span class="n">loglike</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">loglike_lo</span><span class="p">,</span> <span class="n">loglike_hi</span><span class="p">[</span><span class="mi">1</span><span class="p">:]))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="o">-</span><span class="mf">2.0</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">,</span> <span class="mi">21</span><span class="p">)</span>
+            <span class="n">width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(([</span><span class="mf">0.0</span><span class="p">],</span> <span class="n">width</span><span class="p">))</span>
+            <span class="n">loglike</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scan_extension</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">spatial_model</span><span class="o">=</span><span class="n">spatial_model</span><span class="p">,</span>
+                                           <span class="n">width</span><span class="o">=</span><span class="n">width</span><span class="p">,</span> <span class="n">optimizer</span><span class="o">=</span><span class="n">optimizer</span><span class="p">,</span>
+                                           <span class="n">skydir</span><span class="o">=</span><span class="n">skydir</span><span class="p">,</span>
+                                           <span class="n">psf_scale_fn</span><span class="o">=</span><span class="n">psf_scale_fn</span><span class="p">,</span>
+                                           <span class="n">reoptimize</span><span class="o">=</span><span class="n">reoptimize</span><span class="p">)</span>
+
+        <span class="n">ul_data</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">get_parameter_limits</span><span class="p">(</span><span class="n">width</span><span class="p">,</span> <span class="n">loglike</span><span class="p">,</span>
+                                             <span class="n">bounds</span><span class="o">=</span><span class="p">[</span><span class="mi">10</span><span class="o">**-</span><span class="mf">3.0</span><span class="p">,</span> <span class="mi">10</span><span class="o">**</span><span class="mf">0.5</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">ul_data</span><span class="p">[</span><span class="s1">&#39;err&#39;</span><span class="p">]):</span>
+            <span class="n">ul_data</span><span class="p">[</span><span class="s1">&#39;x0&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">width</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">loglike</span><span class="p">)]</span>
+            <span class="n">ul_data</span><span class="p">[</span><span class="s1">&#39;err&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ul_data</span><span class="p">[</span><span class="s1">&#39;x0&#39;</span><span class="p">]</span>
+            <span class="n">ul_data</span><span class="p">[</span><span class="s1">&#39;err_lo&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ul_data</span><span class="p">[</span><span class="s1">&#39;x0&#39;</span><span class="p">]</span>
+            <span class="n">ul_data</span><span class="p">[</span><span class="s1">&#39;err_hi&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">ul_data</span><span class="p">[</span><span class="s1">&#39;x0&#39;</span><span class="p">]</span>
+
+        <span class="n">imax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">loglike</span><span class="p">)</span>
+        <span class="n">err</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">10</span><span class="o">**-</span><span class="mf">2.0</span><span class="p">,</span> <span class="n">ul_data</span><span class="p">[</span><span class="s1">&#39;err&#39;</span><span class="p">])</span>
+        <span class="n">lolim</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">ul_data</span><span class="p">[</span><span class="s1">&#39;x0&#39;</span><span class="p">],</span> <span class="n">width</span><span class="p">[</span><span class="n">imax</span><span class="p">])</span> <span class="o">-</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">err</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">ul_data</span><span class="p">[</span><span class="s1">&#39;ul&#39;</span><span class="p">]):</span>
+            <span class="n">hilim</span> <span class="o">=</span> <span class="mf">1.5</span> <span class="o">*</span> <span class="n">ul_data</span><span class="p">[</span><span class="s1">&#39;ul&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">hilim</span> <span class="o">=</span> <span class="n">ul_data</span><span class="p">[</span><span class="s1">&#39;x0&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">err</span>
+
+        <span class="n">nstep</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">11</span><span class="p">,</span> <span class="nb">int</span><span class="p">((</span><span class="n">hilim</span> <span class="o">-</span> <span class="n">lolim</span><span class="p">)</span> <span class="o">/</span> <span class="n">err</span><span class="p">))</span>
+        <span class="n">width2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">lolim</span><span class="p">,</span> <span class="n">hilim</span><span class="p">,</span> <span class="n">nstep</span><span class="p">)</span>
+
+        <span class="n">loglike2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scan_extension</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">spatial_model</span><span class="o">=</span><span class="n">spatial_model</span><span class="p">,</span>
+                                        <span class="n">width</span><span class="o">=</span><span class="n">width2</span><span class="p">,</span> <span class="n">optimizer</span><span class="o">=</span><span class="n">optimizer</span><span class="p">,</span>
+                                        <span class="n">skydir</span><span class="o">=</span><span class="n">skydir</span><span class="p">,</span>
+                                        <span class="n">psf_scale_fn</span><span class="o">=</span><span class="n">psf_scale_fn</span><span class="p">,</span>
+                                        <span class="n">reoptimize</span><span class="o">=</span><span class="n">reoptimize</span><span class="p">)</span>
+        <span class="n">ul_data2</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">get_parameter_limits</span><span class="p">(</span><span class="n">width2</span><span class="p">,</span> <span class="n">loglike2</span><span class="p">,</span>
+                                              <span class="n">bounds</span><span class="o">=</span><span class="p">[</span><span class="mi">10</span><span class="o">**-</span><span class="mf">3.0</span><span class="p">,</span> <span class="mi">10</span><span class="o">**</span><span class="mf">0.5</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;width: </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">width</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;loglike: </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">loglike</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">loglike</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;ul_data:</span><span class="se">\n</span><span class="s1"> </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">pprint</span><span class="o">.</span><span class="n">pformat</span><span class="p">(</span><span class="n">ul_data</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;width2: </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">width2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;loglike2: </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">loglike2</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">loglike2</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;ul_data2:</span><span class="se">\n</span><span class="s1"> </span><span class="si">%s</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">pprint</span><span class="o">.</span><span class="n">pformat</span><span class="p">(</span><span class="n">ul_data2</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">MutableNamedTuple</span><span class="p">(</span>
+            <span class="n">ext</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="n">ul_data2</span><span class="p">[</span><span class="s1">&#39;x0&#39;</span><span class="p">],</span> <span class="mi">10</span><span class="o">**-</span><span class="mf">2.5</span><span class="p">),</span>
+            <span class="n">ext_ul95</span><span class="o">=</span><span class="n">ul_data2</span><span class="p">[</span><span class="s1">&#39;ul&#39;</span><span class="p">],</span>
+            <span class="n">ext_err_lo</span><span class="o">=</span><span class="n">ul_data2</span><span class="p">[</span><span class="s1">&#39;err_lo&#39;</span><span class="p">],</span>
+            <span class="n">ext_err_hi</span><span class="o">=</span><span class="n">ul_data2</span><span class="p">[</span><span class="s1">&#39;err_hi&#39;</span><span class="p">],</span>
+            <span class="n">ext_err</span><span class="o">=</span><span class="n">ul_data2</span><span class="p">[</span><span class="s1">&#39;err&#39;</span><span class="p">],</span>
+            <span class="n">loglike_ext</span><span class="o">=</span><span class="n">ul_data2</span><span class="p">[</span><span class="s1">&#39;lnlmax&#39;</span><span class="p">],</span>
+            <span class="n">ra</span><span class="o">=</span><span class="n">skydir</span><span class="o">.</span><span class="n">ra</span><span class="o">.</span><span class="n">deg</span><span class="p">,</span>
+            <span class="n">dec</span><span class="o">=</span><span class="n">skydir</span><span class="o">.</span><span class="n">dec</span><span class="o">.</span><span class="n">deg</span><span class="p">,</span>
+            <span class="n">glon</span><span class="o">=</span><span class="n">skydir</span><span class="o">.</span><span class="n">galactic</span><span class="o">.</span><span class="n">l</span><span class="o">.</span><span class="n">deg</span><span class="p">,</span>
+            <span class="n">glat</span><span class="o">=</span><span class="n">skydir</span><span class="o">.</span><span class="n">galactic</span><span class="o">.</span><span class="n">b</span><span class="o">.</span><span class="n">deg</span><span class="p">,</span>
+            <span class="n">pos_offset</span><span class="o">=</span><span class="mf">0.0</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_fit_extension_full</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">skydir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">skydir</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">copy_source</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">spatial_model</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;spatial_model&#39;</span><span class="p">,</span> <span class="s1">&#39;RadialGaussian&#39;</span><span class="p">)</span>
+        <span class="n">loglike</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">like</span><span class="p">()</span>
+
+        <span class="n">o</span> <span class="o">=</span> <span class="n">MutableNamedTuple</span><span class="p">(</span>
+            <span class="n">ext</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">ext_ul95</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
+            <span class="n">ext_err_lo</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">ext_err_hi</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
+            <span class="n">ext_err</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
+            <span class="n">loglike_ext</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
+            <span class="n">ra</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">dec</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">glon</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">glat</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
+            <span class="n">ra_err</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">dec_err</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
+            <span class="n">glon_err</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">glat_err</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
+            <span class="n">pos_err</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">pos_r68</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
+            <span class="n">pos_r95</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">pos_r99</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
+            <span class="n">pos_err_semimajor</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">pos_err_semiminor</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span>
+            <span class="n">pos_angle</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">pos_offset</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+
+        <span class="n">t0</span> <span class="o">=</span> <span class="n">Timer</span><span class="p">()</span>
+        <span class="n">t1</span> <span class="o">=</span> <span class="n">Timer</span><span class="p">()</span>
+
+        <span class="n">nstep</span> <span class="o">=</span> <span class="mi">7</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">4</span><span class="p">):</span>
+
+            <span class="n">t0</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+            <span class="n">fit_ext</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_extension</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">skydir</span><span class="o">=</span><span class="n">skydir</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">fit_ext</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_source_morphology</span><span class="p">(</span><span class="n">name</span><span class="p">,</span>
+                                       <span class="n">spatial_model</span><span class="o">=</span><span class="n">spatial_model</span><span class="p">,</span>
+                                       <span class="n">spatial_pars</span><span class="o">=</span><span class="p">{</span>
+                                           <span class="s1">&#39;SpatialWidth&#39;</span><span class="p">:</span> <span class="nb">max</span><span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">ext</span><span class="p">,</span> <span class="mf">0.00316</span><span class="p">)},</span>
+                                       <span class="n">use_pylike</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">t0</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+            <span class="n">t1</span><span class="o">.</span><span class="n">start</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">pos_r99</span><span class="p">):</span>
+                <span class="n">dtheta_max</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.5</span> <span class="o">*</span> <span class="n">o</span><span class="o">.</span><span class="n">ext</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">dtheta_max</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_r99</span><span class="p">)</span>
+
+            <span class="n">fit_pos0</span><span class="p">,</span> <span class="n">fit_pos1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_position</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">nstep</span><span class="o">=</span><span class="n">nstep</span><span class="p">,</span>
+                                                    <span class="n">dtheta_max</span><span class="o">=</span><span class="n">dtheta_max</span><span class="p">,</span>
+                                                    <span class="n">zmin</span><span class="o">=-</span><span class="mf">3.0</span><span class="p">,</span> <span class="n">use_pylike</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">fit_pos0</span><span class="p">)</span>
+            <span class="n">t1</span><span class="o">.</span><span class="n">stop</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_source_morphology</span><span class="p">(</span><span class="n">name</span><span class="p">,</span>
+                                       <span class="n">spatial_model</span><span class="o">=</span><span class="n">spatial_model</span><span class="p">,</span>
+                                       <span class="n">spatial_pars</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;RA&#39;</span><span class="p">:</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;ra&#39;</span><span class="p">],</span>
+                                                     <span class="s1">&#39;DEC&#39;</span><span class="p">:</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;dec&#39;</span><span class="p">]},</span>
+                                       <span class="n">use_pylike</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Elapsed Time: </span><span class="si">%.2f</span><span class="s1"> </span><span class="si">%.2f</span><span class="s1">&#39;</span><span class="p">,</span>
+                              <span class="n">t0</span><span class="o">.</span><span class="n">elapsed_time</span><span class="p">,</span> <span class="n">t1</span><span class="o">.</span><span class="n">elapsed_time</span><span class="p">)</span>
+
+            <span class="n">fit_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span>
+                <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">[</span><span class="s1">&#39;optimizer&#39;</span><span class="p">])</span>
+
+            <span class="n">skydir</span> <span class="o">=</span> <span class="n">fit_pos0</span><span class="p">[</span><span class="s1">&#39;skydir&#39;</span><span class="p">]</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">pos_offset</span> <span class="o">=</span> <span class="n">skydir</span><span class="o">.</span><span class="n">separation</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">skydir</span><span class="p">)</span><span class="o">.</span><span class="n">deg</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">loglike_ext</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">like</span><span class="p">()</span>
+            <span class="n">dloglike</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">loglike_ext</span> <span class="o">-</span> <span class="n">loglike</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Iter </span><span class="si">%i</span><span class="s1"> R68 = </span><span class="si">%8.3f</span><span class="s1"> Offset = </span><span class="si">%8.3f</span><span class="s1"> &#39;</span>
+                             <span class="s1">&#39;LogLikelihood = </span><span class="si">%10.2f</span><span class="s1"> Delta-LogLikelihood = </span><span class="si">%8.2f</span><span class="s1">&#39;</span><span class="p">,</span>
+                             <span class="n">i</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">ext</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_offset</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">loglike_ext</span><span class="p">,</span>
+                             <span class="n">dloglike</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">dloglike</span> <span class="o">&lt;</span> <span class="mf">0.1</span><span class="p">:</span>
+                <span class="k">break</span>
+
+            <span class="n">loglike</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">loglike_ext</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_source_morphology</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">spatial_pars</span><span class="o">=</span><span class="n">src</span><span class="o">.</span><span class="n">spatial_pars</span><span class="p">,</span>
+                                   <span class="n">use_pylike</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">o</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

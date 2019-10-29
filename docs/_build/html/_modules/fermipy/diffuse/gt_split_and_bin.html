@@ -1,0 +1,487 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fermipy.diffuse.gt_split_and_bin &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../../fermipy.html">fermipy</a> &raquo;</li>
+        
+      <li>fermipy.diffuse.gt_split_and_bin</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for fermipy.diffuse.gt_split_and_bin</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Prepare data for diffuse all-sky analysis</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">math</span>
+
+<span class="kn">import</span> <span class="nn">yaml</span>
+
+<span class="kn">from</span> <span class="nn">fermipy.jobs.utils</span> <span class="k">import</span> <span class="n">is_null</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.link</span> <span class="k">import</span> <span class="n">Link</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.chain</span> <span class="k">import</span> <span class="n">Chain</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.scatter_gather</span> <span class="k">import</span> <span class="n">ScatterGather</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.slac_impl</span> <span class="k">import</span> <span class="n">make_nfs_path</span>
+
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.utils</span> <span class="k">import</span> <span class="n">create_inputlist</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.name_policy</span> <span class="k">import</span> <span class="n">NameFactory</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse</span> <span class="k">import</span> <span class="n">defaults</span> <span class="k">as</span> <span class="n">diffuse_defaults</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.binning</span> <span class="k">import</span> <span class="n">EVT_TYPE_DICT</span>
+
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.job_library</span> <span class="k">import</span> <span class="n">Gtlink_select</span><span class="p">,</span>\
+    <span class="n">Gtlink_bin</span><span class="p">,</span> <span class="n">Gtexpcube2_SG</span>
+
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.gt_coadd_split</span> <span class="k">import</span> <span class="n">CoaddSplit_SG</span>
+
+
+<span class="n">NAME_FACTORY</span> <span class="o">=</span> <span class="n">NameFactory</span><span class="p">()</span>
+
+
+<span class="k">def</span> <span class="nf">make_full_path</span><span class="p">(</span><span class="n">basedir</span><span class="p">,</span> <span class="n">outkey</span><span class="p">,</span> <span class="n">origname</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Make a full file path&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">basedir</span><span class="p">,</span> <span class="n">outkey</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span>
+        <span class="n">origname</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.fits&#39;</span><span class="p">,</span> <span class="s1">&#39;_</span><span class="si">%s</span><span class="s1">.fits&#39;</span> <span class="o">%</span> <span class="n">outkey</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="SplitAndBin"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.gt_split_and_bin.SplitAndBin">[docs]</a><span class="k">class</span> <span class="nc">SplitAndBin</span><span class="p">(</span><span class="n">Chain</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small class to split and bin data according to some user-provided specification</span>
+
+<span class="sd">    This chain consists multiple `Link` objects:</span>
+
+<span class="sd">    select-energy-EBIN-ZCUT : `Gtlink_select`</span>
+<span class="sd">        Initial splitting by energy bin and zenith angle cut</span>
+
+<span class="sd">    select-type-EBIN-ZCUT-FILTER-TYPE : `Gtlink_select`</span>
+<span class="sd">        Refinement of selection from event types</span>
+
+<span class="sd">    bin-EBIN-ZCUT-FILTER-TYPE : `Gtlink_bin`</span>
+<span class="sd">        Final binning of the data for each event type</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-split-and-bin&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;split-and-bin&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s1">&#39;Run gtselect and gtbin together&#39;</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span>
+                           <span class="n">comp</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">],</span>
+                           <span class="n">hpx_order_max</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;hpx_order_ccube&#39;</span><span class="p">],</span>
+                           <span class="n">ft1file</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Input FT1 file&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">evclass</span><span class="o">=</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="s1">&#39;Event class bit mask&#39;</span><span class="p">,</span> <span class="nb">int</span><span class="p">),</span>
+                           <span class="n">outdir</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;counts_cubes_cr&#39;</span><span class="p">,</span> <span class="s1">&#39;Base name for output files&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">outkey</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Key for this particular output file&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">pfiles</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Directory for .par files&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">scratch</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Scratch area&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">dry_run</span><span class="o">=</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;Print commands but do not run them&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">))</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;C&#39;tor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SplitAndBin</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">comp_dict</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">_map_arguments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Map from the top-level arguments to the arguments provided to</span>
+<span class="sd">        the indiviudal links &quot;&quot;&quot;</span>
+        <span class="n">comp_file</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;comp&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">datafile</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">is_null</span><span class="p">(</span><span class="n">comp_file</span><span class="p">):</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="n">is_null</span><span class="p">(</span><span class="n">datafile</span><span class="p">):</span>
+            <span class="k">return</span>
+
+        <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">update_base_dict</span><span class="p">(</span><span class="n">datafile</span><span class="p">)</span>
+
+        <span class="n">outdir</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;outdir&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">outkey</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;outkey&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">ft1file</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="s1">&#39;ft1file&#39;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">is_null</span><span class="p">(</span><span class="n">outdir</span><span class="p">)</span> <span class="ow">or</span> <span class="n">is_null</span><span class="p">(</span><span class="n">outkey</span><span class="p">):</span>
+            <span class="k">return</span>
+        <span class="n">pfiles</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="n">outkey</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">comp_dict</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">comp_file</span><span class="p">))</span>
+        <span class="n">coordsys</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_dict</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;coordsys&#39;</span><span class="p">)</span>
+        <span class="n">full_out_dir</span> <span class="o">=</span> <span class="n">make_nfs_path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="n">outkey</span><span class="p">))</span>
+
+        <span class="k">for</span> <span class="n">key_e</span><span class="p">,</span> <span class="n">comp_e</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">comp_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+            <span class="n">emin</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span> <span class="n">comp_e</span><span class="p">[</span><span class="s1">&#39;log_emin&#39;</span><span class="p">])</span>
+            <span class="n">emax</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mf">10.</span><span class="p">,</span> <span class="n">comp_e</span><span class="p">[</span><span class="s1">&#39;log_emax&#39;</span><span class="p">])</span>
+            <span class="n">enumbins</span> <span class="o">=</span> <span class="n">comp_e</span><span class="p">[</span><span class="s1">&#39;enumbins&#39;</span><span class="p">]</span>
+            <span class="n">zmax</span> <span class="o">=</span> <span class="n">comp_e</span><span class="p">[</span><span class="s1">&#39;zmax&#39;</span><span class="p">]</span>
+            <span class="n">zcut</span> <span class="o">=</span> <span class="s2">&quot;zmax</span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">comp_e</span><span class="p">[</span><span class="s1">&#39;zmax&#39;</span><span class="p">]</span>
+            <span class="n">evclassstr</span> <span class="o">=</span> <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">base_dict</span><span class="p">[</span><span class="s1">&#39;evclass&#39;</span><span class="p">]</span>
+            <span class="n">kwargs_select</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">zcut</span><span class="o">=</span><span class="n">zcut</span><span class="p">,</span>
+                                 <span class="n">ebin</span><span class="o">=</span><span class="n">key_e</span><span class="p">,</span>
+                                 <span class="n">psftype</span><span class="o">=</span><span class="s1">&#39;ALL&#39;</span><span class="p">,</span>
+                                 <span class="n">coordsys</span><span class="o">=</span><span class="n">coordsys</span><span class="p">,</span>
+                                 <span class="n">mktime</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">)</span>
+            <span class="n">selectfile_energy</span> <span class="o">=</span> <span class="n">make_full_path</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="n">outkey</span><span class="p">,</span> <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs_select</span><span class="p">))</span>
+            <span class="n">linkname</span> <span class="o">=</span> <span class="s1">&#39;select-energy-</span><span class="si">%s</span><span class="s1">-</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key_e</span><span class="p">,</span> <span class="n">zcut</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_set_link</span><span class="p">(</span><span class="n">linkname</span><span class="p">,</span> <span class="n">Gtlink_select</span><span class="p">,</span>
+                           <span class="n">infile</span><span class="o">=</span><span class="n">ft1file</span><span class="p">,</span>
+                           <span class="n">outfile</span><span class="o">=</span><span class="n">selectfile_energy</span><span class="p">,</span>
+                           <span class="n">zmax</span><span class="o">=</span><span class="n">zmax</span><span class="p">,</span>
+                           <span class="n">emin</span><span class="o">=</span><span class="n">emin</span><span class="p">,</span>
+                           <span class="n">emax</span><span class="o">=</span><span class="n">emax</span><span class="p">,</span>
+                           <span class="n">evclass</span><span class="o">=</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">evclassmask</span><span class="p">(</span><span class="n">evclassstr</span><span class="p">),</span>
+                           <span class="n">pfiles</span><span class="o">=</span><span class="n">pfiles</span><span class="p">,</span>
+                           <span class="n">logfile</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">full_out_dir</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">.log&quot;</span> <span class="o">%</span> <span class="n">linkname</span><span class="p">))</span>
+
+            <span class="k">if</span> <span class="s1">&#39;evtclasses&#39;</span> <span class="ow">in</span> <span class="n">comp_e</span><span class="p">:</span>
+                <span class="n">evtclasslist_vals</span> <span class="o">=</span> <span class="n">comp_e</span><span class="p">[</span><span class="s1">&#39;evtclasses&#39;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">evtclasslist_vals</span> <span class="o">=</span> <span class="p">[</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">base_dict</span><span class="p">[</span><span class="s1">&#39;evclass&#39;</span><span class="p">]]</span>
+
+            <span class="k">for</span> <span class="n">evtclassval</span> <span class="ow">in</span> <span class="n">evtclasslist_vals</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">psf_type</span><span class="p">,</span> <span class="n">psf_dict</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">comp_e</span><span class="p">[</span><span class="s1">&#39;psf_types&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+                    <span class="n">linkname_select</span> <span class="o">=</span> <span class="s1">&#39;select-type-</span><span class="si">%s</span><span class="s1">-</span><span class="si">%s</span><span class="s1">-</span><span class="si">%s</span><span class="s1">-</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+                        <span class="n">key_e</span><span class="p">,</span> <span class="n">zcut</span><span class="p">,</span> <span class="n">evtclassval</span><span class="p">,</span> <span class="n">psf_type</span><span class="p">)</span>
+                    <span class="n">linkname_bin</span> <span class="o">=</span> <span class="s1">&#39;bin-</span><span class="si">%s</span><span class="s1">-</span><span class="si">%s</span><span class="s1">-</span><span class="si">%s</span><span class="s1">-</span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key_e</span><span class="p">,</span> <span class="n">zcut</span><span class="p">,</span> <span class="n">evtclassval</span><span class="p">,</span> <span class="n">psf_type</span><span class="p">)</span>
+                    <span class="n">hpx_order</span> <span class="o">=</span> <span class="n">psf_dict</span><span class="p">[</span><span class="s1">&#39;hpx_order&#39;</span><span class="p">]</span>
+                    <span class="n">kwargs_bin</span> <span class="o">=</span> <span class="n">kwargs_select</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                    <span class="n">kwargs_bin</span><span class="p">[</span><span class="s1">&#39;psftype&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">psf_type</span>
+                    <span class="n">selectfile_psf</span> <span class="o">=</span> <span class="n">make_full_path</span><span class="p">(</span>
+                        <span class="n">outdir</span><span class="p">,</span> <span class="n">outkey</span><span class="p">,</span> <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs_bin</span><span class="p">))</span>
+                    <span class="n">binfile</span> <span class="o">=</span> <span class="n">make_full_path</span><span class="p">(</span><span class="n">outdir</span><span class="p">,</span> <span class="n">outkey</span><span class="p">,</span> <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">ccube</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs_bin</span><span class="p">))</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_set_link</span><span class="p">(</span><span class="n">linkname_select</span><span class="p">,</span> <span class="n">Gtlink_select</span><span class="p">,</span>
+                                   <span class="n">infile</span><span class="o">=</span><span class="n">selectfile_energy</span><span class="p">,</span>
+                                   <span class="n">outfile</span><span class="o">=</span><span class="n">selectfile_psf</span><span class="p">,</span>
+                                   <span class="n">zmax</span><span class="o">=</span><span class="n">zmax</span><span class="p">,</span>
+                                   <span class="n">emin</span><span class="o">=</span><span class="n">emin</span><span class="p">,</span>
+                                   <span class="n">emax</span><span class="o">=</span><span class="n">emax</span><span class="p">,</span>
+                                   <span class="n">evtype</span><span class="o">=</span><span class="n">EVT_TYPE_DICT</span><span class="p">[</span><span class="n">psf_type</span><span class="p">],</span>
+                                   <span class="n">evclass</span><span class="o">=</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">evclassmask</span><span class="p">(</span><span class="n">evtclassval</span><span class="p">),</span>
+                                   <span class="n">pfiles</span><span class="o">=</span><span class="n">pfiles</span><span class="p">,</span>
+                                   <span class="n">logfile</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">full_out_dir</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">.log&quot;</span> <span class="o">%</span> <span class="n">linkname_select</span><span class="p">))</span>
+
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_set_link</span><span class="p">(</span><span class="n">linkname_bin</span><span class="p">,</span> <span class="n">Gtlink_bin</span><span class="p">,</span>
+                                   <span class="n">coordsys</span><span class="o">=</span><span class="n">coordsys</span><span class="p">,</span>
+                                   <span class="n">hpx_order</span><span class="o">=</span><span class="n">hpx_order</span><span class="p">,</span>
+                                   <span class="n">evfile</span><span class="o">=</span><span class="n">selectfile_psf</span><span class="p">,</span>
+                                   <span class="n">outfile</span><span class="o">=</span><span class="n">binfile</span><span class="p">,</span>
+                                   <span class="n">emin</span><span class="o">=</span><span class="n">emin</span><span class="p">,</span>
+                                   <span class="n">emax</span><span class="o">=</span><span class="n">emax</span><span class="p">,</span>
+                                   <span class="n">enumbins</span><span class="o">=</span><span class="n">enumbins</span><span class="p">,</span>
+                                   <span class="n">pfiles</span><span class="o">=</span><span class="n">pfiles</span><span class="p">,</span>
+                                   <span class="n">logfile</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">full_out_dir</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">.log&quot;</span> <span class="o">%</span> <span class="n">linkname_bin</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="SplitAndBin_SG"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.gt_split_and_bin.SplitAndBin_SG">[docs]</a><span class="k">class</span> <span class="nc">SplitAndBin_SG</span><span class="p">(</span><span class="n">ScatterGather</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small class to generate configurations for SplitAndBin</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-split-and-bin-sg&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> [options]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Prepare data for diffuse all-sky analysis&quot;</span>
+    <span class="n">clientclass</span> <span class="o">=</span> <span class="n">SplitAndBin</span>
+
+    <span class="n">job_time</span> <span class="o">=</span> <span class="mi">1500</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">comp</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">],</span>
+                           <span class="n">data</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span>
+                           <span class="n">hpx_order_max</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;hpx_order_ccube&#39;</span><span class="p">],</span>
+                           <span class="n">ft1file</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Input FT1 file&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">scratch</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Path to scratch area&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">))</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SplitAndBin_SG.build_job_configs"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.gt_split_and_bin.SplitAndBin_SG.build_job_configs">[docs]</a>    <span class="k">def</span> <span class="nf">build_job_configs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Hook to build job configurations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">job_configs</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">comp_file</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;comp&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">comp_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">comp_dict</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">comp_file</span><span class="p">))</span>
+            <span class="n">coordsys</span> <span class="o">=</span> <span class="n">comp_dict</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;coordsys&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">comp_dict</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                <span class="n">v</span><span class="p">[</span><span class="s1">&#39;coordsys&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">coordsys</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">job_configs</span>
+
+        <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">update_base_dict</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">])</span>
+
+        <span class="n">inputfiles</span> <span class="o">=</span> <span class="n">create_inputlist</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;ft1file&#39;</span><span class="p">])</span>
+        <span class="n">outdir_base</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">base_dict</span><span class="p">[</span><span class="s1">&#39;basedir&#39;</span><span class="p">],</span> <span class="s1">&#39;counts_cubes&#39;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">infile</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">inputfiles</span><span class="p">):</span>
+            <span class="n">key</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%06i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">idx</span>
+            <span class="n">output_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">outdir_base</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">output_dir</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="n">logfile</span> <span class="o">=</span> <span class="n">make_nfs_path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="s1">&#39;scatter_</span><span class="si">%s</span><span class="s1">.log&#39;</span> <span class="o">%</span> <span class="n">key</span><span class="p">))</span>
+            <span class="n">job_configs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">comp_dict</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">job_configs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">ft1file</span><span class="o">=</span><span class="n">infile</span><span class="p">,</span>
+                                         <span class="n">comp</span><span class="o">=</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">],</span>
+                                         <span class="n">hpx_order_max</span><span class="o">=</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;hpx_order_max&#39;</span><span class="p">],</span>
+                                         <span class="n">outdir</span><span class="o">=</span><span class="n">outdir_base</span><span class="p">,</span>
+                                         <span class="n">outkey</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+                                         <span class="n">logfile</span><span class="o">=</span><span class="n">logfile</span><span class="p">,</span>
+                                         <span class="n">pfiles</span><span class="o">=</span><span class="n">output_dir</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">job_configs</span></div></div>
+
+
+<div class="viewcode-block" id="SplitAndBinChain"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.gt_split_and_bin.SplitAndBinChain">[docs]</a><span class="k">class</span> <span class="nc">SplitAndBinChain</span><span class="p">(</span><span class="n">Chain</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Chain to run split and bin and then make exposure cubes</span>
+
+<span class="sd">    This chain consists of:</span>
+
+<span class="sd">    split-and-bin : `SplitAndBin_SG`</span>
+<span class="sd">        Chain to make the binned counts maps for each input file</span>
+<span class="sd">    </span>
+<span class="sd">    coadd-split : `CoaddSplit_SG`</span>
+<span class="sd">        Link to co-add the binnec counts maps files</span>
+
+<span class="sd">    expcube2 : `Gtexpcube2_SG`</span>
+<span class="sd">        Link to make the corresponding binned exposure maps</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-split-and-bin-chain&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;split-and-bin-chain&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s1">&#39;Run split-and-bin, coadd-split and exposure&#39;</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span>
+                           <span class="n">comp</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">],</span>
+                           <span class="n">ft1file</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;ft1file&#39;</span><span class="p">],</span>
+                           <span class="n">hpx_order_ccube</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;hpx_order_ccube&#39;</span><span class="p">],</span>
+                           <span class="n">hpx_order_expcube</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;hpx_order_expcube&#39;</span><span class="p">],</span>
+                           <span class="n">scratch</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;scratch&#39;</span><span class="p">],</span>
+                           <span class="n">dry_run</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;dry_run&#39;</span><span class="p">])</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_map_arguments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Map from the top-level arguments to the arguments provided to</span>
+<span class="sd">        the indiviudal links &quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">)</span>
+        <span class="n">comp</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;comp&#39;</span><span class="p">)</span>
+        <span class="n">ft1file</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ft1file&#39;</span><span class="p">)</span>
+        <span class="n">scratch</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;scratch&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">dry_run</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dry_run&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_link</span><span class="p">(</span><span class="s1">&#39;split-and-bin&#39;</span><span class="p">,</span> <span class="n">SplitAndBin_SG</span><span class="p">,</span>
+                       <span class="n">comp</span><span class="o">=</span><span class="n">comp</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                       <span class="n">hpx_order_max</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;hpx_order_ccube&#39;</span><span class="p">,</span> <span class="mi">9</span><span class="p">),</span>
+                       <span class="n">ft1file</span><span class="o">=</span><span class="n">ft1file</span><span class="p">,</span>
+                       <span class="n">scratch</span><span class="o">=</span><span class="n">scratch</span><span class="p">,</span>
+                       <span class="n">dry_run</span><span class="o">=</span><span class="n">dry_run</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_link</span><span class="p">(</span><span class="s1">&#39;coadd-split&#39;</span><span class="p">,</span> <span class="n">CoaddSplit_SG</span><span class="p">,</span>
+                       <span class="n">comp</span><span class="o">=</span><span class="n">comp</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                       <span class="n">ft1file</span><span class="o">=</span><span class="n">ft1file</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_link</span><span class="p">(</span><span class="s1">&#39;expcube2&#39;</span><span class="p">,</span> <span class="n">Gtexpcube2_SG</span><span class="p">,</span>
+                       <span class="n">comp</span><span class="o">=</span><span class="n">comp</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                       <span class="n">hpx_order_max</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;hpx_order_expcube&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+                       <span class="n">dry_run</span><span class="o">=</span><span class="n">dry_run</span><span class="p">)</span></div>
+
+<span class="k">def</span> <span class="nf">register_classes</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Register these classes with the `LinkFactory` &quot;&quot;&quot;</span>
+    <span class="n">SplitAndBin</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">SplitAndBin_SG</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">SplitAndBinChain</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

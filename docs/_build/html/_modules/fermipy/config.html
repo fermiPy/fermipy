@@ -1,0 +1,509 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fermipy.config &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../fermipy.html">fermipy</a> &raquo;</li>
+        
+      <li>fermipy.config</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for fermipy.config</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">fermipy</span>
+<span class="kn">from</span> <span class="nn">fermipy</span> <span class="k">import</span> <span class="n">utils</span>
+
+
+<div class="viewcode-block" id="create_default_config"><a class="viewcode-back" href="../../fermipy.html#fermipy.config.create_default_config">[docs]</a><span class="k">def</span> <span class="nf">create_default_config</span><span class="p">(</span><span class="n">schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Create a configuration dictionary from a schema dictionary.</span>
+<span class="sd">    The schema defines the valid configuration keys and their default</span>
+<span class="sd">    values.  Each element of ``schema`` should be a tuple/list</span>
+<span class="sd">    containing (default value,docstring,type) or a dict containing a</span>
+<span class="sd">    nested schema.&quot;&quot;&quot;</span>
+
+    <span class="n">o</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">schema</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">o</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">create_default_config</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+
+            <span class="n">value</span><span class="p">,</span> <span class="n">comment</span><span class="p">,</span> <span class="n">item_type</span> <span class="o">=</span> <span class="n">item</span>
+
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item_type</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                <span class="n">item_type</span> <span class="o">=</span> <span class="n">item_type</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="p">(</span><span class="n">item_type</span> <span class="o">==</span> <span class="nb">list</span> <span class="ow">or</span> <span class="n">item_type</span> <span class="o">==</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">item_type</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">o</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s1">&#39;Duplicate key in schema.&#39;</span><span class="p">)</span>
+
+            <span class="n">o</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;Unrecognized type for schema dict element: </span><span class="si">%s</span><span class="s1"> </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span>
+                            <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">item</span><span class="p">)))</span>
+
+    <span class="k">return</span> <span class="n">o</span></div>
+
+
+<div class="viewcode-block" id="validate_from_schema"><a class="viewcode-back" href="../../fermipy.html#fermipy.config.validate_from_schema">[docs]</a><span class="k">def</span> <span class="nf">validate_from_schema</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">schema</span><span class="p">,</span> <span class="n">section</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">cfg</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+
+        <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">schema</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">section</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s1">&#39;Invalid configuration key: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">k</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s1">&#39;Invalid configuration key: </span><span class="si">%s</span><span class="s1"> (section : </span><span class="si">%s</span><span class="s1">)&#39;</span>
+                               <span class="o">%</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">section</span><span class="p">))</span>
+
+        <span class="c1"># This is a section</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">schema</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="nb">dict</span><span class="p">):</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span>
+
+            <span class="n">validate_from_schema</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">schema</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">k</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">validate_option</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">cfg</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">schema</span><span class="p">[</span><span class="n">k</span><span class="p">][</span><span class="mi">2</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="validate_option"><a class="viewcode-back" href="../../fermipy.html#fermipy.config.validate_option">[docs]</a><span class="k">def</span> <span class="nf">validate_option</span><span class="p">(</span><span class="n">opt_name</span><span class="p">,</span> <span class="n">opt_val</span><span class="p">,</span> <span class="n">schema_type</span><span class="p">):</span>
+
+    <span class="k">if</span> <span class="n">opt_val</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span>
+
+    <span class="n">type_match</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">opt_val</span><span class="p">)</span> <span class="ow">is</span> <span class="n">schema_type</span>
+    <span class="n">type_checks</span> <span class="o">=</span> <span class="p">(</span><span class="n">schema_type</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">list</span><span class="p">,</span> <span class="nb">dict</span><span class="p">,</span> <span class="nb">bool</span><span class="p">]</span> <span class="ow">or</span>
+                   <span class="nb">type</span><span class="p">(</span><span class="n">opt_val</span><span class="p">)</span> <span class="ow">in</span> <span class="p">[</span><span class="nb">list</span><span class="p">,</span> <span class="nb">dict</span><span class="p">,</span> <span class="nb">bool</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">type_checks</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">type_match</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;Wrong type for </span><span class="si">%s</span><span class="s1"> </span><span class="si">%s</span><span class="s1"> </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span>
+                        <span class="p">(</span><span class="n">opt_name</span><span class="p">,</span> <span class="nb">type</span><span class="p">(</span><span class="n">opt_val</span><span class="p">),</span> <span class="n">schema_type</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="update_from_schema"><a class="viewcode-back" href="../../fermipy.html#fermipy.config.update_from_schema">[docs]</a><span class="k">def</span> <span class="nf">update_from_schema</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="n">cfgin</span><span class="p">,</span> <span class="n">schema</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Update configuration dictionary ``cfg`` with the contents of</span>
+<span class="sd">    ``cfgin`` using the ``schema`` dictionary to determine the valid</span>
+<span class="sd">    input keys.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    cfg : dict</span>
+<span class="sd">        Configuration dictionary to be updated.</span>
+
+<span class="sd">    cfgin : dict</span>
+<span class="sd">        New configuration dictionary that will be merged with ``cfg``.</span>
+
+<span class="sd">    schema : dict</span>
+<span class="sd">        Configuration schema defining the valid configuration keys and</span>
+<span class="sd">        their types.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    cfgout : dict</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cfgout</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">cfg</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">schema</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+
+        <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">cfgin</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">cfgout</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="n">cfgout</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">update_from_schema</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">cfgin</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">v</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">v</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="ow">is</span> <span class="nb">dict</span><span class="p">:</span>
+            <span class="n">cfgout</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">merge_dict</span><span class="p">(</span><span class="n">cfg</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">cfgin</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">add_new_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">cfgout</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">cfgin</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">cfgout</span></div>
+
+
+<div class="viewcode-block" id="cast_config"><a class="viewcode-back" href="../../fermipy.html#fermipy.config.cast_config">[docs]</a><span class="k">def</span> <span class="nf">cast_config</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">defaults</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">defaults</span><span class="p">:</span>
+            <span class="k">continue</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">cast_config</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">defaults</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">item</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">value</span><span class="p">,</span> <span class="n">comment</span><span class="p">,</span> <span class="n">item_type</span> <span class="o">=</span> <span class="n">defaults</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">item_type</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item_type</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">):</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">utils</span><span class="o">.</span><span class="n">isstr</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="ow">and</span> <span class="n">item_type</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+                <span class="n">config</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">item</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">config</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">item_type</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="n">key</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="validate_config"><a class="viewcode-back" href="../../fermipy.html#fermipy.config.validate_config">[docs]</a><span class="k">def</span> <span class="nf">validate_config</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">defaults</span><span class="p">,</span> <span class="n">section</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">key</span> <span class="ow">in</span> <span class="n">defaults</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">defaults</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="nb">dict</span><span class="p">)</span>
+                <span class="ow">and</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)):</span>
+            <span class="n">type0</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">defaults</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+            <span class="n">type1</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s1">&#39;Wrong type for configuration key: &#39;</span>
+                            <span class="s1">&#39;</span><span class="si">%s</span><span class="se">\n</span><span class="s1">type: </span><span class="si">%s</span><span class="s1"> required type: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">type1</span><span class="p">,</span> <span class="n">type0</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">defaults</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="n">section</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s1">&#39;Invalid configuration key: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">key</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="s1">&#39;Invalid configuration key: </span><span class="si">%s</span><span class="s1"> (section : </span><span class="si">%s</span><span class="s1">)&#39;</span>
+                               <span class="o">%</span> <span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">section</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">defaults</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="n">validate_config</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">defaults</span><span class="p">[</span><span class="n">key</span><span class="p">],</span> <span class="n">key</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ConfigSchema"><a class="viewcode-back" href="../../fermipy.html#fermipy.config.ConfigSchema">[docs]</a><span class="k">class</span> <span class="nc">ConfigSchema</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class encapsulating a configuration schema.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">options</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_options</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">options</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">options</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_options</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">merge_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">,</span>
+                                         <span class="n">add_new_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ConfigSchema.add_option"><a class="viewcode-back" href="../../fermipy.html#fermipy.config.ConfigSchema.add_option">[docs]</a>    <span class="k">def</span> <span class="nf">add_option</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">default_value</span><span class="p">,</span> <span class="n">helpstr</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">otype</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="n">otype</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">otype</span> <span class="o">=</span> <span class="nb">type</span><span class="p">(</span><span class="n">default_value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">default_value</span><span class="p">,</span> <span class="n">helpstr</span><span class="p">,</span> <span class="n">otype</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="ConfigSchema.add_section"><a class="viewcode-back" href="../../fermipy.html#fermipy.config.ConfigSchema.add_section">[docs]</a>    <span class="k">def</span> <span class="nf">add_section</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">section</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">section</span></div>
+
+<div class="viewcode-block" id="ConfigSchema.create_config"><a class="viewcode-back" href="../../fermipy.html#fermipy.config.ConfigSchema.create_config">[docs]</a>    <span class="k">def</span> <span class="nf">create_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">validate</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">config</span> <span class="o">=</span> <span class="p">{}</span> <span class="k">if</span> <span class="n">config</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">config</span>
+
+        <span class="n">o</span> <span class="o">=</span> <span class="n">create_default_config</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">merge_dict</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">kwargs</span><span class="p">,</span> <span class="n">add_new_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">cast_config</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">validate</span><span class="p">:</span>
+            <span class="n">validate_from_schema</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+
+        <span class="n">o</span> <span class="o">=</span> <span class="n">update_from_schema</span><span class="p">(</span><span class="n">o</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">o</span></div>
+
+<div class="viewcode-block" id="ConfigSchema.items"><a class="viewcode-back" href="../../fermipy.html#fermipy.config.ConfigSchema.items">[docs]</a>    <span class="k">def</span> <span class="nf">items</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="o">.</span><span class="n">items</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">__contains__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__setitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_options</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span></div>
+
+
+<div class="viewcode-block" id="Configurable"><a class="viewcode-back" href="../../fermipy.html#fermipy.config.Configurable">[docs]</a><span class="k">class</span> <span class="nc">Configurable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;The base class provides common facilities like loading and saving</span>
+<span class="sd">    configuration state. &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="kn">import</span> <span class="nn">yaml</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_config</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_config</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_configdir</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">utils</span><span class="o">.</span><span class="n">isstr</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_configdir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">config</span><span class="p">))</span>
+            <span class="n">config_dict</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">config</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="n">config</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">config_dict</span> <span class="o">=</span> <span class="n">config</span>
+        <span class="k">elif</span> <span class="n">utils</span><span class="o">.</span><span class="n">isstr</span><span class="p">(</span><span class="n">config</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">config</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Invalid path to configuration file: </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">config</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Invalid config argument.&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span><span class="n">config_dict</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">configdir</span> <span class="ow">and</span> <span class="s1">&#39;fileio&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="ow">and</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;fileio&#39;</span><span class="p">][</span><span class="s1">&#39;outdir&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;fileio&#39;</span><span class="p">][</span><span class="s1">&#39;outdir&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">configdir</span>
+
+<div class="viewcode-block" id="Configurable.configure"><a class="viewcode-back" href="../../fermipy.html#fermipy.config.Configurable.configure">[docs]</a>    <span class="k">def</span> <span class="nf">configure</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">schema</span> <span class="o">=</span> <span class="n">ConfigSchema</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">defaults</span><span class="p">)</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">create_config</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">cast_config</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">schema</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_config</span> <span class="o">=</span> <span class="n">config</span></div>
+
+<div class="viewcode-block" id="Configurable.get_config"><a class="viewcode-back" href="../../fermipy.html#fermipy.config.Configurable.get_config">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">get_config</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return a default configuration dictionary for this class.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">create_default_config</span><span class="p">(</span><span class="bp">cls</span><span class="o">.</span><span class="n">defaults</span><span class="p">)</span></div>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">config</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the configuration dictionary of this class.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_config</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">schema</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the configuration schema of this class.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">ConfigSchema</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">defaults</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">configdir</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_configdir</span>
+
+<div class="viewcode-block" id="Configurable.write_config"><a class="viewcode-back" href="../../fermipy.html#fermipy.config.Configurable.write_config">[docs]</a>    <span class="k">def</span> <span class="nf">write_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">outfile</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Write the configuration dictionary to an output file.&quot;&quot;&quot;</span>
+        <span class="n">utils</span><span class="o">.</span><span class="n">write_yaml</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">outfile</span><span class="p">,</span> <span class="n">default_flow_style</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Configurable.print_config"><a class="viewcode-back" href="../../fermipy.html#fermipy.config.Configurable.print_config">[docs]</a>    <span class="k">def</span> <span class="nf">print_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">logger</span><span class="p">,</span> <span class="n">loglevel</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="kn">import</span> <span class="nn">yaml</span>
+        <span class="n">cfgstr</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">default_flow_style</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">loglevel</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Configuration:</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">cfgstr</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">loglevel</span><span class="p">,</span> <span class="s1">&#39;Configuration:</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span> <span class="n">cfgstr</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="ConfigManager"><a class="viewcode-back" href="../../fermipy.html#fermipy.config.ConfigManager">[docs]</a><span class="k">class</span> <span class="nc">ConfigManager</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+<div class="viewcode-block" id="ConfigManager.create"><a class="viewcode-back" href="../../fermipy.html#fermipy.config.ConfigManager.create">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">create</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">configfile</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a configuration dictionary from a yaml config file.</span>
+<span class="sd">        This function will first populate the dictionary with defaults</span>
+<span class="sd">        taken from pre-defined configuration files.  The configuration</span>
+<span class="sd">        dictionary is then updated with the user-defined configuration</span>
+<span class="sd">        file.  Any settings defined by the user will take precedence</span>
+<span class="sd">        over the default settings.&quot;&quot;&quot;</span>
+
+        <span class="c1"># populate config dictionary with an initial set of values</span>
+        <span class="c1"># config_logging = ConfigManager.load(&#39;logging.yaml&#39;)</span>
+
+        <span class="n">config</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;fileio&#39;</span><span class="p">][</span><span class="s1">&#39;outdir&#39;</span><span class="p">]</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">config</span><span class="p">[</span><span class="s1">&#39;fileio&#39;</span><span class="p">][</span><span class="s1">&#39;outdir&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">configfile</span><span class="p">))</span>
+
+        <span class="n">user_config</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">configfile</span><span class="p">)</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">merge_dict</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="n">user_config</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">config</span><span class="p">[</span><span class="s1">&#39;fileio&#39;</span><span class="p">][</span><span class="s1">&#39;outdir&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span>
+            <span class="n">config</span><span class="p">[</span><span class="s1">&#39;fileio&#39;</span><span class="p">][</span><span class="s1">&#39;outdir&#39;</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">config</span></div>
+
+<div class="viewcode-block" id="ConfigManager.load"><a class="viewcode-back" href="../../fermipy.html#fermipy.config.ConfigManager.load">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">load</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="kn">import</span> <span class="nn">yaml</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">fermipy</span><span class="o">.</span><span class="n">PACKAGE_ROOT</span><span class="p">,</span> <span class="s1">&#39;config&#39;</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">config</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">config</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

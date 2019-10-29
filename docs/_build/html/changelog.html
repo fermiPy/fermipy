@@ -1,0 +1,528 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Changelog &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="fermipy.diffuse subpackage" href="fermipy_diffuse.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Changelog</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id2">0.18.0 (7/01/2019)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id3">0.17.4 (3/13/2019)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id4">0.17.3 (7/12/2018)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id5">0.17.2 (5/30/2018)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id6">0.17.1 (5/23/2018)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id7">0.17.0 (5/22/2018)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id8">0.16.0 (12/27/2017)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id14">0.15.0 (09/05/2017)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id19">0.14.0 (03/28/2017)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id24">0.13.0 (01/16/2017)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id29">0.12.0 (11/20/2016)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id34">0.11.0 (08/24/2016)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id38">0.10.0 (07/03/2016)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id39">0.9.0 (05/25/2016)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id40">0.8.0 (05/18/2016)</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Changelog</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/changelog.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="changelog">
+<span id="id1"></span><h1>Changelog<a class="headerlink" href="#changelog" title="Permalink to this headline">¶</a></h1>
+<p>This page is a changelog for releases of Fermipy.  You can also browse
+releases on <a class="reference external" href="https://github.com/fermiPy/fermipy/releases">Github</a>.</p>
+<div class="section" id="id2">
+<h2>0.18.0 (7/01/2019)<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Added tools to use new version of energy dispersion from fermitools.</li>
+<li>Changed travis testing and conda scripts to work with conda release of fermitools.</li>
+</ul>
+</div>
+<div class="section" id="id3">
+<h2>0.17.4 (3/13/2019)<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Including 4FGL, interstellar emission model and isotropic templates files.</li>
+<li>Changing catalog.py to use 4FGL catalog</li>
+<li>Minor fixes to target_collect.py, lightcurve.py and gta.simulate()</li>
+</ul>
+</div>
+<div class="section" id="id4">
+<h2>0.17.3 (7/12/2018)<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Added fitting code to fermipy.diffuse module</li>
+<li>Improved fermipy.jobs to deal with analyses with multiple components</li>
+<li>Added capability to plot global minimum in castro plots</li>
+<li>Added spectra for dark matter decay to DMFitFunction</li>
+<li>Added code to split simulations into smaller batch jobs</li>
+<li>Added fixed shape lightcurve to correct TS_var computation</li>
+</ul>
+</div>
+<div class="section" id="id5">
+<h2>0.17.2 (5/30/2018)<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Added lots of documentation for the fermipy.jobs module.</li>
+<li>Minor changes to the fermipy.jobs module to work with the
+dark matter analysis pipeline (dmpipe).</li>
+</ul>
+</div>
+<div class="section" id="id6">
+<h2>0.17.1 (5/23/2018)<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Patch release to get versioning working with GitHub release system.</li>
+</ul>
+</div>
+<div class="section" id="id7">
+<h2>0.17.0 (5/22/2018)<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>The LogParabola, PowerLawSuperExponetial and Dark Matter SEDs have been added to the sensitivity.py script.</li>
+<li>There are a lot of additions to perform a stacking analysis. This can be applied for instance for the search of dark matter with a stacking analysis of Milky Way dSphs, Galaxy Clusters or other galaxies.</li>
+<li>It contains scripts to send jobs to SLAC Batch Farm and collect the results.</li>
+<li>It includes scripts and functions to perform all sky fits.</li>
+<li>It also fixes a few issues with glon and glat in the localization (#225), and the wrong orientation of residual and TS maps (#216)</li>
+</ul>
+</div>
+<div class="section" id="id8">
+<h2>0.16.0 (12/27/2017)<a class="headerlink" href="#id8" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Improvements and refactoring in the internals of the <code class="docutils literal notranslate"><span class="pre">lightcurve</span></code>
+method (see <a class="reference external" href="https://github.com/fermiPy/fermipy/pull/156">#156</a>,
+<a class="reference external" href="https://github.com/fermiPy/fermipy/pull/157">#157</a>, <a class="reference external" href="https://github.com/fermiPy/fermipy/pull/160">#160</a>, <a class="reference external" href="https://github.com/fermiPy/fermipy/pull/161">#161</a>, <a class="reference external" href="https://github.com/fermiPy/fermipy/pull/162">#162</a>).  Resolve fit
+stability issues that were arising when the source of interest was
+not significantly detected in a given time bin.  Added options to
+speed up source map calculation by rescaling source maps (enabled
+with <code class="docutils literal notranslate"><span class="pre">use_scaled_srcmap=True</span></code>) and split the lightcurve
+calculation across N cores (enabled with <code class="docutils literal notranslate"><span class="pre">multithread=True</span></code> and
+<code class="docutils literal notranslate"><span class="pre">nthread=N</span></code>).  Add calculation of <code class="docutils literal notranslate"><span class="pre">TS_var</span></code> to test for
+variability using method from the 2FGL.</li>
+<li>Updates to validation tools.  Added MeritSkimmer script
+(<code class="docutils literal notranslate"><span class="pre">fermipy-merit-skimmer</span></code>) for skimming ROOT merit tuples either
+locally or on xrootd.</li>
+</ul>
+</div>
+<div class="section" id="id14">
+<h2>0.15.0 (09/05/2017)<a class="headerlink" href="#id14" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Bug fix related to restoring analysis state for phased analysis
+(scaled exposure).</li>
+<li>Many improvements and feature additions to senstivity tools (see e.g. <a class="reference external" href="https://github.com/fermiPy/fermipy/pull/148">#148</a>, <a class="reference external" href="https://github.com/fermiPy/fermipy/pull/149">#149</a>, and <a class="reference external" href="https://github.com/fermiPy/fermipy/pull/152">#152</a>).</li>
+<li>Various updates to support DM pipeline package (<a class="reference external" href="https://github.com/fermiPy/fermipy/pull/146">#146</a>).</li>
+<li>Improve robustness of algorithms for extracting peak and
+uncertainty ellipse from 2D likelihood surface.</li>
+<li>Added <a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.curvature" title="fermipy.gtanalysis.GTAnalysis.curvature"><code class="xref py py-obj docutils literal notranslate"><span class="pre">curvature</span></code></a> method for testing a
+source for spectral curvature.</li>
+<li>Added <code class="docutils literal notranslate"><span class="pre">fix_shape</span></code> option to
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.extension" title="fermipy.gtanalysis.GTAnalysis.extension"><code class="xref py py-obj docutils literal notranslate"><span class="pre">extension</span></code></a> and
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.localize" title="fermipy.gtanalysis.GTAnalysis.localize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">localize</span></code></a> to fix spectral shape
+parameters.  Spectral shape parameters of the source of interest are
+now free by default when localizing or fitting extension.</li>
+</ul>
+</div>
+<div class="section" id="id19">
+<h2>0.14.0 (03/28/2017)<a class="headerlink" href="#id19" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Refactoring and improvements in
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.localize" title="fermipy.gtanalysis.GTAnalysis.localize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">localize</span></code></a> and
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.extension" title="fermipy.gtanalysis.GTAnalysis.extension"><code class="xref py py-obj docutils literal notranslate"><span class="pre">extension</span></code></a> (see <a class="reference external" href="https://github.com/fermiPy/fermipy/pull/124">#124</a>).  Cleanup of
+columns in <a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.localize" title="fermipy.gtanalysis.GTAnalysis.localize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">localize</span></code></a>.  Add new
+columns for 1-sigma errors projected in CEL and GAL coordinates as
+well as associated covariance and correlation matrices.  Add
+positional errors when running
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.extension" title="fermipy.gtanalysis.GTAnalysis.extension"><code class="xref py py-obj docutils literal notranslate"><span class="pre">extension</span></code></a> with
+<code class="docutils literal notranslate"><span class="pre">fit_position=True</span></code>.</li>
+<li>Add <code class="docutils literal notranslate"><span class="pre">free_radius</span></code> option to
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.localize" title="fermipy.gtanalysis.GTAnalysis.localize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">localize</span></code></a>,
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.extension" title="fermipy.gtanalysis.GTAnalysis.extension"><code class="xref py py-obj docutils literal notranslate"><span class="pre">extension</span></code></a>, and
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.sed" title="fermipy.gtanalysis.GTAnalysis.sed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sed</span></code></a>.  This can be used to free
+background sources within a certain distance of the analyzed source.</li>
+<li>Relocalize point-source hypothesis when testing extension of
+extended sources.</li>
+<li>Improve speed and accuracy of source map calculation (see <a class="reference external" href="https://github.com/fermiPy/fermipy/pull/123">#123</a>).  Exposures are now
+extracted directly from the exposure map.</li>
+<li>Write analysis configuration to <code class="docutils literal notranslate"><span class="pre">CONFIG</span></code> header keyword of all
+FITS output files.</li>
+<li>Add <code class="docutils literal notranslate"><span class="pre">jobs</span></code> and <code class="docutils literal notranslate"><span class="pre">diffuse</span></code> submodules (see <a class="reference external" href="https://github.com/fermiPy/fermipy/pull/120">#120</a> and <a class="reference external" href="https://github.com/fermiPy/fermipy/pull/120">#122</a>).  These contain
+functionality for peforming all-sky diffuse analysis and setting up
+automated analysis pipelines.  More detailed documentation on these
+features to be provided in a future release.</li>
+</ul>
+</div>
+<div class="section" id="id24">
+<h2>0.13.0 (01/16/2017)<a class="headerlink" href="#id24" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Rewrite LTCube class to add support for fast LT cube generation.
+The <code class="docutils literal notranslate"><span class="pre">gtlike.use_local_ltcube</span></code> option can be used to enable the
+python-based LT cube calculation in lieu of <code class="docutils literal notranslate"><span class="pre">gtltcube</span></code>.</li>
+<li>Bug fixes and improvements to lightcurve method (see <a class="reference external" href="https://github.com/fermiPy/fermipy/pull/102">#102</a>).  Python-based LT
+cube generation is now enabled by default resulting in much faster
+execution time when generating light curves over long time spans.</li>
+<li>Add <code class="docutils literal notranslate"><span class="pre">fit_position</span></code> option to
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.extension" title="fermipy.gtanalysis.GTAnalysis.extension"><code class="xref py py-obj docutils literal notranslate"><span class="pre">extension</span></code></a> that can be used to
+enable a joint fit of extension and position.</li>
+<li>New scheme for auto-generating parameter docstrings.</li>
+<li>Add new <a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.set_source_morphology" title="fermipy.gtanalysis.GTAnalysis.set_source_morphology"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_source_morphology</span></code></a>
+method to update the spatial model of a source at runtime.</li>
+<li>Major refactoring of <a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.extension" title="fermipy.gtanalysis.GTAnalysis.extension"><code class="xref py py-obj docutils literal notranslate"><span class="pre">extension</span></code></a> and
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.localize" title="fermipy.gtanalysis.GTAnalysis.localize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">localize</span></code></a> (see <a class="reference external" href="https://github.com/fermiPy/fermipy/pull/106">#106</a> and <a class="reference external" href="https://github.com/fermiPy/fermipy/pull/110">#110</a>).</li>
+<li>Pulled in many new modules and scripts for diffuse all-sky analysis
+(see <a class="reference external" href="https://github.com/fermiPy/fermipy/pull/105">#105</a>).</li>
+</ul>
+</div>
+<div class="section" id="id29">
+<h2>0.12.0 (11/20/2016)<a class="headerlink" href="#id29" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Add support for phased analysis (<a class="reference external" href="https://github.com/fermiPy/fermipy/pull/87">#87</a>). <code class="docutils literal notranslate"><span class="pre">gtlike.expscale</span></code>
+and <code class="docutils literal notranslate"><span class="pre">gtlike.src_expscale</span></code> can be used to apply a constant exposure
+correction to a whole component or individual sources within a
+component.  See <a class="reference internal" href="advanced/phased.html#phased"><span class="std std-ref">Phased Analysis</span></a> for examples.</li>
+<li>Add script and tools for calculating flux sensitivity (<a class="reference external" href="https://github.com/fermiPy/fermipy/pull/88">#88</a> and <a class="reference external" href="https://github.com/fermiPy/fermipy/pull/95">#95</a>).  The
+<code class="docutils literal notranslate"><span class="pre">fermipy-flux-sensitivity</span></code> script evaluates both the differential
+and integral flux sensitivity for a given TS threshold and minimum
+number of detected counts.  See <a class="reference internal" href="advanced/sensitivity.html#sensitivity"><span class="std std-ref">Sensitivity Tools</span></a> for examples.</li>
+<li>Add <code class="docutils literal notranslate"><span class="pre">fermipy-healview</span></code> script for generating images of healpix
+maps and cubes.</li>
+<li>Improvements to HPX-related classes and utilities.</li>
+<li>Refactoring in <code class="docutils literal notranslate"><span class="pre">irfs</span></code> module to support development of new
+validation tools.</li>
+<li>Improvements to configuration handling to allow parameter validation
+when updating configuration at runtime.</li>
+<li>Add lightcurve method (<a class="reference external" href="https://github.com/fermiPy/fermipy/pull/80">#80</a>).  See
+<a class="reference internal" href="advanced/lightcurve.html#lightcurve"><span class="std std-ref">Light Curves</span></a> for documentation.</li>
+<li>Change convention for flux arrays in source object.  Values and
+uncertainties are now stored in separate arrays (e.g. <code class="docutils literal notranslate"><span class="pre">flux</span></code> and
+<code class="docutils literal notranslate"><span class="pre">flux_err</span></code>).</li>
+<li>Add <a class="reference internal" href="install.html#dockerinstall"><span class="std std-ref">Docker-based installation</span></a> instructions.
+This can be used to run the RHEL6 SLAC ST builds on any machine that
+supports Docker (e.g. OSX Yosemite or later).</li>
+<li>Adopt changes to column name conventions in SED format.  All column
+names are now lowercase.</li>
+</ul>
+</div>
+<div class="section" id="id34">
+<h2>0.11.0 (08/24/2016)<a class="headerlink" href="#id34" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Add support for weighted likelihood fits (supported in ST
+11-03-00 or later).  Weights maps can be specified with the <code class="docutils literal notranslate"><span class="pre">wmap</span></code>
+parameter in <a class="reference internal" href="config.html#config-gtlike"><span class="std std-ref">gtlike</span></a>.</li>
+<li>Implemented performance improvements in
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.tsmap" title="fermipy.gtanalysis.GTAnalysis.tsmap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tsmap</span></code></a> including switching to
+newton’s method for step-size calculation and masking of empty
+pixels (see <a class="reference external" href="https://github.com/fermiPy/fermipy/pull/79">#79</a>).</li>
+<li>Ongoing development and refactoring of classes for dealing with
+CastroData (binned likelihood profiles).</li>
+<li>Added <a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.reload_sources" title="fermipy.gtanalysis.GTAnalysis.reload_sources"><code class="xref py py-obj docutils literal notranslate"><span class="pre">reload_sources</span></code></a> method for
+faster recomputation of source maps.</li>
+<li>Fixed sign error in localization plotting method that gave wrong
+orientation for error ellipse..</li>
+<li>Refactored classes in <a class="reference internal" href="fermipy.html#module-fermipy.spectrum" title="fermipy.spectrum"><code class="xref py py-obj docutils literal notranslate"><span class="pre">spectrum</span></code></a> and simplified interface
+for doing spectral fits (see <a class="reference external" href="https://github.com/fermiPy/fermipy/pull/69">#69</a>).</li>
+<li>Added DMFitFunction spectral model class in
+<a class="reference internal" href="fermipy.html#module-fermipy.spectrum" title="fermipy.spectrum"><code class="xref py py-obj docutils literal notranslate"><span class="pre">spectrum</span></code></a> (see <a class="reference external" href="https://github.com/fermiPy/fermipy/pull/66">#66</a>).  This uses the same
+lookup tables as the ST DMFitFunction class but provides a pure
+python implementation which can be used independently of the STs.</li>
+</ul>
+</div>
+<div class="section" id="id38">
+<h2>0.10.0 (07/03/2016)<a class="headerlink" href="#id38" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Implement support for more spectral models
+(DMFitFunction, EblAtten, FileFunction, Gaussian).</li>
+<li>New options (<code class="docutils literal notranslate"><span class="pre">outdir_regex</span></code> and <code class="docutils literal notranslate"><span class="pre">workdir</span> <span class="pre">regex</span></code>) for
+fine-grained control over input/output file staging.</li>
+<li>Add <code class="docutils literal notranslate"><span class="pre">offset_roi_edge</span></code> to source dictionary.  Defined as the
+distance from the source position to the edge of the ROI (&lt; 0 =
+inside the ROI, &gt; 0 = outside the ROI).</li>
+<li>Add new variables in <a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.fit" title="fermipy.gtanalysis.GTAnalysis.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code></a> output
+(<code class="docutils literal notranslate"><span class="pre">edm</span></code>, <code class="docutils literal notranslate"><span class="pre">fit_status</span></code>).</li>
+<li>Add new package scripts (<code class="docutils literal notranslate"><span class="pre">fermipy-collect-sources</span></code>,
+<code class="docutils literal notranslate"><span class="pre">fermipy-cluster-sources</span></code>).</li>
+<li>Various refactoring and improvements in code for dealing with castro
+data.</li>
+<li>Add <code class="docutils literal notranslate"><span class="pre">MODEL_FLUX</span></code> and <code class="docutils literal notranslate"><span class="pre">PARAMS</span></code> HDUs to SED FITS file.  Many new
+elements added SED output dictionary.</li>
+<li>Support NEWTON fitter with the same interface as MINUIT and
+NEWMINUIT.  Running <a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.fit" title="fermipy.gtanalysis.GTAnalysis.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code></a> with
+<code class="docutils literal notranslate"><span class="pre">optimizer</span></code> = NEWTON will use the NEWTON fitter where applicable
+(only free norms) and MINUIT otherwise.  The <code class="docutils literal notranslate"><span class="pre">optimizer</span></code> argument
+to <a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.sed" title="fermipy.gtanalysis.GTAnalysis.sed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sed</span></code></a>,
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.extension" title="fermipy.gtanalysis.GTAnalysis.extension"><code class="xref py py-obj docutils literal notranslate"><span class="pre">extension</span></code></a>, and
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.localize" title="fermipy.gtanalysis.GTAnalysis.localize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">localize</span></code></a> can be used to override
+the default optimizer at runtime.  Note that the NEWTON fitter is
+only supported by ST releases <em>after</em> 11-01-01.</li>
+</ul>
+</div>
+<div class="section" id="id39">
+<h2>0.9.0 (05/25/2016)<a class="headerlink" href="#id39" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Bug fixes and various refactoring in TSCube and CastroData.  Classes
+for reading and manipulating bin-by-bin likelihoods are now moved to
+the <a class="reference internal" href="fermipy.html#module-fermipy.castro" title="fermipy.castro"><code class="xref py py-obj docutils literal notranslate"><span class="pre">castro</span></code></a> module.</li>
+<li>Rationalized naming conventions for energy-related variables.
+Properties and method arguments with units of the logarithm of the
+energy now consistently contain <code class="docutils literal notranslate"><span class="pre">log</span></code> in the name.<ul>
+<li><a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.energies" title="fermipy.gtanalysis.GTAnalysis.energies"><code class="xref py py-obj docutils literal notranslate"><span class="pre">energies</span></code></a> now returns bin energies
+in MeV (previously it returned logarithmic energies).
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.log_energies" title="fermipy.gtanalysis.GTAnalysis.log_energies"><code class="xref py py-obj docutils literal notranslate"><span class="pre">log_energies</span></code></a> can be used to
+access logarithmic bin energies.</li>
+<li>Changed <code class="docutils literal notranslate"><span class="pre">erange</span></code> parameter to <code class="docutils literal notranslate"><span class="pre">loge_bounds</span></code> in the methods
+that accept an energy range.</li>
+<li>Changed the units of <code class="docutils literal notranslate"><span class="pre">emin</span></code>, <code class="docutils literal notranslate"><span class="pre">ectr</span></code>, and <code class="docutils literal notranslate"><span class="pre">emax</span></code> in the sed
+output dictionary to MeV.</li>
+</ul>
+</li>
+<li>Add more columns to the FITS source catalog file generated by
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.write_roi" title="fermipy.gtanalysis.GTAnalysis.write_roi"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_roi</span></code></a>.  All float and string
+values in the source dictionary are now automatically included in
+the FITS file.  Parameter values, errors, and names are written to
+the <code class="docutils literal notranslate"><span class="pre">param_values</span></code>, <code class="docutils literal notranslate"><span class="pre">param_errors</span></code>, and <code class="docutils literal notranslate"><span class="pre">param_names</span></code> vector
+columns.</li>
+<li>Add package script for dispatching batch jobs to LSF (<code class="docutils literal notranslate"><span class="pre">fermipy-dispatch</span></code>).</li>
+<li>Fixed some bugs related to handling of unicode strings.</li>
+</ul>
+</div>
+<div class="section" id="id40">
+<h2>0.8.0 (05/18/2016)<a class="headerlink" href="#id40" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>Added new variables to source dictionary:<ul>
+<li>Likelihood scan of source normalization (<code class="docutils literal notranslate"><span class="pre">dloglike_scan</span></code>,
+<code class="docutils literal notranslate"><span class="pre">eflux_scan</span></code>, <code class="docutils literal notranslate"><span class="pre">flux_scan</span></code>).</li>
+<li>Source localization errors (<code class="docutils literal notranslate"><span class="pre">pos_sigma</span></code>,
+<code class="docutils literal notranslate"><span class="pre">pos_sigma_semimajor</span></code>, <code class="docutils literal notranslate"><span class="pre">pos_sigma_semiminor</span></code>, <code class="docutils literal notranslate"><span class="pre">pos_r68</span></code>,
+<code class="docutils literal notranslate"><span class="pre">pos_r95</span></code>, <code class="docutils literal notranslate"><span class="pre">pos_r99</span></code>, <code class="docutils literal notranslate"><span class="pre">pos_angle</span></code>).  These are automatically
+filled when running <a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.localize" title="fermipy.gtanalysis.GTAnalysis.localize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">localize</span></code></a> or
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.find_sources" title="fermipy.gtanalysis.GTAnalysis.find_sources"><code class="xref py py-obj docutils literal notranslate"><span class="pre">find_sources</span></code></a>.</li>
+</ul>
+</li>
+<li>Removed camel-case in some source variable names.</li>
+<li>Add <code class="docutils literal notranslate"><span class="pre">cacheft1</span></code> option to <a class="reference internal" href="config.html#config-data"><span class="std std-ref">data</span></a> disable caching FT1
+files.  Cacheing is still enabled by default.</li>
+<li>Support FITS file format for preliminary releases of the 4FGL
+catalog.</li>
+<li>Add <code class="docutils literal notranslate"><span class="pre">__future__</span></code> statements throughout to ensure
+forward-compatibility with python3.</li>
+<li>Reorganize utility modules including those for manipulation of WCS
+and healpix images.</li>
+<li>Various improvements and refactoring in
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.localize" title="fermipy.gtanalysis.GTAnalysis.localize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">localize</span></code></a>.  This method now moved to
+the <a class="reference internal" href="fermipy.html#module-fermipy.sourcefind" title="fermipy.sourcefind"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sourcefind</span></code></a> module.</li>
+<li>Add new global parameter <code class="docutils literal notranslate"><span class="pre">llscan_pts</span></code> in <a class="reference internal" href="config.html#config-gtlike"><span class="std std-ref">gtlike</span></a> to
+define the number of likelihood evaluation points.</li>
+<li>Write output of <a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.sed" title="fermipy.gtanalysis.GTAnalysis.sed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sed</span></code></a> to a FITS file
+in the Likelihood SED format.  More information about the
+Likelihood SED format is available on this <a class="reference external" href="http://gamma-astro-data-formats.readthedocs.io/en/latest/results/binned_likelihoods/index.html">page</a>.</li>
+<li>Write ROI model to a FITS file when calling
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.write_roi" title="fermipy.gtanalysis.GTAnalysis.write_roi"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_roi</span></code></a>.  This file contains a
+BINTABLE with one row per source and uses the same column names as
+the 3FGL catalog file to describe spectral parameterizations.  Note
+that this file currently only contains a subset of the information
+available in the numpy output file.</li>
+<li>Reorganize classes and methods in <a class="reference internal" href="fermipy.html#module-fermipy.sed" title="fermipy.sed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sed</span></code></a> for manipulating
+and fitting bin-by-bin likelihoods.  Spectral functions moved to a
+dedicated <a class="reference internal" href="fermipy.html#module-fermipy.spectrum" title="fermipy.spectrum"><code class="xref py py-obj docutils literal notranslate"><span class="pre">spectrum</span></code></a> module.</li>
+<li>Write return dictionary to a numpy file in
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.residmap" title="fermipy.gtanalysis.GTAnalysis.residmap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">residmap</span></code></a> and
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.tsmap" title="fermipy.gtanalysis.GTAnalysis.tsmap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tsmap</span></code></a>.</li>
+</ul>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+      
+        <a href="fermipy_diffuse.html" class="btn btn-neutral float-left" title="fermipy.diffuse subpackage" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

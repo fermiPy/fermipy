@@ -1,0 +1,763 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>SED Analysis &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Light Curves" href="lightcurve.html" />
+    <link rel="prev" title="Advanced Analysis Methods" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer.html">Developer Notes</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Advanced Analysis Methods</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">SED Analysis</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#examples">Examples</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sed-fits-file">SED FITS File</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sed-dictionary">SED Dictionary</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#reference-api">Reference/API</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="lightcurve.html">Light Curves</a></li>
+<li class="toctree-l2"><a class="reference internal" href="extension.html">Extension Fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tsmap.html">TS Map</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tscube.html">TS Cube</a></li>
+<li class="toctree-l2"><a class="reference internal" href="residmap.html">Residual Map</a></li>
+<li class="toctree-l2"><a class="reference internal" href="detection.html">Source Finding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="localization.html">Source Localization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="phased.html">Phased Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sensitivity.html">Sensitivity Tools</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Advanced Analysis Methods</a> &raquo;</li>
+        
+      <li>SED Analysis</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/advanced/sed.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="sed-analysis">
+<span id="sed"></span><h1>SED Analysis<a class="headerlink" href="#sed-analysis" title="Permalink to this headline">¶</a></h1>
+<p>The <a class="reference internal" href="../fermipy.html#fermipy.gtanalysis.GTAnalysis.sed" title="fermipy.gtanalysis.GTAnalysis.sed"><code class="xref py py-meth docutils literal notranslate"><span class="pre">sed()</span></code></a> method computes a
+spectral energy distribution (SED) by performing independent fits for
+the flux normalization of a source in bins of energy.  The
+normalization in each bin is fit using a power-law spectral
+parameterization with a fixed index.  The value of this index can be
+set with the <code class="docutils literal notranslate"><span class="pre">bin_index</span></code> parameter or allowed to vary over the
+energy range according to the local slope of the global spectral model
+(with the <code class="docutils literal notranslate"><span class="pre">use_local_index</span></code> parameter).</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">free_background</span></code>, <code class="docutils literal notranslate"><span class="pre">free_radius</span></code>, and <code class="docutils literal notranslate"><span class="pre">cov_scale</span></code> parameters
+control how nuisance parameters are dealt with in the fit.  By default
+the method will fix the parameters of background components ROI when
+fitting the source normalization in each energy bin
+(<code class="docutils literal notranslate"><span class="pre">free_background=False</span></code>).  Setting <code class="docutils literal notranslate"><span class="pre">free_background=True</span></code> will
+profile the normalizations of all background components that were free
+when the method was executed.  In order to minimize overfitting,
+background normalization parameters are constrained with priors taken
+from the global fit.  The strength of the priors is controlled with
+the <code class="docutils literal notranslate"><span class="pre">cov_scale</span></code> parameter.  A larger (smaller) value of
+<code class="docutils literal notranslate"><span class="pre">cov_scale</span></code> applies a weaker (stronger) constraint on the background
+amplitude.  Setting <code class="docutils literal notranslate"><span class="pre">cov_scale=None</span></code> performs an unconstrained fit
+without priors.</p>
+<div class="section" id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
+<p>The <a class="reference internal" href="../fermipy.html#fermipy.gtanalysis.GTAnalysis.sed" title="fermipy.gtanalysis.GTAnalysis.sed"><code class="xref py py-meth docutils literal notranslate"><span class="pre">sed()</span></code></a> method is executed
+by passing the name of a source in the ROI as a single argument.
+Additional keyword argument can also be provided to override the
+default configuration of the method:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Run analysis with default energy binning</span>
+<span class="n">sed</span> <span class="o">=</span> <span class="n">gta</span><span class="o">.</span><span class="n">sed</span><span class="p">(</span><span class="s1">&#39;sourceA&#39;</span><span class="p">)</span>
+
+<span class="c1"># Override the energy binning and the assumed power-law index</span>
+<span class="c1"># within the bin</span>
+<span class="n">sed</span> <span class="o">=</span> <span class="n">gta</span><span class="o">.</span><span class="n">sed</span><span class="p">(</span><span class="s1">&#39;sourceA&#39;</span><span class="p">,</span> <span class="n">loge_bins</span><span class="o">=</span><span class="p">[</span><span class="mf">2.0</span><span class="p">,</span><span class="mf">2.5</span><span class="p">,</span><span class="mf">3.0</span><span class="p">,</span><span class="mf">3.5</span><span class="p">,</span><span class="mf">4.0</span><span class="p">,</span><span class="mf">4.5</span><span class="p">,</span><span class="mf">5.0</span><span class="p">],</span> <span class="n">bin_index</span><span class="o">=</span><span class="mf">2.3</span><span class="p">)</span>
+
+<span class="c1"># Profile background normalization parameters with prior scale of 5.0</span>
+<span class="n">sed</span> <span class="o">=</span> <span class="n">gta</span><span class="o">.</span><span class="n">sed</span><span class="p">(</span><span class="s1">&#39;sourceA&#39;</span><span class="p">,</span> <span class="n">free_background</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">cov_scale</span><span class="o">=</span><span class="mf">5.0</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>By default the method will use the energy bins of the underlying
+analysis.  The <code class="docutils literal notranslate"><span class="pre">loge_bins</span></code> keyword argument can be used to override
+the default binning with the restriction that the SED energy bins
+must align with the analysis bins. The bins used in the analysis can be
+found with <code class="docutils literal notranslate"><span class="pre">gta.log_energies</span></code>. For example if in the analysis
+8 energy bins per decade are considered and you want to make the SED in 4 bins
+per decade you can specify <code class="docutils literal notranslate"><span class="pre">loge_bins=gta.log_energies[::2]</span></code>.</p>
+<p>The return value of <a class="reference internal" href="../fermipy.html#fermipy.gtanalysis.GTAnalysis.sed" title="fermipy.gtanalysis.GTAnalysis.sed"><code class="xref py py-meth docutils literal notranslate"><span class="pre">sed()</span></code></a> is a
+dictionary with the results of the analysis.  The following example
+shows how to extract values from the output dictionary and load the
+SED data from the output FITS file:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get the sed results from the return argument</span>
+<span class="n">sed</span> <span class="o">=</span> <span class="n">gta</span><span class="o">.</span><span class="n">sed</span><span class="p">(</span><span class="s1">&#39;sourceA&#39;</span><span class="p">,</span> <span class="n">outfile</span><span class="o">=</span><span class="s1">&#39;sed.fits&#39;</span><span class="p">)</span>
+
+<span class="c1"># Print the SED flux values</span>
+<span class="k">print</span><span class="p">(</span><span class="n">sed</span><span class="p">[</span><span class="s1">&#39;flux&#39;</span><span class="p">])</span>
+
+<span class="c1"># Reload the SED table from the output FITS file</span>
+<span class="kn">from</span> <span class="nn">astropy.table</span> <span class="kn">import</span> <span class="n">Table</span>
+<span class="n">sed_tab</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="s1">&#39;sed.fits&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The contents of the FITS file and output dictionary are documented in
+<a class="reference internal" href="#sed-fits"><span class="std std-ref">SED FITS File</span></a> and <a class="reference internal" href="#sed-dict"><span class="std std-ref">SED Dictionary</span></a>.</p>
+</div>
+<div class="section" id="sed-fits-file">
+<span id="sed-fits"></span><h2>SED FITS File<a class="headerlink" href="#sed-fits-file" title="Permalink to this headline">¶</a></h2>
+<p>The following table describes the contents of the FITS file written by
+<a class="reference internal" href="../fermipy.html#fermipy.gtanalysis.GTAnalysis.sed" title="fermipy.gtanalysis.GTAnalysis.sed"><code class="xref py py-meth docutils literal notranslate"><span class="pre">sed()</span></code></a>.  The <code class="docutils literal notranslate"><span class="pre">SED</span></code> HDU uses
+that data format specification for SEDs documented <a class="reference external" href="https://gamma-astro-data-formats.readthedocs.io/en/latest/results/flux_points/index.html">here</a>.</p>
+<table border="1" class="colwidths-given docutils" id="id1">
+<caption><span class="caption-text"><em>sed</em> Output Dictionary</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">HDU</th>
+<th class="head">Column Name</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>SED</td>
+<td><code class="docutils literal notranslate"><span class="pre">e_min</span></code></td>
+<td>Lower edges of SED energy bins (MeV).</td>
+</tr>
+<tr class="row-odd"><td>SED</td>
+<td><code class="docutils literal notranslate"><span class="pre">e_ref</span></code></td>
+<td>Upper edges of SED energy bins (MeV).</td>
+</tr>
+<tr class="row-even"><td>SED</td>
+<td><code class="docutils literal notranslate"><span class="pre">e_max</span></code></td>
+<td>Centers of SED energy bins (MeV).</td>
+</tr>
+<tr class="row-odd"><td>SED</td>
+<td><code class="docutils literal notranslate"><span class="pre">ref_dnde_e_min</span></code></td>
+<td>Differential flux of the reference model evaluated at the lower bin edge (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>)</td>
+</tr>
+<tr class="row-even"><td>SED</td>
+<td><code class="docutils literal notranslate"><span class="pre">ref_dnde_e_max</span></code></td>
+<td>Differential flux of the reference model evaluated at the upper bin edge (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>)</td>
+</tr>
+<tr class="row-odd"><td>SED</td>
+<td><code class="docutils literal notranslate"><span class="pre">ref_flux</span></code></td>
+<td>Flux of the reference model in each bin (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>).</td>
+</tr>
+<tr class="row-even"><td>SED</td>
+<td><code class="docutils literal notranslate"><span class="pre">ref_eflux</span></code></td>
+<td>Energy flux of the reference model in each bin (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>).</td>
+</tr>
+<tr class="row-odd"><td>SED</td>
+<td><code class="docutils literal notranslate"><span class="pre">ref_dnde</span></code></td>
+<td>Differential flux of the reference model evaluated at the bin center (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>)</td>
+</tr>
+<tr class="row-even"><td>SED</td>
+<td><code class="docutils literal notranslate"><span class="pre">ref_npred</span></code></td>
+<td>Number of predicted counts in the reference model in each bin.</td>
+</tr>
+<tr class="row-odd"><td>SED</td>
+<td><code class="docutils literal notranslate"><span class="pre">norm</span></code></td>
+<td>Normalization in each bin in units of the reference model.</td>
+</tr>
+<tr class="row-even"><td>SED</td>
+<td><code class="docutils literal notranslate"><span class="pre">norm_err</span></code></td>
+<td>Symmetric error on the normalization in each bin in units of the reference model.</td>
+</tr>
+<tr class="row-odd"><td>SED</td>
+<td><code class="docutils literal notranslate"><span class="pre">norm_errn</span></code></td>
+<td>Lower 1-sigma error on the normalization in each bin in units of the reference model.</td>
+</tr>
+<tr class="row-even"><td>SED</td>
+<td><code class="docutils literal notranslate"><span class="pre">norm_errp</span></code></td>
+<td>Upper 1-sigma error on the normalization in each bin in units of the reference model.</td>
+</tr>
+<tr class="row-odd"><td>SED</td>
+<td><code class="docutils literal notranslate"><span class="pre">norm_UL</span></code></td>
+<td>Upper limit on the normalization in each bin in units of the reference model.</td>
+</tr>
+<tr class="row-even"><td>SED</td>
+<td><code class="docutils literal notranslate"><span class="pre">loglike</span></code></td>
+<td>Log-likelihood value of the model for the best-fit amplitude.</td>
+</tr>
+<tr class="row-odd"><td>SED</td>
+<td><code class="docutils literal notranslate"><span class="pre">norm_scan</span></code></td>
+<td>Array of NxM normalization values for the profile likelihood scan in N energy bins and M scan points.  A row-wise multiplication with any of <code class="docutils literal notranslate"><span class="pre">ref</span></code> columns can be used to convert this matrix to the respective unit.</td>
+</tr>
+<tr class="row-even"><td>SED</td>
+<td><code class="docutils literal notranslate"><span class="pre">dloglike_scan</span></code></td>
+<td>Array of NxM delta-loglikelihood values for the profile likelihood scan in N energy bins and M scan points.</td>
+</tr>
+<tr class="row-odd"><td>MODEL_FLUX</td>
+<td><code class="docutils literal notranslate"><span class="pre">energy</span></code></td>
+<td>Energies at which the spectral band is evaluated (MeV).</td>
+</tr>
+<tr class="row-even"><td>MODEL_FLUX</td>
+<td><code class="docutils literal notranslate"><span class="pre">dnde</span></code></td>
+<td>Central value of spectral band (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>).</td>
+</tr>
+<tr class="row-odd"><td>MODEL_FLUX</td>
+<td><code class="docutils literal notranslate"><span class="pre">dnde_lo</span></code></td>
+<td>Lower 1-sigma bound of spectral band (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>).</td>
+</tr>
+<tr class="row-even"><td>MODEL_FLUX</td>
+<td><code class="docutils literal notranslate"><span class="pre">dnde_hi</span></code></td>
+<td>Upper 1-sigma bound of spectral band (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>).</td>
+</tr>
+<tr class="row-odd"><td>MODEL_FLUX</td>
+<td><code class="docutils literal notranslate"><span class="pre">dnde_err</span></code></td>
+<td>Symmetric error of spectral band (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>).</td>
+</tr>
+<tr class="row-even"><td>MODEL_FLUX</td>
+<td><code class="docutils literal notranslate"><span class="pre">dnde_ferr</span></code></td>
+<td>Fractional width of spectral band.</td>
+</tr>
+<tr class="row-odd"><td>PARAMS</td>
+<td><code class="docutils literal notranslate"><span class="pre">name</span></code></td>
+<td>Name of the parameter.</td>
+</tr>
+<tr class="row-even"><td>PARAMS</td>
+<td><code class="docutils literal notranslate"><span class="pre">value</span></code></td>
+<td>Value of the parameter.</td>
+</tr>
+<tr class="row-odd"><td>PARAMS</td>
+<td><code class="docutils literal notranslate"><span class="pre">error</span></code></td>
+<td>1-sigma parameter error (nan indicates that the parameter was not included in the fit).</td>
+</tr>
+<tr class="row-even"><td>PARAMS</td>
+<td><code class="docutils literal notranslate"><span class="pre">covariance</span></code></td>
+<td>Covariance matrix among free parameters.</td>
+</tr>
+<tr class="row-odd"><td>PARAMS</td>
+<td><code class="docutils literal notranslate"><span class="pre">correlation</span></code></td>
+<td>Correlation matrix among free parameters.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="sed-dictionary">
+<span id="sed-dict"></span><h2>SED Dictionary<a class="headerlink" href="#sed-dictionary" title="Permalink to this headline">¶</a></h2>
+<p>The following table describes the contents of the
+<a class="reference internal" href="../fermipy.html#fermipy.gtanalysis.GTAnalysis.sed" title="fermipy.gtanalysis.GTAnalysis.sed"><code class="xref py py-meth docutils literal notranslate"><span class="pre">sed()</span></code></a> output dictionary:</p>
+<table border="1" class="colwidths-given docutils" id="id2">
+<caption><span class="caption-text"><em>sed</em> Output Dictionary</span><a class="headerlink" href="#id2" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">loge_min</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Lower edges of SED energy bins (log10(E/MeV)).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">loge_max</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Upper edges of SED energy bins (log10(E/MeV)).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">loge_ctr</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Centers of SED energy bins (log10(E/MeV)).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">loge_ref</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Reference energies of SED energy bins (log10(E/MeV)).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">e_min</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Lower edges of SED energy bins (MeV).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">e_max</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Upper edges of SED energy bins (MeV).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">e_ctr</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Centers of SED energy bins (MeV).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">e_ref</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Reference energies of SED energy bins (MeV).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">ref_flux</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Flux of the reference model in each bin (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">ref_eflux</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Energy flux of the reference model in each bin (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">ref_dnde</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Differential flux of the reference model evaluated at the bin center (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>)</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">ref_dnde_e_min</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Differential flux of the reference model evaluated at the lower bin edge (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>)</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">ref_dnde_e_max</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Differential flux of the reference model evaluated at the upper bin edge (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>)</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">ref_e2dnde</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>E^2 x the differential flux of the reference model evaluated at the bin center (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>)</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">ref_npred</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Number of predicted counts in the reference model in each bin.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">norm</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Normalization in each bin in units of the reference model.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">flux</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Flux in each bin (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">eflux</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Energy flux in each bin (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dnde</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Differential flux in each bin (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">e2dnde</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>E^2 x the differential flux in each bin (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dnde_err</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>1-sigma error on dnde evaluated from likelihood curvature.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dnde_err_lo</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Lower 1-sigma error on dnde evaluated from the profile likelihood (MINOS errors).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dnde_err_hi</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Upper 1-sigma error on dnde evaluated from the profile likelihood (MINOS errors).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dnde_ul95</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>95% CL upper limit on dnde evaluated from the profile likelihood (MINOS errors).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dnde_ul</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Upper limit on dnde evaluated from the profile likelihood using a CL = <code class="docutils literal notranslate"><span class="pre">ul_confidence</span></code>.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">e2dnde_err</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>1-sigma error on e2dnde evaluated from likelihood curvature.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">e2dnde_err_lo</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Lower 1-sigma error on e2dnde evaluated from the profile likelihood (MINOS errors).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">e2dnde_err_hi</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Upper 1-sigma error on e2dnde evaluated from the profile likelihood (MINOS errors).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">e2dnde_ul95</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>95% CL upper limit on e2dnde evaluated from the profile likelihood (MINOS errors).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">e2dnde_ul</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Upper limit on e2dnde evaluated from the profile likelihood using a CL = <code class="docutils literal notranslate"><span class="pre">ul_confidence</span></code>.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">ts</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Test statistic.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">loglike</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Log-likelihood of model for the best-fit amplitude.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">npred</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Number of model counts.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">fit_quality</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Fit quality parameter for MINUIT and NEWMINUIT optimizers (3 - Full accurate covariance matrix, 2 - Full matrix, but forced positive-definite (i.e. not accurate), 1 - Diagonal approximation only, not accurate, 0 - Error matrix not calculated at all).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">fit_status</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Fit status parameter (0=ok).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">index</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Spectral index of the power-law model used to fit this bin.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">norm_scan</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Array of NxM normalization values for the profile likelihood scan in N energy bins and M scan points.  A row-wise multiplication with any of <code class="docutils literal notranslate"><span class="pre">ref</span></code> columns can be used to convert this matrix to the respective unit.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dloglike_scan</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Array of NxM delta-loglikelihood values for the profile likelihood scan in N energy bins and M scan points.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">loglike_scan</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Array of NxM loglikelihood values for the profile likelihood scan in N energy bins and M scan points.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">param_covariance</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Covariance matrix for the best-fit spectral parameters of the source.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">param_names</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Array of names for the parameters in the global spectral parameterization of this source.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">param_values</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Array of parameter values.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">param_errors</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Array of parameter errors.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">model_flux</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></td>
+<td>Dictionary containing the differential flux uncertainty band of the best-fit global spectral parameterization for the source.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">config</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></td>
+<td>Copy of input configuration to this method.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline">¶</a></h2>
+<p>The default configuration of the method is controlled with the
+<a class="reference internal" href="../config.html#config-sed"><span class="std std-ref">sed</span></a> section of the configuration file.  The default
+configuration can be overriden by passing the option as a <em>kwargs</em>
+argument to the method.</p>
+<table border="1" class="colwidths-given docutils" id="id3">
+<caption><span class="caption-text"><em>sed</em> Options</span><a class="headerlink" href="#id3" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">bin_index</span></code></td>
+<td>2.0</td>
+<td>Spectral index that will be use when fitting the energy distribution within an energy bin.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">cov_scale</span></code></td>
+<td>3.0</td>
+<td>Scale factor that sets the strength of the prior on nuisance parameters that are free.  Setting this to None disables the prior.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">free_background</span></code></td>
+<td>False</td>
+<td>Leave background parameters free when performing the fit. If True then any parameters that are currently free in the model will be fit simultaneously with the source of interest.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">free_pars</span></code></td>
+<td>None</td>
+<td>Set the parameters of the source of interest that will be freed when performing the global fit.  By default all parameters will be freed.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">free_radius</span></code></td>
+<td>None</td>
+<td>Free normalizations of background sources within this angular distance in degrees from the source of interest.  If None then no sources will be freed.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">make_plots</span></code></td>
+<td>False</td>
+<td>Generate diagnostic plots.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">ul_confidence</span></code></td>
+<td>0.95</td>
+<td>Confidence level for flux upper limit.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">use_local_index</span></code></td>
+<td>False</td>
+<td>Use a power-law approximation to the shape of the global spectrum in each bin.  If this is false then a constant index set to <code class="xref py py-obj docutils literal notranslate"><span class="pre">bin_index</span></code> will be used.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">write_fits</span></code></td>
+<td>True</td>
+<td>Write the output to a FITS file.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">write_npy</span></code></td>
+<td>True</td>
+<td>Write the output dictionary to a numpy file.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="reference-api">
+<h2>Reference/API<a class="headerlink" href="#reference-api" title="Permalink to this headline">¶</a></h2>
+<dl class="method">
+<dt>
+<code class="descclassname">GTAnalysis.</code><code class="descname">sed</code><span class="sig-paren">(</span><em>name</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>Generate a spectral energy distribution (SED) for a source.  This
+function will fit the normalization of the source in each
+energy bin.  By default the SED will be generated with the
+analysis energy bins but a custom binning can be defined with
+the <code class="docutils literal notranslate"><span class="pre">loge_bins</span></code> parameter.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Source name.</li>
+<li><strong>prefix</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Optional string that will be prepended to all output files
+(FITS and rendered images).</li>
+<li><strong>loge_bins</strong> (<a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a>) – Sequence of energies in log10(E/MeV) defining the edges of
+the energy bins.  If this argument is None then the
+analysis energy bins will be used.  The energies in this
+sequence must align with the bin edges of the underyling
+analysis instance.</li>
+<li><strong>bin_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – Spectral index that will be use when fitting the energy
+distribution within an energy bin. (default : 2.0)</li>
+<li><strong>cov_scale</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – Scale factor that sets the strength of the prior on nuisance
+parameters that are free.  Setting this to None disables the
+prior. (default : 3.0)</li>
+<li><strong>free_background</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Leave background parameters free when performing the fit. If
+True then any parameters that are currently free in the
+model will be fit simultaneously with the source of
+interest. (default : False)</li>
+<li><strong>free_pars</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.8)"><em>list</em></a>) – Set the parameters of the source of interest that will be
+freed when performing the global fit.  By default all
+parameters will be freed. (default : None)</li>
+<li><strong>free_radius</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – Free normalizations of background sources within this
+angular distance in degrees from the source of interest.  If
+None then no sources will be freed. (default : None)</li>
+<li><strong>make_plots</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Generate diagnostic plots. (default : False)</li>
+<li><strong>ul_confidence</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – Confidence level for flux upper limit. (default : 0.95)</li>
+<li><strong>use_local_index</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Use a power-law approximation to the shape of the global
+spectrum in each bin.  If this is false then a constant
+index set to <code class="xref py py-obj docutils literal notranslate"><span class="pre">bin_index</span></code> will be used. (default : False)</li>
+<li><strong>write_fits</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Write the output to a FITS file. (default : True)</li>
+<li><strong>write_npy</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Write the output dictionary to a numpy file. (default :
+True)</li>
+<li><strong>optimizer</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a>) – Dictionary that overrides the default optimizer settings.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>sed</strong> – Dictionary containing output of the SED analysis.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)">dict</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="lightcurve.html" class="btn btn-neutral float-right" title="Light Curves" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral float-left" title="Advanced Analysis Methods" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

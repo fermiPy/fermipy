@@ -1,0 +1,515 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fermipy.jobs.target_analysis &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../../fermipy.html">fermipy</a> &raquo;</li>
+        
+      <li>fermipy.jobs.target_analysis</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for fermipy.jobs.target_analysis</h1><div class="highlight"><pre>
+<span></span><span class="ch">#!/usr/bin/env python</span>
+
+<span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module with classes for simple target analysis and to </span>
+<span class="sd">paralleize those analyses.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">fermipy.utils</span> <span class="k">import</span> <span class="n">load_yaml</span><span class="p">,</span> <span class="n">write_yaml</span><span class="p">,</span> <span class="n">init_matplotlib_backend</span>
+
+<span class="kn">from</span> <span class="nn">fermipy.jobs.utils</span> <span class="k">import</span> <span class="n">is_null</span><span class="p">,</span> <span class="n">is_not_null</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.link</span> <span class="k">import</span> <span class="n">Link</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.scatter_gather</span> <span class="k">import</span> <span class="n">ScatterGather</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.slac_impl</span> <span class="k">import</span> <span class="n">make_nfs_path</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.analysis_utils</span> <span class="k">import</span> <span class="n">baseline_roi_fit</span><span class="p">,</span> <span class="n">localize_sources</span><span class="p">,</span>\
+    <span class="n">add_source_get_correlated</span><span class="p">,</span> <span class="n">build_profile_dict</span>
+
+<span class="kn">from</span> <span class="nn">fermipy.jobs.name_policy</span> <span class="k">import</span> <span class="n">NameFactory</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs</span> <span class="k">import</span> <span class="n">defaults</span>
+
+<span class="n">init_matplotlib_backend</span><span class="p">(</span><span class="s1">&#39;Agg&#39;</span><span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">fermipy.gtanalysis</span> <span class="k">import</span> <span class="n">GTAnalysis</span>
+    <span class="n">HAVE_ST</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="n">HAVE_ST</span> <span class="o">=</span> <span class="kc">False</span>
+
+<span class="n">NAME_FACTORY</span> <span class="o">=</span> <span class="n">NameFactory</span><span class="p">(</span><span class="n">basedir</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="AnalyzeROI"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.target_analysis.AnalyzeROI">[docs]</a><span class="k">class</span> <span class="nc">AnalyzeROI</span><span class="p">(</span><span class="n">Link</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small class that wraps an analysis script.</span>
+
+<span class="sd">    This particular script does baseline fitting of an ROI.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-analyze-roi&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;analyze-roi&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Run analysis of a single ROI&quot;</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">common</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">],</span>
+                           <span class="n">roi_baseline</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">common</span><span class="p">[</span><span class="s1">&#39;roi_baseline&#39;</span><span class="p">],</span>
+                           <span class="n">make_plots</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">common</span><span class="p">[</span><span class="s1">&#39;make_plots&#39;</span><span class="p">])</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span>
+
+<div class="viewcode-block" id="AnalyzeROI.run_analysis"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.target_analysis.AnalyzeROI.run_analysis">[docs]</a>    <span class="k">def</span> <span class="nf">run_analysis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">argv</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Run this analysis&quot;&quot;&quot;</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">HAVE_ST</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="s2">&quot;Trying to run fermipy analysis, but don&#39;t have ST&quot;</span><span class="p">)</span>
+
+        <span class="n">gta</span> <span class="o">=</span> <span class="n">GTAnalysis</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">logging</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;verbosity&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">},</span>
+                         <span class="n">fileio</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;workdir_regex&#39;</span><span class="p">:</span> <span class="s1">&#39;\.xml$|\.npy$&#39;</span><span class="p">})</span>
+
+        <span class="n">gta</span><span class="o">.</span><span class="n">setup</span><span class="p">(</span><span class="n">overwrite</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="n">baseline_roi_fit</span><span class="p">(</span><span class="n">gta</span><span class="p">,</span> <span class="n">make_plots</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">make_plots</span><span class="p">,</span>
+                         <span class="n">minmax_npred</span><span class="o">=</span><span class="p">[</span><span class="mf">1e3</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">])</span>
+
+        <span class="n">localize_sources</span><span class="p">(</span><span class="n">gta</span><span class="p">,</span> <span class="n">nstep</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">dtheta_max</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">update</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                         <span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;base&#39;</span><span class="p">,</span> <span class="n">make_plots</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">make_plots</span><span class="p">)</span>
+
+        <span class="n">gta</span><span class="o">.</span><span class="n">find_sources</span><span class="p">(</span><span class="n">sqrt_ts_threshold</span><span class="o">=</span><span class="mf">5.0</span><span class="p">,</span> <span class="n">search_skydir</span><span class="o">=</span><span class="n">gta</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">skydir</span><span class="p">,</span>
+                         <span class="n">search_minmax_radius</span><span class="o">=</span><span class="p">[</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">])</span>
+        <span class="n">gta</span><span class="o">.</span><span class="n">optimize</span><span class="p">()</span>
+        <span class="n">gta</span><span class="o">.</span><span class="n">print_roi</span><span class="p">()</span>
+        <span class="n">gta</span><span class="o">.</span><span class="n">print_params</span><span class="p">()</span>
+
+        <span class="n">gta</span><span class="o">.</span><span class="n">free_sources</span><span class="p">(</span><span class="n">skydir</span><span class="o">=</span><span class="n">gta</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">skydir</span><span class="p">,</span> <span class="n">distance</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="s1">&#39;norm&#39;</span><span class="p">)</span>
+        <span class="n">gta</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">covar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">gta</span><span class="o">.</span><span class="n">print_roi</span><span class="p">()</span>
+        <span class="n">gta</span><span class="o">.</span><span class="n">print_params</span><span class="p">()</span>
+
+        <span class="n">gta</span><span class="o">.</span><span class="n">write_roi</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">roi_baseline</span><span class="p">,</span> <span class="n">make_plots</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">make_plots</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="AnalyzeSED"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.target_analysis.AnalyzeSED">[docs]</a><span class="k">class</span> <span class="nc">AnalyzeSED</span><span class="p">(</span><span class="n">Link</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small class to wrap an analysis script.</span>
+
+<span class="sd">    This particular script fits an SED for a target source</span>
+<span class="sd">    with respect to the baseline ROI model.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-analyze-sed&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;analyze-sed&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Extract the SED for a single target&quot;</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">common</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">],</span>
+                           <span class="n">roi_baseline</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">common</span><span class="p">[</span><span class="s1">&#39;roi_baseline&#39;</span><span class="p">],</span>
+                           <span class="n">skydirs</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">sims</span><span class="p">[</span><span class="s1">&#39;skydirs&#39;</span><span class="p">],</span>
+                           <span class="n">profiles</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">common</span><span class="p">[</span><span class="s1">&#39;profiles&#39;</span><span class="p">],</span>
+                           <span class="n">make_plots</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">common</span><span class="p">[</span><span class="s1">&#39;make_plots&#39;</span><span class="p">],</span>
+                           <span class="n">non_null_src</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">common</span><span class="p">[</span><span class="s1">&#39;non_null_src&#39;</span><span class="p">])</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="AnalyzeSED.run_analysis"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.target_analysis.AnalyzeSED.run_analysis">[docs]</a>    <span class="k">def</span> <span class="nf">run_analysis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">argv</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Run this analysis&quot;&quot;&quot;</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">HAVE_ST</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="s2">&quot;Trying to run fermipy analysis, but don&#39;t have ST&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">is_null</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">skydirs</span><span class="p">):</span>
+            <span class="n">skydir_dict</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">skydir_dict</span> <span class="o">=</span> <span class="n">load_yaml</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">skydirs</span><span class="p">)</span>
+
+        <span class="n">gta</span> <span class="o">=</span> <span class="n">GTAnalysis</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">config</span><span class="p">,</span>
+                         <span class="n">logging</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;verbosity&#39;</span><span class="p">:</span> <span class="mi">3</span><span class="p">},</span>
+                         <span class="n">fileio</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;workdir_regex&#39;</span><span class="p">:</span> <span class="s1">&#39;\.xml$|\.npy$&#39;</span><span class="p">})</span>
+        <span class="c1">#gta.setup(overwrite=False)</span>
+        <span class="n">gta</span><span class="o">.</span><span class="n">load_roi</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">roi_baseline</span><span class="p">)</span>
+        <span class="n">gta</span><span class="o">.</span><span class="n">print_roi</span><span class="p">()</span>
+
+        <span class="n">basedir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">config</span><span class="p">)</span>
+        <span class="c1"># This should be a no-op, b/c it was done in the baseline analysis</span>
+
+        <span class="k">for</span> <span class="n">profile</span> <span class="ow">in</span> <span class="n">args</span><span class="o">.</span><span class="n">profiles</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">skydir_dict</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">skydir_keys</span> <span class="o">=</span> <span class="p">[</span><span class="kc">None</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">skydir_keys</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">skydir_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+
+            <span class="k">for</span> <span class="n">skydir_key</span> <span class="ow">in</span> <span class="n">skydir_keys</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">skydir_key</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">pkey</span><span class="p">,</span> <span class="n">psrc_name</span><span class="p">,</span> <span class="n">pdict</span> <span class="o">=</span> <span class="n">build_profile_dict</span><span class="p">(</span><span class="n">basedir</span><span class="p">,</span> <span class="n">profile</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">skydir_val</span> <span class="o">=</span> <span class="n">skydir_dict</span><span class="p">[</span><span class="n">skydir_key</span><span class="p">]</span>
+                    <span class="n">pkey</span><span class="p">,</span> <span class="n">psrc_name</span><span class="p">,</span> <span class="n">pdict</span> <span class="o">=</span> <span class="n">build_profile_dict</span><span class="p">(</span><span class="n">basedir</span><span class="p">,</span> <span class="n">profile</span><span class="p">)</span>
+                    <span class="n">pdict</span><span class="p">[</span><span class="s1">&#39;ra&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">skydir_val</span><span class="p">[</span><span class="s1">&#39;ra&#39;</span><span class="p">]</span>
+                    <span class="n">pdict</span><span class="p">[</span><span class="s1">&#39;dec&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">skydir_val</span><span class="p">[</span><span class="s1">&#39;dec&#39;</span><span class="p">]</span>
+                    <span class="n">pkey</span> <span class="o">+=</span> <span class="s2">&quot;_</span><span class="si">%06i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">skydir_key</span>
+
+                <span class="n">outfile</span> <span class="o">=</span> <span class="s2">&quot;sed_</span><span class="si">%s</span><span class="s2">.fits&quot;</span> <span class="o">%</span> <span class="n">pkey</span>
+
+                <span class="c1"># Add the source and get the list of correlated soruces</span>
+                <span class="n">correl_dict</span><span class="p">,</span> <span class="n">test_src_name</span> <span class="o">=</span> <span class="n">add_source_get_correlated</span><span class="p">(</span><span class="n">gta</span><span class="p">,</span> <span class="n">psrc_name</span><span class="p">,</span> 
+                                                                       <span class="n">pdict</span><span class="p">,</span> <span class="n">correl_thresh</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span> 
+                                                                       <span class="n">non_null_src</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">non_null_src</span><span class="p">)</span>
+
+                <span class="c1"># Write the list of correlated sources</span>
+                <span class="n">correl_yaml</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">basedir</span><span class="p">,</span> <span class="s2">&quot;correl_</span><span class="si">%s</span><span class="s2">.yaml&quot;</span> <span class="o">%</span> <span class="n">pkey</span><span class="p">)</span>
+                <span class="n">write_yaml</span><span class="p">(</span><span class="n">correl_dict</span><span class="p">,</span> <span class="n">correl_yaml</span><span class="p">)</span>
+
+                <span class="n">gta</span><span class="o">.</span><span class="n">free_sources</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">src_name</span> <span class="ow">in</span> <span class="n">correl_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+                    <span class="n">gta</span><span class="o">.</span><span class="n">free_source</span><span class="p">(</span><span class="n">src_name</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="s1">&#39;norm&#39;</span><span class="p">)</span>
+
+                <span class="c1"># build the SED</span>
+                <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">non_null_src</span><span class="p">:</span>
+                    <span class="n">gta</span><span class="o">.</span><span class="n">update_source</span><span class="p">(</span><span class="n">test_src_name</span><span class="p">,</span> <span class="n">reoptimize</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                    <span class="n">gta</span><span class="o">.</span><span class="n">write_roi</span><span class="p">(</span><span class="s2">&quot;base_</span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span> <span class="n">pkey</span><span class="p">,</span> <span class="n">make_plots</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="n">gta</span><span class="o">.</span><span class="n">sed</span><span class="p">(</span><span class="n">test_src_name</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">pkey</span><span class="p">,</span> <span class="n">outfile</span><span class="o">=</span><span class="n">outfile</span><span class="p">,</span> <span class="n">make_plots</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">make_plots</span><span class="p">)</span>
+
+                <span class="c1"># remove the source</span>
+                <span class="n">gta</span><span class="o">.</span><span class="n">delete_source</span><span class="p">(</span><span class="n">test_src_name</span><span class="p">)</span>
+                <span class="c1"># put the ROI back to how it was</span>
+                <span class="n">gta</span><span class="o">.</span><span class="n">load_xml</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">roi_baseline</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">gta</span></div></div>
+
+
+<div class="viewcode-block" id="AnalyzeROI_SG"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.target_analysis.AnalyzeROI_SG">[docs]</a><span class="k">class</span> <span class="nc">AnalyzeROI_SG</span><span class="p">(</span><span class="n">ScatterGather</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small class to generate configurations for the `AnalyzeROI` class.</span>
+
+<span class="sd">    This loops over all the targets defined in the target list.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-analyze-roi-sg&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> [options]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Run analyses on a series of ROIs&quot;</span>
+    <span class="n">clientclass</span> <span class="o">=</span> <span class="n">AnalyzeROI</span>
+
+    <span class="n">job_time</span> <span class="o">=</span> <span class="mi">1500</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">ttype</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">common</span><span class="p">[</span><span class="s1">&#39;ttype&#39;</span><span class="p">],</span>
+                           <span class="n">targetlist</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">common</span><span class="p">[</span><span class="s1">&#39;targetlist&#39;</span><span class="p">],</span>
+                           <span class="n">config</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">common</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">],</span>
+                           <span class="n">roi_baseline</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">common</span><span class="p">[</span><span class="s1">&#39;roi_baseline&#39;</span><span class="p">],</span>
+                           <span class="n">make_plots</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">common</span><span class="p">[</span><span class="s1">&#39;make_plots&#39;</span><span class="p">])</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span>
+
+<div class="viewcode-block" id="AnalyzeROI_SG.build_job_configs"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.target_analysis.AnalyzeROI_SG.build_job_configs">[docs]</a>    <span class="k">def</span> <span class="nf">build_job_configs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Hook to build job configurations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">job_configs</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">ttype</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="s1">&#39;ttype&#39;</span><span class="p">]</span>
+        <span class="p">(</span><span class="n">targets_yaml</span><span class="p">,</span> <span class="n">sim</span><span class="p">)</span> <span class="o">=</span> <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">resolve_targetfile</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Found &#39;sim&#39; argument on AnalyzeROI_SG config.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">targets_yaml</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">job_configs</span>
+
+        <span class="n">config_yaml</span> <span class="o">=</span> <span class="s1">&#39;config.yaml&#39;</span>
+        <span class="n">config_override</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;config&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">is_not_null</span><span class="p">(</span><span class="n">config_override</span><span class="p">):</span>
+            <span class="n">config_yaml</span> <span class="o">=</span> <span class="n">config_override</span>
+
+        <span class="n">targets</span> <span class="o">=</span> <span class="n">load_yaml</span><span class="p">(</span><span class="n">targets_yaml</span><span class="p">)</span>
+        <span class="n">base_config</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">roi_baseline</span><span class="o">=</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;roi_baseline&#39;</span><span class="p">],</span>
+                           <span class="n">make_plots</span><span class="o">=</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;make_plots&#39;</span><span class="p">])</span>
+
+        <span class="k">for</span> <span class="n">target_name</span> <span class="ow">in</span> <span class="n">targets</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+            <span class="n">name_keys</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">target_type</span><span class="o">=</span><span class="n">ttype</span><span class="p">,</span>
+                             <span class="n">target_name</span><span class="o">=</span><span class="n">target_name</span><span class="p">,</span>
+                             <span class="n">fullpath</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">target_dir</span> <span class="o">=</span> <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">targetdir</span><span class="p">(</span><span class="o">**</span><span class="n">name_keys</span><span class="p">)</span>
+            <span class="n">config_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">target_dir</span><span class="p">,</span> <span class="n">config_yaml</span><span class="p">)</span>
+            <span class="n">logfile</span> <span class="o">=</span> <span class="n">make_nfs_path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                <span class="n">target_dir</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">.log&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">linkname</span><span class="p">,</span> <span class="n">target_name</span><span class="p">)))</span>
+            <span class="n">job_config</span> <span class="o">=</span> <span class="n">base_config</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>           
+            <span class="n">job_config</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config_path</span><span class="p">,</span>
+                                   <span class="n">logfile</span><span class="o">=</span><span class="n">logfile</span><span class="p">))</span>
+            <span class="n">job_configs</span><span class="p">[</span><span class="n">target_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">job_config</span>
+
+        <span class="k">return</span> <span class="n">job_configs</span></div></div>
+
+
+<div class="viewcode-block" id="AnalyzeSED_SG"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.target_analysis.AnalyzeSED_SG">[docs]</a><span class="k">class</span> <span class="nc">AnalyzeSED_SG</span><span class="p">(</span><span class="n">ScatterGather</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small class to generate configurations for this script</span>
+
+<span class="sd">    This loops over all the targets defined in the target list,</span>
+<span class="sd">    and over all the profiles defined for each target.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-analyze-sed-sg&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> [options]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Run analyses on a series of ROIs&quot;</span>
+    <span class="n">clientclass</span> <span class="o">=</span> <span class="n">AnalyzeSED</span>
+
+    <span class="n">job_time</span> <span class="o">=</span> <span class="mi">1500</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">ttype</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">common</span><span class="p">[</span><span class="s1">&#39;ttype&#39;</span><span class="p">],</span>
+                           <span class="n">targetlist</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">common</span><span class="p">[</span><span class="s1">&#39;targetlist&#39;</span><span class="p">],</span>
+                           <span class="n">config</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">common</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">],</span>
+                           <span class="n">roi_baseline</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">common</span><span class="p">[</span><span class="s1">&#39;roi_baseline&#39;</span><span class="p">],</span>
+                           <span class="n">skydirs</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">sims</span><span class="p">[</span><span class="s1">&#39;skydirs&#39;</span><span class="p">],</span>
+                           <span class="n">make_plots</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">common</span><span class="p">[</span><span class="s1">&#39;make_plots&#39;</span><span class="p">],</span>
+                           <span class="n">non_null_src</span><span class="o">=</span><span class="n">defaults</span><span class="o">.</span><span class="n">common</span><span class="p">[</span><span class="s1">&#39;non_null_src&#39;</span><span class="p">])</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span>
+
+<div class="viewcode-block" id="AnalyzeSED_SG.build_job_configs"><a class="viewcode-back" href="../../../fermipy_jobs.html#fermipy.jobs.target_analysis.AnalyzeSED_SG.build_job_configs">[docs]</a>    <span class="k">def</span> <span class="nf">build_job_configs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Hook to build job configurations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">job_configs</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">ttype</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="s1">&#39;ttype&#39;</span><span class="p">]</span>
+        <span class="p">(</span><span class="n">targets_yaml</span><span class="p">,</span> <span class="n">sim</span><span class="p">)</span> <span class="o">=</span> <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">resolve_targetfile</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">sim</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Found &#39;sim&#39; argument on AnalyzeSED_SG config.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">targets_yaml</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">job_configs</span>
+
+        <span class="n">targets</span> <span class="o">=</span> <span class="n">load_yaml</span><span class="p">(</span><span class="n">targets_yaml</span><span class="p">)</span>
+        <span class="n">config_yaml</span> <span class="o">=</span> <span class="s1">&#39;config.yaml&#39;</span>
+
+        <span class="k">if</span> <span class="n">is_not_null</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;skydirs&#39;</span><span class="p">]):</span>
+            <span class="n">skydirs</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="s1">&#39;skydirs&#39;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">skydirs</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="n">base_config</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">roi_baseline</span><span class="o">=</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;roi_baseline&#39;</span><span class="p">],</span>
+                           <span class="n">make_plots</span><span class="o">=</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;make_plots&#39;</span><span class="p">],</span>
+                           <span class="n">non_null_src</span><span class="o">=</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;non_null_src&#39;</span><span class="p">])</span>
+
+        <span class="k">for</span> <span class="n">target_name</span><span class="p">,</span> <span class="n">target_list</span> <span class="ow">in</span> <span class="n">targets</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">name_keys</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">target_type</span><span class="o">=</span><span class="n">ttype</span><span class="p">,</span>
+                             <span class="n">target_name</span><span class="o">=</span><span class="n">target_name</span><span class="p">,</span>
+                             <span class="n">sim_name</span><span class="o">=</span><span class="s1">&#39;random&#39;</span><span class="p">,</span>
+                             <span class="n">fullpath</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">skydirs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">target_dir</span> <span class="o">=</span> <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">targetdir</span><span class="p">(</span><span class="o">**</span><span class="n">name_keys</span><span class="p">)</span>
+                <span class="n">skydir_path</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">target_dir</span> <span class="o">=</span> <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">sim_targetdir</span><span class="p">(</span><span class="o">**</span><span class="n">name_keys</span><span class="p">)</span>
+                <span class="n">skydir_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">target_dir</span><span class="p">,</span> <span class="n">skydirs</span><span class="p">)</span>
+            <span class="n">config_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">target_dir</span><span class="p">,</span> <span class="n">config_yaml</span><span class="p">)</span>
+            <span class="n">logfile</span> <span class="o">=</span> <span class="n">make_nfs_path</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                <span class="n">target_dir</span><span class="p">,</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">.log&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">linkname</span><span class="p">,</span> <span class="n">target_name</span><span class="p">)))</span>
+            <span class="n">job_config</span> <span class="o">=</span> <span class="n">base_config</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">job_config</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">config_path</span><span class="p">,</span>
+                                   <span class="n">profiles</span><span class="o">=</span><span class="n">target_list</span><span class="p">,</span>
+                                   <span class="n">skydirs</span><span class="o">=</span><span class="n">skydir_path</span><span class="p">,</span>
+                                   <span class="n">logfile</span><span class="o">=</span><span class="n">logfile</span><span class="p">))</span>
+            <span class="n">job_configs</span><span class="p">[</span><span class="n">target_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">job_config</span>
+
+        <span class="k">return</span> <span class="n">job_configs</span></div></div>
+
+
+<span class="k">def</span> <span class="nf">register_classes</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Register these classes with the `LinkFactory` &quot;&quot;&quot;</span>
+    <span class="n">AnalyzeROI</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">AnalyzeROI_SG</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">AnalyzeSED</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">AnalyzeSED_SG</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

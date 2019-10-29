@@ -1,0 +1,1539 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Configuration &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Output File" href="output.html" />
+    <link rel="prev" title="Quickstart Guide" href="quickstart.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#class-configuration">Class Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration-file">Configuration File</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#binning">binning</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#components">components</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#data">data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#extension">extension</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fileio">fileio</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#gtlike">gtlike</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lightcurve">lightcurve</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#model">model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#optimizer">optimizer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#plotting">plotting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#residmap">residmap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#roiopt">roiopt</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sed">sed</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#selection">selection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sourcefind">sourcefind</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#tsmap">tsmap</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#tscube">tscube</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Configuration</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/config.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="configuration">
+<span id="config"></span><h1>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline">¶</a></h1>
+<p>This page describes the configuration management scheme used within
+the Fermipy package and documents the configuration parameters
+that can be set in the configuration file.</p>
+<div class="section" id="class-configuration">
+<h2>Class Configuration<a class="headerlink" href="#class-configuration" title="Permalink to this headline">¶</a></h2>
+<p>Classes in the Fermipy package own a configuration state dictionary
+that is initialized when the class instance is created.  Elements of
+the configuration dictionary can be scalars (str, int, float) or
+dictionaries containing groups of parameters.  The settings in this
+dictionary are used to control the runtime behavior of the class.</p>
+<p>When creating a class instance, the configuration is initialized by
+passing either a configuration dictionary or configuration file path
+to the class constructor.  Keyword arguments can be passed to the
+constructor to override configuration parameters in the input
+dictionary.  In the following example the <em>config</em> dictionary defines
+values for the parameters <em>emin</em> and <em>emax</em>.  By passing a dictionary
+for the <em>selection</em> keyword argument, the value of <em>emax</em> in the
+keyword argument (10000) overrides the value of <em>emax</em> in the input
+dictionary.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+<span class="s1">&#39;selection&#39;</span> <span class="p">:</span> <span class="p">{</span> <span class="s1">&#39;emin&#39;</span> <span class="p">:</span> <span class="mi">100</span><span class="p">,</span>
+                <span class="s1">&#39;emax&#39;</span> <span class="p">:</span> <span class="mi">1000</span> <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="n">gta</span> <span class="o">=</span> <span class="n">GTAnalysis</span><span class="p">(</span><span class="n">config</span><span class="p">,</span><span class="n">selection</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;emax&#39;</span> <span class="p">:</span> <span class="mi">10000</span><span class="p">})</span>
+</pre></div>
+</div>
+<p>The first argument can also be the path to a YAML configuration file
+rather than a dictionary:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">gta</span> <span class="o">=</span> <span class="n">GTAnalysis</span><span class="p">(</span><span class="s1">&#39;config.yaml&#39;</span><span class="p">,</span><span class="n">selection</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;emax&#39;</span> <span class="p">:</span> <span class="mi">10000</span><span class="p">})</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="configuration-file">
+<h2>Configuration File<a class="headerlink" href="#configuration-file" title="Permalink to this headline">¶</a></h2>
+<p>Fermipy uses <a class="reference external" href="http://yaml.org/">YAML</a> files to read and write its
+configuration in a persistent format.  The configuration file has a
+hierarchical structure that groups parameters into dictionaries that
+are keyed to a section name (<em>data</em>, <em>binning</em>, etc.).</p>
+<div class="literal-block-wrapper docutils container" id="id1">
+<div class="code-block-caption"><span class="caption-text">Sample Configuration</span><a class="headerlink" href="#id1" title="Permalink to this code">¶</a></div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">data</span><span class="p">:</span>
+  <span class="nt">evfile </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">ft1.lst</span>
+  <span class="nt">scfile </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">ft2.fits</span>
+  <span class="nt">ltcube </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">ltcube.fits</span>
+
+<span class="nt">binning</span><span class="p">:</span>
+  <span class="nt">roiwidth   </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">10.0</span>
+  <span class="nt">binsz      </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.1</span>
+  <span class="nt">binsperdec </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">8</span>
+
+<span class="nt">selection </span><span class="p">:</span>
+  <span class="nt">emin </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">100</span>
+  <span class="nt">emax </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">316227.76</span>
+  <span class="nt">zmax    </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">90</span>
+  <span class="nt">evclass </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">128</span>
+  <span class="nt">evtype  </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">3</span>
+  <span class="nt">tmin    </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">239557414</span>
+  <span class="nt">tmax    </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">428903014</span>
+  <span class="nt">filter  </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">null</span>
+  <span class="nt">target </span><span class="p">:</span> <span class="s">&#39;mkn421&#39;</span>
+
+<span class="nt">gtlike</span><span class="p">:</span>
+  <span class="nt">edisp </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">True</span>
+  <span class="nt">edisp_bins </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">-1</span>
+  <span class="nt">irfs </span><span class="p">:</span> <span class="s">&#39;P8R3_SOURCE_V2&#39;</span>
+  <span class="nt">edisp_disable </span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="s">&#39;isodiff&#39;</span><span class="p p-Indicator">,</span><span class="s">&#39;galdiff&#39;</span><span class="p p-Indicator">]</span>
+
+<span class="nt">model</span><span class="p">:</span>
+  <span class="nt">src_roiwidth </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">15.0</span>
+  <span class="nt">galdiff  </span><span class="p">:</span> <span class="s">&#39;$FERMI_DIFFUSE_DIR/gll_iem_v07.fits&#39;</span>
+  <span class="nt">isodiff  </span><span class="p">:</span> <span class="s">&#39;iso_P8R3_SOURCE_V2_v1.txt&#39;</span>
+  <span class="nt">catalogs </span><span class="p">:</span> <span class="p p-Indicator">[</span><span class="s">&#39;3FGL&#39;</span><span class="p p-Indicator">]</span>
+</pre></div>
+</div>
+</div>
+<p>The configuration file has the same structure as the configuration
+dictionary such that one can read/write configurations using the
+load/dump methods of the yaml module:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">yaml</span>
+<span class="c1"># Load a configuration</span>
+<span class="n">config</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s1">&#39;config.yaml&#39;</span><span class="p">))</span>
+<span class="c1"># Update a parameter and write a new configuration</span>
+<span class="n">config</span><span class="p">[</span><span class="s1">&#39;selection&#39;</span><span class="p">][</span><span class="s1">&#39;emin&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1000.</span>
+<span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;new_config.yaml&#39;</span><span class="p">,</span><span class="s1">&#39;w&#39;</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>Most of the configuration parameters are optional and if not set
+explicitly in the configuration file will be set to a default value.
+The parameters that can be set in each section are described below.</p>
+<div class="section" id="binning">
+<span id="config-binning"></span><h3>binning<a class="headerlink" href="#binning" title="Permalink to this headline">¶</a></h3>
+<p>Options in the <em>binning</em> section control the spatial and spectral binning of the data.</p>
+<div class="literal-block-wrapper docutils container" id="id2">
+<div class="code-block-caption"><span class="caption-text">Sample <em>binning</em> Configuration</span><a class="headerlink" href="#id2" title="Permalink to this code">¶</a></div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">binning</span><span class="p">:</span>
+
+  <span class="c1"># Binning</span>
+  <span class="nt">roiwidth   </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">10.0</span>
+  <span class="nt">npix       </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">null</span>
+  <span class="nt">binsz      </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">0.1</span> <span class="c1"># spatial bin size in deg</span>
+  <span class="nt">binsperdec </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">8</span>   <span class="c1"># nb energy bins per decade</span>
+  <span class="nt">projtype   </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">WCS</span>
+</pre></div>
+</div>
+</div>
+<table border="1" class="colwidths-given docutils" id="id3">
+<caption><span class="caption-text"><em>binning</em> Options</span><a class="headerlink" href="#id3" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">binsperdec</span></code></td>
+<td>8</td>
+<td>Number of energy bins per decade.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">binsz</span></code></td>
+<td>0.1</td>
+<td>Spatial bin size in degrees.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">coordsys</span></code></td>
+<td>CEL</td>
+<td>Coordinate system of the spatial projection (CEL or GAL).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">enumbins</span></code></td>
+<td>None</td>
+<td>Number of energy bins.  If none this will be inferred from energy range and <code class="docutils literal notranslate"><span class="pre">binsperdec</span></code> parameter.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">hpx_ebin</span></code></td>
+<td>True</td>
+<td>Include energy binning</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">hpx_order</span></code></td>
+<td>10</td>
+<td>Order of the map (int between 0 and 12, included)</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">hpx_ordering_scheme</span></code></td>
+<td>RING</td>
+<td>HEALPix Ordering Scheme</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">npix</span></code></td>
+<td>None</td>
+<td>Number of pixels.  If none then this will be set from <code class="docutils literal notranslate"><span class="pre">roiwidth</span></code> and <code class="docutils literal notranslate"><span class="pre">binsz</span></code>.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">proj</span></code></td>
+<td>AIT</td>
+<td>Spatial projection for WCS mode.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">projtype</span></code></td>
+<td>WCS</td>
+<td>Projection mode (WCS or HPX).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">roiwidth</span></code></td>
+<td>10.0</td>
+<td>Width of the ROI in degrees.  The number of pixels in each spatial dimension will be set from <code class="docutils literal notranslate"><span class="pre">roiwidth</span></code> / <code class="docutils literal notranslate"><span class="pre">binsz</span></code> (rounded up).</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="components">
+<span id="config-components"></span><h3>components<a class="headerlink" href="#components" title="Permalink to this headline">¶</a></h3>
+<p>The <em>components</em> section can be used to define analysis configurations
+for independent subselections of the data.  Each subselection will
+have its own binned likelihood instance that is combined in a global
+likelihood function for the ROI (implemented with the SummedLikelihood
+class in pyLikelihood).  The <em>components</em> section is optional and when
+set to null (the default) only a single likelihood component will be
+created with the parameters of the root analysis configuration.</p>
+<p>The component section is defined as a list of dictionaries where each
+element sets analysis parameters for a different subcomponent of the
+analysis.  The component configurations follow the same structure and
+accept the same parameters as the root analysis configuration.
+Parameters not defined in a given element will default to the values
+set in the root analysis configuration.</p>
+<p>The following example illustrates how to define a Front/Back analysis
+with two components.  Files associated to each component will be given
+a suffix according to their order in the list (e.g. file_00.fits,
+file_01.fits, etc.).</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># Component section for Front/Back analysis</span>
+  <span class="p p-Indicator">-</span> <span class="p p-Indicator">{</span><span class="nt"> selection </span><span class="p">:</span> <span class="p p-Indicator">{</span><span class="nt"> evtype </span><span class="p">:</span> <span class="nv">1</span> <span class="p p-Indicator">}</span> <span class="p p-Indicator">}</span> <span class="c1"># Front</span>
+  <span class="p p-Indicator">-</span> <span class="p p-Indicator">{</span><span class="nt"> selection </span><span class="p">:</span> <span class="p p-Indicator">{</span><span class="nt"> evtype </span><span class="p">:</span> <span class="nv">2</span> <span class="p p-Indicator">}</span> <span class="p p-Indicator">}</span> <span class="c1"># Back</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="data">
+<span id="config-data"></span><h3>data<a class="headerlink" href="#data" title="Permalink to this headline">¶</a></h3>
+<p>The <em>data</em> section defines the input data files for the analysis (FT1,
+FT2, and livetime cube).  <code class="docutils literal notranslate"><span class="pre">evfile</span></code> and <code class="docutils literal notranslate"><span class="pre">scfile</span></code> can either be
+individual files or group of files.  The optional <code class="docutils literal notranslate"><span class="pre">ltcube</span></code> option can
+be used to choose a pre-generated livetime cube.  If <code class="docutils literal notranslate"><span class="pre">ltcube</span></code> is
+null a livetime cube will be generated at runtime with <code class="docutils literal notranslate"><span class="pre">gtltcube</span></code>.</p>
+<div class="literal-block-wrapper docutils container" id="id4">
+<div class="code-block-caption"><span class="caption-text">Sample <em>data</em> Configuration</span><a class="headerlink" href="#id4" title="Permalink to this code">¶</a></div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">data </span><span class="p">:</span>
+  <span class="nt">evfile </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">ft1.lst</span>
+  <span class="nt">scfile </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">ft2.fits</span>
+  <span class="nt">ltcube </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">null</span>
+</pre></div>
+</div>
+</div>
+<table border="1" class="colwidths-given docutils" id="id5">
+<caption><span class="caption-text"><em>data</em> Options</span><a class="headerlink" href="#id5" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">cacheft1</span></code></td>
+<td>True</td>
+<td>Cache FT1 files when performing binned analysis.  If false then only the counts cube is retained.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">evfile</span></code></td>
+<td>None</td>
+<td>Path to FT1 file or list of FT1 files.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">ltcube</span></code></td>
+<td>None</td>
+<td>Path to livetime cube.  If none a livetime cube will be generated with <code class="docutils literal notranslate"><span class="pre">gtmktime</span></code>.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">scfile</span></code></td>
+<td>None</td>
+<td>Path to FT2 (spacecraft) file.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="extension">
+<span id="config-extension"></span><h3>extension<a class="headerlink" href="#extension" title="Permalink to this headline">¶</a></h3>
+<p>The options in <em>extension</em> control the default behavior of the
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.extension" title="fermipy.gtanalysis.GTAnalysis.extension"><code class="xref py py-obj docutils literal notranslate"><span class="pre">extension</span></code></a> method.  For more information
+about using this method see the <a class="reference internal" href="advanced/extension.html#extension"><span class="std std-ref">Extension Fitting</span></a> page.</p>
+<table border="1" class="colwidths-given docutils" id="id6">
+<caption><span class="caption-text"><em>extension</em> Options</span><a class="headerlink" href="#id6" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">fit_ebin</span></code></td>
+<td>False</td>
+<td>Perform a fit for the angular extension in each analysis energy bin.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">fit_position</span></code></td>
+<td>False</td>
+<td>Perform a simultaneous fit to the source position and extension.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">fix_shape</span></code></td>
+<td>False</td>
+<td>Fix spectral shape parameters of the source of interest. If True then only the normalization parameter will be fit.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">free_background</span></code></td>
+<td>False</td>
+<td>Leave background parameters free when performing the fit. If True then any parameters that are currently free in the model will be fit simultaneously with the source of interest.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">free_radius</span></code></td>
+<td>None</td>
+<td>Free normalizations of background sources within this angular distance in degrees from the source of interest.  If None then no sources will be freed.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">make_plots</span></code></td>
+<td>False</td>
+<td>Generate diagnostic plots.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">make_tsmap</span></code></td>
+<td>True</td>
+<td>Make a TS map for the source of interest.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">psf_scale_fn</span></code></td>
+<td>None</td>
+<td>Tuple of two vectors (logE,f) defining an energy-dependent PSF scaling function that will be applied when building spatial models for the source of interest.  The tuple (logE,f) defines the fractional corrections f at the sequence of energies logE = log10(E/MeV) where f=0 corresponds to no correction.  The correction function f(E) is evaluated by linearly interpolating the fractional correction factors f in log(E).  The corrected PSF is given by P’(x;E) = P(x/(1+f(E));E) where x is the angular separation.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">save_model_map</span></code></td>
+<td>False</td>
+<td>Save model counts cubes for the best-fit model of extension.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">spatial_model</span></code></td>
+<td>RadialGaussian</td>
+<td>Spatial model that will be used to test the sourceextension.  The spatial scale parameter of the model will be set such that the 68% containment radius of the model is equal to the width parameter.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">sqrt_ts_threshold</span></code></td>
+<td>None</td>
+<td>Threshold on sqrt(TS_ext) that will be applied when <code class="docutils literal notranslate"><span class="pre">update</span></code> is True.  If None then nothreshold is applied.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">tsmap_fitter</span></code></td>
+<td>tsmap</td>
+<td>Set the method for generating the TS map.  Valid options are tsmap or tscube.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">update</span></code></td>
+<td>False</td>
+<td>Update this source with the best-fit model for spatial extension if TS_ext &gt; <code class="docutils literal notranslate"><span class="pre">tsext_threshold</span></code>.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">width</span></code></td>
+<td>None</td>
+<td>Sequence of values in degrees for the likelihood scan over spatial extension (68% containment radius).  If this argument is None then the scan points will be determined from width_min/width_max/width_nstep.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">width_max</span></code></td>
+<td>1.0</td>
+<td>Maximum value in degrees for the likelihood scan over spatial extent.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">width_min</span></code></td>
+<td>0.01</td>
+<td>Minimum value in degrees for the likelihood scan over spatial extent.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">width_nstep</span></code></td>
+<td>21</td>
+<td>Number of scan points between width_min and width_max. Scan points will be spaced evenly on a logarithmic scale between <code class="xref py py-obj docutils literal notranslate"><span class="pre">width_min</span></code> and <code class="xref py py-obj docutils literal notranslate"><span class="pre">width_max</span></code>.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">write_fits</span></code></td>
+<td>True</td>
+<td>Write the output to a FITS file.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">write_npy</span></code></td>
+<td>True</td>
+<td>Write the output dictionary to a numpy file.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="fileio">
+<span id="config-fileio"></span><h3>fileio<a class="headerlink" href="#fileio" title="Permalink to this headline">¶</a></h3>
+<p>The <em>fileio</em> section collects options related to file bookkeeping.
+The <code class="docutils literal notranslate"><span class="pre">outdir</span></code> option sets the root directory of the analysis instance
+where all output files will be written.  If <code class="docutils literal notranslate"><span class="pre">outdir</span></code> is null then the
+output directory will be automatically set to the directory in which
+the configuration file is located.  Enabling the <code class="docutils literal notranslate"><span class="pre">usescratch</span></code> option
+will stage all output data files to a temporary scratch directory
+created under <code class="docutils literal notranslate"><span class="pre">scratchdir</span></code>.</p>
+<div class="literal-block-wrapper docutils container" id="id7">
+<div class="code-block-caption"><span class="caption-text">Sample <em>fileio</em> Configuration</span><a class="headerlink" href="#id7" title="Permalink to this code">¶</a></div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">fileio</span><span class="p">:</span>
+   <span class="nt">outdir </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">null</span>
+   <span class="nt">logfile </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">null</span>
+   <span class="nt">usescratch </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">False</span>
+   <span class="nt">scratchdir  </span><span class="p">:</span> <span class="s">&#39;/scratch&#39;</span>
+</pre></div>
+</div>
+</div>
+<table border="1" class="colwidths-given docutils" id="id8">
+<caption><span class="caption-text"><em>fileio</em> Options</span><a class="headerlink" href="#id8" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">logfile</span></code></td>
+<td>None</td>
+<td>Path to log file.  If None then log will be written to fermipy.log.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">outdir</span></code></td>
+<td>None</td>
+<td>Path of the output directory.  If none this will default to the directory containing the configuration file.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">outdir_regex</span></code></td>
+<td>[‘.fits$|.fit$|.xml$|.npy$|.png$|.pdf$|.yaml$’]</td>
+<td>Stage files to the output directory that match at least one of the regular expressions in this list.  This option only takes effect when <code class="docutils literal notranslate"><span class="pre">usescratch</span></code> is True.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">savefits</span></code></td>
+<td>True</td>
+<td>Save intermediate FITS files.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">scratchdir</span></code></td>
+<td>/scratch</td>
+<td>Path to the scratch directory.  If <code class="docutils literal notranslate"><span class="pre">usescratch</span></code> is True then a temporary working directory will be created under this directory.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">usescratch</span></code></td>
+<td>False</td>
+<td>Run analysis in a temporary working directory under <code class="docutils literal notranslate"><span class="pre">scratchdir</span></code>.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">workdir</span></code></td>
+<td>None</td>
+<td>Path to the working directory.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">workdir_regex</span></code></td>
+<td>[‘.fits$|.fit$|.xml$|.npy$’]</td>
+<td>Stage files to the working directory that match at least one of the regular expressions in this list.  This option only takes effect when <code class="docutils literal notranslate"><span class="pre">usescratch</span></code> is True.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="gtlike">
+<span id="config-gtlike"></span><h3>gtlike<a class="headerlink" href="#gtlike" title="Permalink to this headline">¶</a></h3>
+<p>Options in the <em>gtlike</em> section control the setup of the likelihood
+analysis include the IRF name (<code class="docutils literal notranslate"><span class="pre">irfs</span></code>).
+The <code class="docutils literal notranslate"><span class="pre">edisp_bin</span></code> option has been recently added to implement the latest handling of the
+energy dispersion (see <a class="reference external" href="https://fermi.gsfc.nasa.gov/ssc/data/analysis/documentation/Pass8_edisp_usage.html">FSSC</a>
+for further details).</p>
+<table border="1" class="colwidths-given docutils" id="id9">
+<caption><span class="caption-text"><em>gtlike</em> Options</span><a class="headerlink" href="#id9" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">bexpmap</span></code></td>
+<td>None</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">bexpmap_base</span></code></td>
+<td>None</td>
+<td>Set the basline all-sky expoure map file.  This will be used to generate a scaled source map.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">bexpmap_roi</span></code></td>
+<td>None</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">bexpmap_roi_base</span></code></td>
+<td>None</td>
+<td>Set the basline ROI expoure map file.  This will be used to generate a scaled source map.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">convolve</span></code></td>
+<td>True</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">edisp</span></code></td>
+<td>True</td>
+<td>Enable the correction for energy dispersion.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">edisp_bins</span></code></td>
+<td>-1</td>
+<td>Number of bins to use for energy correction.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">edisp_disable</span></code></td>
+<td>None</td>
+<td>Provide a list of sources for which the edisp correction should be disabled.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">expscale</span></code></td>
+<td>None</td>
+<td>Exposure correction that is applied to all sources in the analysis component.  This correction is superseded by <code class="xref py py-obj docutils literal notranslate"><span class="pre">src_expscale</span></code> if it is defined for a source.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">irfs</span></code></td>
+<td>None</td>
+<td>Set the IRF string.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">llscan_npts</span></code></td>
+<td>20</td>
+<td>Number of evaluation points to use when performing a likelihood scan.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">minbinsz</span></code></td>
+<td>0.05</td>
+<td>Set the minimum bin size used for resampling diffuse maps.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">resample</span></code></td>
+<td>True</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">rfactor</span></code></td>
+<td>2</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">src_expscale</span></code></td>
+<td>None</td>
+<td>Dictionary of exposure corrections for individual sources keyed to source name.  The exposure for a given source will be scaled by this value.  A value of 1.0 corresponds to the nominal exposure.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">srcmap</span></code></td>
+<td>None</td>
+<td>Set the source maps file.  When defined this file will be used instead of the local source maps file.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">srcmap_base</span></code></td>
+<td>None</td>
+<td>Set the baseline source maps file.  This will be used to generate a scaled source map.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">use_external_srcmap</span></code></td>
+<td>False</td>
+<td>Use an external precomputed source map file.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">use_scaled_srcmap</span></code></td>
+<td>False</td>
+<td>Generate source map by scaling an external srcmap file.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">wmap</span></code></td>
+<td>None</td>
+<td>Likelihood weights map.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="lightcurve">
+<span id="config-lightcurve"></span><h3>lightcurve<a class="headerlink" href="#lightcurve" title="Permalink to this headline">¶</a></h3>
+<p>The options in <em>lightcurve</em> control the default behavior of the
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.lightcurve" title="fermipy.gtanalysis.GTAnalysis.lightcurve"><code class="xref py py-obj docutils literal notranslate"><span class="pre">lightcurve</span></code></a> method.  For more information
+about using this method see the <a class="reference internal" href="advanced/lightcurve.html#lightcurve"><span class="std std-ref">Light Curves</span></a> page.</p>
+<table border="1" class="colwidths-given docutils" id="id10">
+<caption><span class="caption-text"><em>lightcurve</em> Options</span><a class="headerlink" href="#id10" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">binsz</span></code></td>
+<td>86400.0</td>
+<td>Set the lightcurve bin size in seconds.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">free_background</span></code></td>
+<td>False</td>
+<td>Leave background parameters free when performing the fit. If True then any parameters that are currently free in the model will be fit simultaneously with the source of interest.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">free_params</span></code></td>
+<td>None</td>
+<td>Set the parameters of the source of interest that will be re-fit in each time bin. If this list is empty then all parameters will be freed.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">free_radius</span></code></td>
+<td>None</td>
+<td>Free normalizations of background sources within this angular distance in degrees from the source of interest.  If None then no sources will be freed.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">free_sources</span></code></td>
+<td>None</td>
+<td>List of sources to be freed.  These sources will be added to the list of sources satisfying the free_radius selection.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">make_plots</span></code></td>
+<td>False</td>
+<td>Generate diagnostic plots.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">max_free_sources</span></code></td>
+<td>5</td>
+<td>Maximum number of sources that will be fit simultaneously with the source of interest.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">multithread</span></code></td>
+<td>False</td>
+<td>Split the calculation across number of processes set by nthread option.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">nbins</span></code></td>
+<td>None</td>
+<td>Set the number of lightcurve bins.  The total time range will be evenly split into this number of time bins.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">nthread</span></code></td>
+<td>None</td>
+<td>Number of processes to create when multithread is True.  If None then one process will be created for each available core.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">outdir</span></code></td>
+<td>None</td>
+<td>Store all data in this directory (e.g. “30days”). If None then use current directory.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">save_bin_data</span></code></td>
+<td>True</td>
+<td>Save analysis directories for individual time bins.  If False then only the analysis results table will be saved.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">shape_ts_threshold</span></code></td>
+<td>16.0</td>
+<td>Set the TS threshold at which shape parameters of sources will be freed.  If a source is detected with TS less than this value then its shape parameters will be fixed to values derived from the analysis of the full time range.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">systematic</span></code></td>
+<td>0.02</td>
+<td>Systematic correction factor for TS:subscript:<code class="xref py py-obj docutils literal notranslate"><span class="pre">var</span></code>. See Sect. 3.6 in 2FGL for details.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">time_bins</span></code></td>
+<td>None</td>
+<td>Set the lightcurve bin edge sequence in MET.  This option takes precedence over binsz and nbins.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">use_local_ltcube</span></code></td>
+<td>True</td>
+<td>Generate a fast LT cube.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">use_scaled_srcmap</span></code></td>
+<td>False</td>
+<td>Generate approximate source maps for each time bin by scaling the current source maps by the exposure ratio with respect to that time bin.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">write_fits</span></code></td>
+<td>True</td>
+<td>Write the output to a FITS file.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">write_npy</span></code></td>
+<td>True</td>
+<td>Write the output dictionary to a numpy file.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="model">
+<span id="config-model"></span><h3>model<a class="headerlink" href="#model" title="Permalink to this headline">¶</a></h3>
+<p>The <em>model</em> section collects options that control the inclusion of
+point-source and diffuse components in the model.  <code class="docutils literal notranslate"><span class="pre">galdiff</span></code> and
+<code class="docutils literal notranslate"><span class="pre">isodiff</span></code> set the templates for the Galactic IEM and isotropic
+diffuse respectively.  <code class="docutils literal notranslate"><span class="pre">catalogs</span></code> defines a list of catalogs that
+will be merged to form a master analysis catalog from which sources
+will be drawn.  Valid entries in this list can be FITS files or XML
+model files.  <code class="docutils literal notranslate"><span class="pre">sources</span></code> can be used to insert additional
+point-source or extended components beyond those defined in the master
+catalog.  <code class="docutils literal notranslate"><span class="pre">src_radius</span></code> and <code class="docutils literal notranslate"><span class="pre">src_roiwidth</span></code> set the maximum distance
+from the ROI center at which sources in the master catalog will be
+included in the ROI model.</p>
+<div class="literal-block-wrapper docutils container" id="id11">
+<div class="code-block-caption"><span class="caption-text">Sample <em>model</em> Configuration</span><a class="headerlink" href="#id11" title="Permalink to this code">¶</a></div>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">model </span><span class="p">:</span>
+
+  <span class="c1"># Diffuse components</span>
+  <span class="nt">galdiff  </span><span class="p">:</span> <span class="s">&#39;$FERMI_DIR/refdata/fermi/galdiffuse/gll_iem_v06.fits&#39;</span>
+  <span class="nt">isodiff  </span><span class="p">:</span> <span class="s">&#39;$FERMI_DIR/refdata/fermi/galdiffuse/iso_P8R2_SOURCE_V6_v06.txt&#39;</span>
+
+  <span class="c1"># List of catalogs to be used in the model.</span>
+  <span class="nt">catalogs </span><span class="p">:</span>
+    <span class="p p-Indicator">-</span> <span class="s">&#39;3FGL&#39;</span>
+    <span class="p p-Indicator">-</span> <span class="s">&#39;extra_sources.xml&#39;</span>
+
+  <span class="nt">sources </span><span class="p">:</span>
+    <span class="p p-Indicator">-</span> <span class="p p-Indicator">{</span><span class="nt"> &#39;name&#39; </span><span class="p">:</span> <span class="s">&#39;SourceA&#39;</span><span class="p p-Indicator">,</span><span class="nt"> &#39;ra&#39; </span><span class="p">:</span> <span class="nv">60.0</span><span class="p p-Indicator">,</span><span class="nt"> &#39;dec&#39; </span><span class="p">:</span> <span class="nv">30.0</span><span class="p p-Indicator">,</span><span class="nt"> &#39;SpectrumType&#39; </span><span class="p">:</span> <span class="nv">PowerLaw</span> <span class="p p-Indicator">}</span>
+    <span class="p p-Indicator">-</span> <span class="p p-Indicator">{</span><span class="nt"> &#39;name&#39; </span><span class="p">:</span> <span class="s">&#39;SourceB&#39;</span><span class="p p-Indicator">,</span><span class="nt"> &#39;ra&#39; </span><span class="p">:</span> <span class="nv">58.0</span><span class="p p-Indicator">,</span><span class="nt"> &#39;dec&#39; </span><span class="p">:</span> <span class="nv">35.0</span><span class="p p-Indicator">,</span><span class="nt"> &#39;SpectrumType&#39; </span><span class="p">:</span> <span class="nv">PowerLaw</span> <span class="p p-Indicator">}</span>
+
+  <span class="c1"># Include catalog sources within this distance from the ROI center</span>
+  <span class="nt">src_radius  </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">null</span>
+
+  <span class="c1"># Include catalog sources within a box of width roisrc.</span>
+  <span class="nt">src_roiwidth </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">15.0</span>
+</pre></div>
+</div>
+</div>
+<table border="1" class="colwidths-given docutils" id="id12">
+<caption><span class="caption-text"><em>model</em> Options</span><a class="headerlink" href="#id12" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">assoc_xmatch_columns</span></code></td>
+<td>[‘3FGL_Name’]</td>
+<td>Choose a set of association columns on which to cross-match catalogs.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">catalogs</span></code></td>
+<td>None</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">diffuse</span></code></td>
+<td>None</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">diffuse_dir</span></code></td>
+<td>None</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">diffuse_xml</span></code></td>
+<td>None</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">extdir</span></code></td>
+<td>None</td>
+<td>Set a directory that will be searched for extended source FITS templates.  Template files in this directory will take precendence over catalog source templates with the same name.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">extract_diffuse</span></code></td>
+<td>False</td>
+<td>Extract a copy of all mapcube components centered on the ROI.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">galdiff</span></code></td>
+<td>None</td>
+<td>Set the path to one or more galactic IEM mapcubes.  A separate component will be generated for each item in this list.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">isodiff</span></code></td>
+<td>None</td>
+<td>Set the path to one or more isotropic templates.  A separate component will be generated for each item in this list.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">limbdiff</span></code></td>
+<td>None</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">merge_sources</span></code></td>
+<td>True</td>
+<td>Merge properties of sources that appear in multiple source catalogs.  If merge_sources=false then subsequent sources with the same name will be ignored.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">sources</span></code></td>
+<td>None</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">src_radius</span></code></td>
+<td>None</td>
+<td>Radius of circular region in degrees centered on the ROI that selects sources for inclusion in the model.  If this parameter is none then no selection is applied.  This selection is ORed with the <code class="docutils literal notranslate"><span class="pre">src_roiwidth</span></code> selection.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">src_radius_roi</span></code></td>
+<td>None</td>
+<td>Half-width of <code class="docutils literal notranslate"><span class="pre">src_roiwidth</span></code> selection.  This parameter can be used in lieu of <code class="docutils literal notranslate"><span class="pre">src_roiwidth</span></code>.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">src_roiwidth</span></code></td>
+<td>None</td>
+<td>Width of square region in degrees centered on the ROI that selects sources for inclusion in the model.  If this parameter is none then no selection is applied.  This selection will be ORed with the <code class="docutils literal notranslate"><span class="pre">src_radius</span></code> selection.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="optimizer">
+<span id="config-optimizer"></span><h3>optimizer<a class="headerlink" href="#optimizer" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="colwidths-given docutils" id="id13">
+<caption><span class="caption-text"><em>optimizer</em> Options</span><a class="headerlink" href="#id13" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">init_lambda</span></code></td>
+<td>0.0001</td>
+<td>Initial value of damping parameter for step size calculation when using the NEWTON fitter.  A value of zero disables damping.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">max_iter</span></code></td>
+<td>100</td>
+<td>Maximum number of iterations for the Newtons method fitter.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">min_fit_quality</span></code></td>
+<td>2</td>
+<td>Set the minimum fit quality.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">optimizer</span></code></td>
+<td>MINUIT</td>
+<td>Set the optimization algorithm to use when maximizing the likelihood function.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">retries</span></code></td>
+<td>3</td>
+<td>Set the number of times to retry the fit when the fit quality is less than <code class="docutils literal notranslate"><span class="pre">min_fit_quality</span></code>.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">tol</span></code></td>
+<td>0.001</td>
+<td>Set the optimizer tolerance.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">verbosity</span></code></td>
+<td>0</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="plotting">
+<span id="config-plotting"></span><h3>plotting<a class="headerlink" href="#plotting" title="Permalink to this headline">¶</a></h3>
+<table border="1" class="colwidths-given docutils" id="id14">
+<caption><span class="caption-text"><em>plotting</em> Options</span><a class="headerlink" href="#id14" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">catalogs</span></code></td>
+<td>None</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">cmap</span></code></td>
+<td>magma</td>
+<td>Set the colormap for 2D plots.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">cmap_resid</span></code></td>
+<td>RdBu_r</td>
+<td>Set the colormap for 2D residual plots.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">figsize</span></code></td>
+<td>[8.0, 6.0]</td>
+<td>Set the default figure size.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">format</span></code></td>
+<td>png</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">graticule_radii</span></code></td>
+<td>None</td>
+<td>Define a list of radii at which circular graticules will be drawn.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">interactive</span></code></td>
+<td>False</td>
+<td>Enable interactive mode.  If True then plots will be drawn after each plotting command.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">label_ts_threshold</span></code></td>
+<td>0.0</td>
+<td>TS threshold for labeling sources in sky maps.  If None then no sources will be labeled.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">loge_bounds</span></code></td>
+<td>None</td>
+<td>&#160;</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="residmap">
+<span id="config-residmap"></span><h3>residmap<a class="headerlink" href="#residmap" title="Permalink to this headline">¶</a></h3>
+<p>The options in <em>residmap</em> control the default behavior of the
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.residmap" title="fermipy.gtanalysis.GTAnalysis.residmap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">residmap</span></code></a> method.  For more
+information about using this method see the <a class="reference internal" href="advanced/residmap.html#residmap"><span class="std std-ref">Residual Map</span></a> page.</p>
+<table border="1" class="colwidths-given docutils" id="id15">
+<caption><span class="caption-text"><em>residmap</em> Options</span><a class="headerlink" href="#id15" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">exclude</span></code></td>
+<td>None</td>
+<td>List of sources that will be removed from the model when computing the residual map.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">loge_bounds</span></code></td>
+<td>None</td>
+<td>Restrict the analysis to an energy range (emin,emax) in log10(E/MeV) that is a subset of the analysis energy range. By default the full analysis energy range will be used.  If either emin/emax are None then only an upper/lower bound on the energy range wil be applied.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">make_plots</span></code></td>
+<td>False</td>
+<td>Generate diagnostic plots.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">model</span></code></td>
+<td>None</td>
+<td>Dictionary defining the spatial/spectral properties of the test source. If model is None the test source will be a PointSource with an Index 2 power-law spectrum.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">use_weights</span></code></td>
+<td>False</td>
+<td>Used weighted version of maps in making plots.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">write_fits</span></code></td>
+<td>True</td>
+<td>Write the output to a FITS file.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">write_npy</span></code></td>
+<td>True</td>
+<td>Write the output dictionary to a numpy file.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="roiopt">
+<span id="config-roiopt"></span><h3>roiopt<a class="headerlink" href="#roiopt" title="Permalink to this headline">¶</a></h3>
+<p>The options in <em>roiopt</em> control the default behavior of the
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.optimize" title="fermipy.gtanalysis.GTAnalysis.optimize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">optimize</span></code></a> method.  For more
+information about using this method see the <a class="reference internal" href="fitting.html#fitting"><span class="std std-ref">ROI Optimization and Fitting</span></a> page.</p>
+<table border="1" class="colwidths-given docutils" id="id16">
+<caption><span class="caption-text"><em>roiopt</em> Options</span><a class="headerlink" href="#id16" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">max_free_sources</span></code></td>
+<td>5</td>
+<td>Maximum number of sources that will be fit simultaneously in the first optimization step.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">npred_frac</span></code></td>
+<td>0.95</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">npred_threshold</span></code></td>
+<td>1.0</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">shape_ts_threshold</span></code></td>
+<td>25.0</td>
+<td>Threshold on source TS used for determining the sources that will be fit in the third optimization step.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">skip</span></code></td>
+<td>None</td>
+<td>List of str source names to skip while optimizing.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="sed">
+<span id="config-sed"></span><h3>sed<a class="headerlink" href="#sed" title="Permalink to this headline">¶</a></h3>
+<p>The options in <em>sed</em> control the default behavior of the
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.sed" title="fermipy.gtanalysis.GTAnalysis.sed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">sed</span></code></a> method.  For more information
+about using this method see the <a class="reference internal" href="advanced/sed.html#sed"><span class="std std-ref">SED Analysis</span></a> page.</p>
+<table border="1" class="colwidths-given docutils" id="id17">
+<caption><span class="caption-text"><em>sed</em> Options</span><a class="headerlink" href="#id17" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">bin_index</span></code></td>
+<td>2.0</td>
+<td>Spectral index that will be use when fitting the energy distribution within an energy bin.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">cov_scale</span></code></td>
+<td>3.0</td>
+<td>Scale factor that sets the strength of the prior on nuisance parameters that are free.  Setting this to None disables the prior.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">free_background</span></code></td>
+<td>False</td>
+<td>Leave background parameters free when performing the fit. If True then any parameters that are currently free in the model will be fit simultaneously with the source of interest.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">free_pars</span></code></td>
+<td>None</td>
+<td>Set the parameters of the source of interest that will be freed when performing the global fit.  By default all parameters will be freed.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">free_radius</span></code></td>
+<td>None</td>
+<td>Free normalizations of background sources within this angular distance in degrees from the source of interest.  If None then no sources will be freed.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">make_plots</span></code></td>
+<td>False</td>
+<td>Generate diagnostic plots.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">ul_confidence</span></code></td>
+<td>0.95</td>
+<td>Confidence level for flux upper limit.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">use_local_index</span></code></td>
+<td>False</td>
+<td>Use a power-law approximation to the shape of the global spectrum in each bin.  If this is false then a constant index set to <code class="xref py py-obj docutils literal notranslate"><span class="pre">bin_index</span></code> will be used.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">write_fits</span></code></td>
+<td>True</td>
+<td>Write the output to a FITS file.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">write_npy</span></code></td>
+<td>True</td>
+<td>Write the output dictionary to a numpy file.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="selection">
+<span id="config-selection"></span><h3>selection<a class="headerlink" href="#selection" title="Permalink to this headline">¶</a></h3>
+<p>The <em>selection</em> section collects parameters related to the data
+selection and target definition.  The majority of the parameters in
+this section are arguments to <em>gtselect</em> and <em>gtmktime</em>.  The ROI
+center can be set with the <em>target</em> parameter by providing the name of
+a source defined in one of the input catalogs (defined in the <em>model</em>
+section).  Alternatively the ROI center can be defined by giving
+explicit sky coordinates with <em>ra</em> and <em>dec</em> or <em>glon</em> and <em>glat</em>.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">selection</span><span class="p">:</span>
+
+  <span class="c1"># gtselect parameters</span>
+  <span class="nt">emin    </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">100</span>
+  <span class="nt">emax    </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">100000</span>
+  <span class="nt">zmax    </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">90</span>
+  <span class="nt">evclass </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">128</span>
+  <span class="nt">evtype  </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">3</span>
+  <span class="nt">tmin    </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">239557414</span>
+  <span class="nt">tmax    </span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">428903014</span>
+
+  <span class="c1"># gtmktime parameters</span>
+  <span class="nt">filter </span><span class="p">:</span> <span class="s">&#39;DATA_QUAL&gt;0</span><span class="nv"> </span><span class="s">&amp;&amp;</span><span class="nv"> </span><span class="s">LAT_CONFIG==1&#39;</span>
+  <span class="nt">roicut </span><span class="p">:</span> <span class="s">&#39;no&#39;</span>
+
+  <span class="c1"># Set the ROI center to the coordinates of this source</span>
+  <span class="nt">target </span><span class="p">:</span> <span class="s">&#39;mkn421&#39;</span>
+</pre></div>
+</div>
+<table border="1" class="colwidths-given docutils" id="id18">
+<caption><span class="caption-text"><em>selection</em> Options</span><a class="headerlink" href="#id18" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">convtype</span></code></td>
+<td>None</td>
+<td>Conversion type selection.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dec</span></code></td>
+<td>None</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">emax</span></code></td>
+<td>None</td>
+<td>Maximum Energy (MeV)</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">emin</span></code></td>
+<td>None</td>
+<td>Minimum Energy (MeV)</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">evclass</span></code></td>
+<td>None</td>
+<td>Event class selection.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">evtype</span></code></td>
+<td>None</td>
+<td>Event type selection.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">filter</span></code></td>
+<td>None</td>
+<td>Filter string for <code class="docutils literal notranslate"><span class="pre">gtmktime</span></code> selection.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">glat</span></code></td>
+<td>None</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">glon</span></code></td>
+<td>None</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">logemax</span></code></td>
+<td>None</td>
+<td>Maximum Energy (log10(MeV))</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">logemin</span></code></td>
+<td>None</td>
+<td>Minimum Energy (log10(MeV))</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">phasemax</span></code></td>
+<td>None</td>
+<td>Maximum pulsar phase</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">phasemin</span></code></td>
+<td>None</td>
+<td>Minimum pulsar phase</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">ra</span></code></td>
+<td>None</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">radius</span></code></td>
+<td>None</td>
+<td>Radius of data selection.  If none this will be automatically set from the ROI size.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">roicut</span></code></td>
+<td>no</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">target</span></code></td>
+<td>None</td>
+<td>Choose an object on which to center the ROI.  This option takes precendence over ra/dec or glon/glat.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">tmax</span></code></td>
+<td>None</td>
+<td>Maximum time (MET).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">tmin</span></code></td>
+<td>None</td>
+<td>Minimum time (MET).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">zmax</span></code></td>
+<td>None</td>
+<td>Maximum zenith angle.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="sourcefind">
+<span id="config-sourcefind"></span><h3>sourcefind<a class="headerlink" href="#sourcefind" title="Permalink to this headline">¶</a></h3>
+<p>The options in <em>sourcefind</em> control the default behavior of the
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.find_sources" title="fermipy.gtanalysis.GTAnalysis.find_sources"><code class="xref py py-obj docutils literal notranslate"><span class="pre">find_sources</span></code></a> method.  For more information
+about using this method see the <a class="reference internal" href="advanced/detection.html#findsources"><span class="std std-ref">Source Finding</span></a> page.</p>
+<table border="1" class="colwidths-given docutils" id="id19">
+<caption><span class="caption-text"><em>sourcefind</em> Options</span><a class="headerlink" href="#id19" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">free_params</span></code></td>
+<td>None</td>
+<td>&#160;</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">max_iter</span></code></td>
+<td>5</td>
+<td>Maximum number of source finding iterations.  The source finder will continue adding sources until no additional peaks are found or the number of iterations exceeds this number.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">min_separation</span></code></td>
+<td>1.0</td>
+<td>Minimum separation in degrees between sources detected in each iteration. The source finder will look for the maximum peak in the TS map within a circular region of this radius.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">model</span></code></td>
+<td>None</td>
+<td>Dictionary defining the spatial/spectral properties of the test source. If model is None the test source will be a PointSource with an Index 2 power-law spectrum.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">multithread</span></code></td>
+<td>False</td>
+<td>Split the calculation across number of processes set by nthread option.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">nthread</span></code></td>
+<td>None</td>
+<td>Number of processes to create when multithread is True.  If None then one process will be created for each available core.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">sources_per_iter</span></code></td>
+<td>4</td>
+<td>Maximum number of sources that will be added in each iteration.  If the number of detected peaks in a given iteration is larger than this number, only the N peaks with the largest TS will be used as seeds for the current iteration.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">sqrt_ts_threshold</span></code></td>
+<td>5.0</td>
+<td>Source threshold in sqrt(TS).  Only peaks with sqrt(TS) exceeding this threshold will be used as seeds for new sources.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">tsmap_fitter</span></code></td>
+<td>tsmap</td>
+<td>Set the method for generating the TS map.  Valid options are tsmap or tscube.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="tsmap">
+<span id="config-tsmap"></span><h3>tsmap<a class="headerlink" href="#tsmap" title="Permalink to this headline">¶</a></h3>
+<p>The options in <em>tsmap</em> control the default behavior of the
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.tsmap" title="fermipy.gtanalysis.GTAnalysis.tsmap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tsmap</span></code></a> method.  For more information
+about using this method see the <a class="reference internal" href="advanced/tsmap.html#tsmap"><span class="std std-ref">TS Map</span></a> page.</p>
+<table border="1" class="colwidths-given docutils" id="id20">
+<caption><span class="caption-text"><em>tsmap</em> Options</span><a class="headerlink" href="#id20" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">exclude</span></code></td>
+<td>None</td>
+<td>List of sources that will be removed from the model when computing the TS map.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">loge_bounds</span></code></td>
+<td>None</td>
+<td>Restrict the analysis to an energy range (emin,emax) in log10(E/MeV) that is a subset of the analysis energy range. By default the full analysis energy range will be used.  If either emin/emax are None then only an upper/lower bound on the energy range wil be applied.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">make_plots</span></code></td>
+<td>False</td>
+<td>Generate diagnostic plots.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">max_kernel_radius</span></code></td>
+<td>3.0</td>
+<td>Set the maximum radius of the test source kernel.  Using a smaller value will speed up the TS calculation at the loss of accuracy.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">model</span></code></td>
+<td>None</td>
+<td>Dictionary defining the spatial/spectral properties of the test source. If model is None the test source will be a PointSource with an Index 2 power-law spectrum.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">multithread</span></code></td>
+<td>False</td>
+<td>Split the calculation across number of processes set by nthread option.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">nthread</span></code></td>
+<td>None</td>
+<td>Number of processes to create when multithread is True.  If None then one process will be created for each available core.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">write_fits</span></code></td>
+<td>True</td>
+<td>Write the output to a FITS file.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">write_npy</span></code></td>
+<td>True</td>
+<td>Write the output dictionary to a numpy file.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="tscube">
+<span id="config-tscube"></span><h3>tscube<a class="headerlink" href="#tscube" title="Permalink to this headline">¶</a></h3>
+<p>The options in <em>tscube</em> control the default behavior of the
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.tscube" title="fermipy.gtanalysis.GTAnalysis.tscube"><code class="xref py py-obj docutils literal notranslate"><span class="pre">tscube</span></code></a> method.  For more information
+about using this method see the <a class="reference internal" href="advanced/tscube.html#tscube"><span class="std std-ref">TS Cube</span></a> page.</p>
+<table border="1" class="colwidths-given docutils" id="id21">
+<caption><span class="caption-text"><em>tscube</em> Options</span><a class="headerlink" href="#id21" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Option</th>
+<th class="head">Default</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">cov_scale</span></code></td>
+<td>-1.0</td>
+<td>Scale factor to apply to broadband fitting cov. matrix in bin-by-bin fits ( &lt; 0 -&gt; fixed )</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">cov_scale_bb</span></code></td>
+<td>-1.0</td>
+<td>Scale factor to apply to global fitting cov. matrix in broadband fits. ( &lt; 0 -&gt; no prior )</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">do_sed</span></code></td>
+<td>True</td>
+<td>Compute the energy bin-by-bin fits</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">exclude</span></code></td>
+<td>None</td>
+<td>List of sources that will be removed from the model when computing the TS map.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">init_lambda</span></code></td>
+<td>0</td>
+<td>Initial value of damping parameter for newton step size calculation.   A value of zero disables damping.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">max_iter</span></code></td>
+<td>30</td>
+<td>Maximum number of iterations for the Newtons method fitter.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">model</span></code></td>
+<td>None</td>
+<td>Dictionary defining the spatial/spectral properties of the test source. If model is None the test source will be a PointSource with an Index 2 power-law spectrum.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">nnorm</span></code></td>
+<td>10</td>
+<td>Number of points in the likelihood v. normalization scan</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">norm_sigma</span></code></td>
+<td>5.0</td>
+<td>Number of sigma to use for the scan range</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">remake_test_source</span></code></td>
+<td>False</td>
+<td>If true, recomputes the test source image (otherwise just shifts it)</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">st_scan_level</span></code></td>
+<td>0</td>
+<td>Level to which to do ST-based fitting (for testing)</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">tol</span></code></td>
+<td>0.001</td>
+<td>Critetia for fit convergence (estimated vertical distance to min &lt; tol )</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">tol_type</span></code></td>
+<td>0</td>
+<td>Absoulte (0) or relative (1) criteria for convergence.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="output.html" class="btn btn-neutral float-right" title="Output File" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="quickstart.html" class="btn btn-neutral float-left" title="Quickstart Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

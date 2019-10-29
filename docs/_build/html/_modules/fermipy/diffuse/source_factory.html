@@ -1,0 +1,438 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fermipy.diffuse.source_factory &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../../fermipy.html">fermipy</a> &raquo;</li>
+        
+      <li>fermipy.diffuse.source_factory</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for fermipy.diffuse.source_factory</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Classes and utilities that create fermipy source objects</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="k">import</span> <span class="n">OrderedDict</span>
+
+<span class="kn">from</span> <span class="nn">astropy.table</span> <span class="k">import</span> <span class="n">Table</span>
+<span class="kn">from</span> <span class="nn">astropy.coordinates</span> <span class="k">import</span> <span class="n">SkyCoord</span>
+<span class="kn">from</span> <span class="nn">fermipy</span> <span class="k">import</span> <span class="n">roi_model</span>
+<span class="kn">from</span> <span class="nn">fermipy</span> <span class="k">import</span> <span class="n">catalog</span>
+
+
+<div class="viewcode-block" id="make_point_source"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.source_factory.make_point_source">[docs]</a><span class="k">def</span> <span class="nf">make_point_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">src_dict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Construct and return a `fermipy.roi_model.Source` object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">roi_model</span><span class="o">.</span><span class="n">Source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">src_dict</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="make_spatialmap_source"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.source_factory.make_spatialmap_source">[docs]</a><span class="k">def</span> <span class="nf">make_spatialmap_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">Spatial_Filename</span><span class="p">,</span> <span class="n">spectrum</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Construct and return a `fermipy.roi_model.Source` object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">Spatial_Filename</span><span class="o">=</span><span class="n">Spatial_Filename</span><span class="p">,</span> 
+                <span class="n">ra</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">dec</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+                <span class="n">SpatialType</span><span class="o">=</span><span class="s1">&#39;SpatialMap&#39;</span><span class="p">,</span>
+                <span class="n">Source_Name</span><span class="o">=</span><span class="n">name</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">spectrum</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">spectrum</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">roi_model</span><span class="o">.</span><span class="n">Source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="make_mapcube_source"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.source_factory.make_mapcube_source">[docs]</a><span class="k">def</span> <span class="nf">make_mapcube_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">Spatial_Filename</span><span class="p">,</span> <span class="n">spectrum</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Construct and return a `fermipy.roi_model.MapCubeSource` object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">Spatial_Filename</span><span class="o">=</span><span class="n">Spatial_Filename</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">spectrum</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">spectrum</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">roi_model</span><span class="o">.</span><span class="n">MapCubeSource</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="make_isotropic_source"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.source_factory.make_isotropic_source">[docs]</a><span class="k">def</span> <span class="nf">make_isotropic_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">Spectrum_Filename</span><span class="p">,</span> <span class="n">spectrum</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Construct and return a `fermipy.roi_model.IsoSource` object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">Spectrum_Filename</span><span class="o">=</span><span class="n">Spectrum_Filename</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">spectrum</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">spectrum</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">roi_model</span><span class="o">.</span><span class="n">IsoSource</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="make_composite_source"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.source_factory.make_composite_source">[docs]</a><span class="k">def</span> <span class="nf">make_composite_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">spectrum</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Construct and return a `fermipy.roi_model.CompositeSource` object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">SpatialType</span><span class="o">=</span><span class="s1">&#39;CompositeSource&#39;</span><span class="p">,</span>
+                <span class="n">SpatialModel</span><span class="o">=</span><span class="s1">&#39;CompositeSource&#39;</span><span class="p">,</span>
+                <span class="n">SourceType</span><span class="o">=</span><span class="s1">&#39;CompositeSource&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">spectrum</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">spectrum</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">roi_model</span><span class="o">.</span><span class="n">CompositeSource</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="make_catalog_sources"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.source_factory.make_catalog_sources">[docs]</a><span class="k">def</span> <span class="nf">make_catalog_sources</span><span class="p">(</span><span class="n">catalog_roi_model</span><span class="p">,</span> <span class="n">source_names</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Construct and return dictionary of sources that are a subset of sources</span>
+<span class="sd">    in catalog_roi_model.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    catalog_roi_model : dict or `fermipy.roi_model.ROIModel`</span>
+<span class="sd">        Input set of sources</span>
+
+<span class="sd">    source_names : list</span>
+<span class="sd">        Names of sourcs to extract</span>
+
+<span class="sd">    Returns dict mapping source_name to `fermipy.roi_model.Source` object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sources</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">source_name</span> <span class="ow">in</span> <span class="n">source_names</span><span class="p">:</span>
+        <span class="n">sources</span><span class="p">[</span><span class="n">source_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">catalog_roi_model</span><span class="p">[</span><span class="n">source_name</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">sources</span></div>
+
+
+<div class="viewcode-block" id="make_sources"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.source_factory.make_sources">[docs]</a><span class="k">def</span> <span class="nf">make_sources</span><span class="p">(</span><span class="n">comp_key</span><span class="p">,</span> <span class="n">comp_dict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Make dictionary mapping component keys to a source</span>
+<span class="sd">    or set of sources</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    comp_key : str</span>
+<span class="sd">        Key used to access sources</span>
+
+<span class="sd">    comp_dict : dict</span>
+<span class="sd">        Information used to build sources</span>
+
+<span class="sd">    return `OrderedDict` maping comp_key to `fermipy.roi_model.Source`</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">srcdict</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">comp_info</span> <span class="o">=</span> <span class="n">comp_dict</span><span class="o">.</span><span class="n">info</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="n">comp_info</span> <span class="o">=</span> <span class="n">comp_dict</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">spectrum</span> <span class="o">=</span> <span class="n">comp_dict</span><span class="o">.</span><span class="n">spectrum</span>
+    <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+        <span class="n">spectrum</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">model_type</span> <span class="o">=</span> <span class="n">comp_info</span><span class="o">.</span><span class="n">model_type</span>
+    <span class="k">if</span> <span class="n">model_type</span> <span class="o">==</span> <span class="s1">&#39;PointSource&#39;</span><span class="p">:</span>
+        <span class="n">srcdict</span><span class="p">[</span><span class="n">comp_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">make_point_source</span><span class="p">(</span><span class="n">comp_info</span><span class="o">.</span><span class="n">source_name</span><span class="p">,</span>
+                                              <span class="n">comp_info</span><span class="o">.</span><span class="n">src_dict</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">model_type</span> <span class="o">==</span> <span class="s1">&#39;SpatialMap&#39;</span><span class="p">:</span>
+        <span class="n">srcdict</span><span class="p">[</span><span class="n">comp_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">make_spatialmap_source</span><span class="p">(</span><span class="n">comp_info</span><span class="o">.</span><span class="n">source_name</span><span class="p">,</span>
+                                                   <span class="n">comp_info</span><span class="o">.</span><span class="n">Spatial_Filename</span><span class="p">,</span>
+                                                   <span class="n">spectrum</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">model_type</span> <span class="o">==</span> <span class="s1">&#39;MapCubeSource&#39;</span><span class="p">:</span>
+        <span class="n">srcdict</span><span class="p">[</span><span class="n">comp_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">make_mapcube_source</span><span class="p">(</span><span class="n">comp_info</span><span class="o">.</span><span class="n">source_name</span><span class="p">,</span>
+                                                <span class="n">comp_info</span><span class="o">.</span><span class="n">Spatial_Filename</span><span class="p">,</span>
+                                                <span class="n">spectrum</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">model_type</span> <span class="o">==</span> <span class="s1">&#39;IsoSource&#39;</span><span class="p">:</span>
+        <span class="n">srcdict</span><span class="p">[</span><span class="n">comp_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">make_isotropic_source</span><span class="p">(</span><span class="n">comp_info</span><span class="o">.</span><span class="n">source_name</span><span class="p">,</span>
+                                                  <span class="n">comp_info</span><span class="o">.</span><span class="n">Spectral_Filename</span><span class="p">,</span>
+                                                  <span class="n">spectrum</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">model_type</span> <span class="o">==</span> <span class="s1">&#39;CompositeSource&#39;</span><span class="p">:</span>
+        <span class="n">srcdict</span><span class="p">[</span><span class="n">comp_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">make_composite_source</span><span class="p">(</span><span class="n">comp_info</span><span class="o">.</span><span class="n">source_name</span><span class="p">,</span>
+                                                  <span class="n">spectrum</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">model_type</span> <span class="o">==</span> <span class="s1">&#39;CatalogSources&#39;</span><span class="p">:</span>
+        <span class="n">srcdict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">make_catalog_sources</span><span class="p">(</span><span class="n">comp_info</span><span class="o">.</span><span class="n">roi_model</span><span class="p">,</span>
+                                            <span class="n">comp_info</span><span class="o">.</span><span class="n">source_names</span><span class="p">))</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Unrecognized model_type </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">model_type</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">srcdict</span></div>
+
+
+<div class="viewcode-block" id="SourceFactory"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.source_factory.SourceFactory">[docs]</a><span class="k">class</span> <span class="nc">SourceFactory</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small helper class to build and keep track of sources</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;C&#39;tor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_source_info_dict</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_sources</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">sources</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the dictionary of sources&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sources</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span> <span class="nf">source_info_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return the dictionary of source_info objects used to build sources&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_source_info_dict</span>
+
+<div class="viewcode-block" id="SourceFactory.add_sources"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.source_factory.SourceFactory.add_sources">[docs]</a>    <span class="k">def</span> <span class="nf">add_sources</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">source_info_dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add all of the sources in source_info_dict to this factory</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_source_info_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">source_info_dict</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">source_info_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sources</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">make_sources</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="SourceFactory.build_catalog"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.source_factory.SourceFactory.build_catalog">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">build_catalog</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build a `fermipy.catalog.Catalog` object</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+
+<span class="sd">        catalog_type : str</span>
+<span class="sd">            Specifies catalog type, options include 2FHL | 3FGL | 4FGLP</span>
+<span class="sd">        catalog_file : str</span>
+<span class="sd">            FITS file with catalog tables</span>
+<span class="sd">        catalog_extdir : str</span>
+<span class="sd">            Path to directory with extended source templates</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">catalog_type</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;catalog_type&#39;</span><span class="p">)</span>
+        <span class="n">catalog_file</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;catalog_file&#39;</span><span class="p">)</span>
+        <span class="n">catalog_extdir</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;catalog_extdir&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">catalog_type</span> <span class="o">==</span> <span class="s1">&#39;2FHL&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">catalog</span><span class="o">.</span><span class="n">Catalog2FHL</span><span class="p">(</span><span class="n">fitsfile</span><span class="o">=</span><span class="n">catalog_file</span><span class="p">,</span> <span class="n">extdir</span><span class="o">=</span><span class="n">catalog_extdir</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">catalog_type</span> <span class="o">==</span> <span class="s1">&#39;3FGL&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">catalog</span><span class="o">.</span><span class="n">Catalog3FGL</span><span class="p">(</span><span class="n">fitsfile</span><span class="o">=</span><span class="n">catalog_file</span><span class="p">,</span> <span class="n">extdir</span><span class="o">=</span><span class="n">catalog_extdir</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">catalog_type</span> <span class="o">==</span> <span class="s1">&#39;4FGLP&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">catalog</span><span class="o">.</span><span class="n">Catalog4FGLP</span><span class="p">(</span><span class="n">fitsfile</span><span class="o">=</span><span class="n">catalog_file</span><span class="p">,</span> <span class="n">extdir</span><span class="o">=</span><span class="n">catalog_extdir</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">catalog_type</span> <span class="o">==</span> <span class="s1">&#39;FL8Y&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">catalog</span><span class="o">.</span><span class="n">CatalogFL8Y</span><span class="p">(</span><span class="n">fitsfile</span><span class="o">=</span><span class="n">catalog_file</span><span class="p">,</span> <span class="n">extdir</span><span class="o">=</span><span class="n">catalog_extdir</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">table</span> <span class="o">=</span> <span class="n">Table</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">catalog_file</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">catalog</span><span class="o">.</span><span class="n">Catalog</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">extdir</span><span class="o">=</span><span class="n">catalog_extdir</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="SourceFactory.make_fermipy_roi_model_from_catalogs"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.source_factory.SourceFactory.make_fermipy_roi_model_from_catalogs">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">make_fermipy_roi_model_from_catalogs</span><span class="p">(</span><span class="n">cataloglist</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build and return a `fermipy.roi_model.ROIModel object from</span>
+<span class="sd">        a list of fermipy.catalog.Catalog` objects</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">catalogs</span><span class="o">=</span><span class="n">cataloglist</span><span class="p">,</span>
+                    <span class="n">src_roiwidth</span><span class="o">=</span><span class="mf">360.</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">roi_model</span><span class="o">.</span><span class="n">ROIModel</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">skydir</span><span class="o">=</span><span class="n">SkyCoord</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;deg&#39;</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="SourceFactory.make_roi"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.source_factory.SourceFactory.make_roi">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">make_roi</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">sources</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build and return a `fermipy.roi_model.ROIModel` object from</span>
+<span class="sd">        a dict with information about the sources</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">sources</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">sources</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">src_fact</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">()</span>
+        <span class="n">src_fact</span><span class="o">.</span><span class="n">add_sources</span><span class="p">(</span><span class="n">sources</span><span class="p">)</span>
+        <span class="n">ret_model</span> <span class="o">=</span> <span class="n">roi_model</span><span class="o">.</span><span class="n">ROIModel</span><span class="p">(</span>
+            <span class="p">{},</span> <span class="n">skydir</span><span class="o">=</span><span class="n">SkyCoord</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;deg&#39;</span><span class="p">))</span>
+        <span class="k">for</span> <span class="n">source</span> <span class="ow">in</span> <span class="n">src_fact</span><span class="o">.</span><span class="n">sources</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+            <span class="n">ret_model</span><span class="o">.</span><span class="n">load_source</span><span class="p">(</span><span class="n">source</span><span class="p">,</span>
+                                  <span class="n">build_index</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">merge_sources</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ret_model</span></div>
+
+<div class="viewcode-block" id="SourceFactory.copy_selected_sources"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.source_factory.SourceFactory.copy_selected_sources">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">copy_selected_sources</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">roi</span><span class="p">,</span> <span class="n">source_names</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Build and return a `fermipy.roi_model.ROIModel` object</span>
+<span class="sd">        by copying selected sources from another such object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">roi_new</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">make_roi</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">source_name</span> <span class="ow">in</span> <span class="n">source_names</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">src_cp</span> <span class="o">=</span> <span class="n">roi</span><span class="o">.</span><span class="n">copy_source</span><span class="p">(</span><span class="n">source_name</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">roi_new</span><span class="o">.</span><span class="n">load_source</span><span class="p">(</span><span class="n">src_cp</span><span class="p">,</span> <span class="n">build_index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">roi_new</span></div></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

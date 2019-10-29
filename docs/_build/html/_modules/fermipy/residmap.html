@@ -1,0 +1,720 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fermipy.residmap &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../fermipy.html">fermipy</a> &raquo;</li>
+        
+      <li>fermipy.residmap</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for fermipy.residmap</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy.signal</span>
+<span class="kn">import</span> <span class="nn">healpy</span> <span class="k">as</span> <span class="nn">hp</span>
+<span class="kn">from</span> <span class="nn">astropy.io</span> <span class="k">import</span> <span class="n">fits</span>
+<span class="kn">from</span> <span class="nn">gammapy.maps</span> <span class="k">import</span> <span class="n">WcsNDMap</span><span class="p">,</span> <span class="n">HpxNDMap</span>
+<span class="kn">import</span> <span class="nn">fermipy.utils</span> <span class="k">as</span> <span class="nn">utils</span>
+<span class="kn">import</span> <span class="nn">fermipy.wcs_utils</span> <span class="k">as</span> <span class="nn">wcs_utils</span>
+<span class="kn">import</span> <span class="nn">fermipy.fits_utils</span> <span class="k">as</span> <span class="nn">fits_utils</span>
+<span class="kn">import</span> <span class="nn">fermipy.plotting</span> <span class="k">as</span> <span class="nn">plotting</span>
+<span class="kn">from</span> <span class="nn">fermipy.config</span> <span class="k">import</span> <span class="n">ConfigSchema</span>
+<span class="kn">from</span> <span class="nn">fermipy.timing</span> <span class="k">import</span> <span class="n">Timer</span>
+
+
+<div class="viewcode-block" id="poisson_lnl"><a class="viewcode-back" href="../../fermipy.html#fermipy.gtanalysis.poisson_lnl">[docs]</a><span class="k">def</span> <span class="nf">poisson_lnl</span><span class="p">(</span><span class="n">nc</span><span class="p">,</span> <span class="n">mu</span><span class="p">):</span>
+    <span class="n">nc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">nc</span><span class="p">,</span> <span class="n">ndmin</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">ndmin</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">shape</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">nc</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">mu</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+    <span class="n">lnl</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">mu</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+    <span class="n">nc</span> <span class="o">=</span> <span class="n">nc</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+
+    <span class="n">msk</span> <span class="o">=</span> <span class="n">nc</span> <span class="o">&gt;</span> <span class="mi">0</span>
+
+    <span class="n">lnl</span><span class="p">[</span><span class="n">msk</span><span class="p">]</span> <span class="o">=</span> <span class="n">nc</span><span class="p">[</span><span class="n">msk</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">mu</span><span class="p">[</span><span class="n">msk</span><span class="p">])</span> <span class="o">-</span> <span class="n">mu</span><span class="p">[</span><span class="n">msk</span><span class="p">]</span>
+    <span class="n">lnl</span><span class="p">[</span><span class="o">~</span><span class="n">msk</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">mu</span><span class="p">[</span><span class="o">~</span><span class="n">msk</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">lnl</span></div>
+
+
+<div class="viewcode-block" id="convolve_map"><a class="viewcode-back" href="../../fermipy.html#fermipy.gtanalysis.convolve_map">[docs]</a><span class="k">def</span> <span class="nf">convolve_map</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">cpix</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">imin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">imax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">wmap</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Perform an energy-dependent convolution on a sequence of 2-D spatial maps.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    m : `~numpy.ndarray`</span>
+<span class="sd">       3-D map containing a sequence of 2-D spatial maps.  First</span>
+<span class="sd">       dimension should be energy.</span>
+
+<span class="sd">    k : `~numpy.ndarray`</span>
+<span class="sd">       3-D map containing a sequence of convolution kernels (PSF) for</span>
+<span class="sd">       each slice in m.  This map should have the same dimension as m.</span>
+
+<span class="sd">    cpix : list</span>
+<span class="sd">       Indices of kernel reference pixel in the two spatial dimensions.</span>
+
+<span class="sd">    threshold : float</span>
+<span class="sd">       Kernel amplitude </span>
+
+<span class="sd">    imin : int</span>
+<span class="sd">       Minimum index in energy dimension.</span>
+
+<span class="sd">    imax : int</span>
+<span class="sd">       Maximum index in energy dimension.</span>
+
+<span class="sd">    wmap :  `~numpy.ndarray`</span>
+<span class="sd">       3-D map containing a sequence of 2-D spatial maps of weights.  First</span>
+<span class="sd">       dimension should be energy. This map should have the same dimension as m.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">islice</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">imin</span><span class="p">,</span> <span class="n">imax</span><span class="p">)</span>
+
+    <span class="n">o</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="n">islice</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+    <span class="n">ix</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">cpix</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="n">iy</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">cpix</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="c1"># Loop over energy</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="n">islice</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+
+        <span class="n">ks</span> <span class="o">=</span> <span class="n">k</span><span class="p">[</span><span class="n">islice</span><span class="p">,</span> <span class="o">...</span><span class="p">][</span><span class="n">i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+        <span class="n">ms</span> <span class="o">=</span> <span class="n">m</span><span class="p">[</span><span class="n">islice</span><span class="p">,</span> <span class="o">...</span><span class="p">][</span><span class="n">i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+
+        <span class="n">mx</span> <span class="o">=</span> <span class="n">ks</span><span class="p">[</span><span class="n">ix</span><span class="p">,</span> <span class="p">:]</span> <span class="o">&gt;</span> <span class="n">ks</span><span class="p">[</span><span class="n">ix</span><span class="p">,</span> <span class="n">iy</span><span class="p">]</span> <span class="o">*</span> <span class="n">threshold</span>
+        <span class="n">my</span> <span class="o">=</span> <span class="n">ks</span><span class="p">[:,</span> <span class="n">iy</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">ks</span><span class="p">[</span><span class="n">ix</span><span class="p">,</span> <span class="n">iy</span><span class="p">]</span> <span class="o">*</span> <span class="n">threshold</span>
+
+        <span class="n">nx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">mx</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span><span class="p">)))</span>
+        <span class="n">ny</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">my</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span><span class="p">)))</span>
+
+        <span class="c1"># Ensure that there is an odd number of pixels in the kernel</span>
+        <span class="c1"># array</span>
+        <span class="k">if</span> <span class="n">ix</span> <span class="o">+</span> <span class="n">nx</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&gt;=</span> <span class="n">ms</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">or</span> <span class="n">ix</span> <span class="o">-</span> <span class="n">nx</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">nx</span> <span class="o">-=</span> <span class="mi">1</span>
+            <span class="n">ny</span> <span class="o">-=</span> <span class="mi">1</span>
+
+        <span class="n">sx</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">ix</span> <span class="o">-</span> <span class="n">nx</span><span class="p">,</span> <span class="n">ix</span> <span class="o">+</span> <span class="n">nx</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">sy</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">iy</span> <span class="o">-</span> <span class="n">ny</span><span class="p">,</span> <span class="n">iy</span> <span class="o">+</span> <span class="n">ny</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">ks</span> <span class="o">=</span> <span class="n">ks</span><span class="p">[</span><span class="n">sx</span><span class="p">,</span> <span class="n">sy</span><span class="p">]</span>
+
+<span class="c1">#        origin = [0, 0]</span>
+<span class="c1">#        if ks.shape[0] % 2 == 0: origin[0] += 1</span>
+<span class="c1">#        if ks.shape[1] % 2 == 0: origin[1] += 1</span>
+<span class="c1">#        o[i,...] = ndimage.convolve(ms, ks, mode=&#39;constant&#39;,</span>
+<span class="c1">#                                     origin=origin, cval=0.0)</span>
+
+        <span class="n">o</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">signal</span><span class="o">.</span><span class="n">fftconvolve</span><span class="p">(</span><span class="n">ms</span><span class="p">,</span> <span class="n">ks</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s1">&#39;same&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">wmap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">o</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">*=</span> <span class="n">wmap</span><span class="p">[</span><span class="n">islice</span><span class="p">,</span> <span class="o">...</span><span class="p">][</span><span class="n">i</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">o</span></div>
+
+
+<div class="viewcode-block" id="convolve_map_hpx"><a class="viewcode-back" href="../../fermipy.html#fermipy.gtanalysis.convolve_map_hpx">[docs]</a><span class="k">def</span> <span class="nf">convolve_map_hpx</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">cpix</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">imin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">imax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">wmap</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Perform an energy-dependent convolution on a sequence of 2-D spatial maps.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    m : `~numpy.ndarray`</span>
+<span class="sd">       2-D map containing a sequence of 1-D HEALPix maps.  First</span>
+<span class="sd">       dimension should be energy.</span>
+
+<span class="sd">    k : `~numpy.ndarray`</span>
+<span class="sd">       2-D map containing a sequence of convolution kernels (PSF) for</span>
+<span class="sd">       each slice in m.  This map should have the same dimension as m.</span>
+
+<span class="sd">    threshold : float</span>
+<span class="sd">       Kernel amplitude </span>
+
+<span class="sd">    imin : int</span>
+<span class="sd">       Minimum index in energy dimension.</span>
+
+<span class="sd">    imax : int</span>
+<span class="sd">       Maximum index in energy dimension.</span>
+
+<span class="sd">    wmap :  `~numpy.ndarray`</span>
+<span class="sd">       2-D map containing a sequence of 1-D HEALPix maps of weights.  First</span>
+<span class="sd">       dimension should be energy. This map should have the same dimension as m.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s1">&#39;convolve_map_hpx&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="convolve_map_hpx_gauss"><a class="viewcode-back" href="../../fermipy.html#fermipy.gtanalysis.convolve_map_hpx_gauss">[docs]</a><span class="k">def</span> <span class="nf">convolve_map_hpx_gauss</span><span class="p">(</span><span class="n">m</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">,</span> <span class="n">imin</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">imax</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">wmap</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Perform an energy-dependent convolution on a sequence of 2-D spatial maps.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    m : `HpxMap`</span>
+<span class="sd">       2-D map containing a sequence of 1-D HEALPix maps.  First</span>
+<span class="sd">       dimension should be energy.</span>
+
+<span class="sd">    sigmas : `~numpy.ndarray`</span>
+<span class="sd">       1-D map containing a sequence gaussian widths for smoothing</span>
+
+<span class="sd">    imin : int</span>
+<span class="sd">       Minimum index in energy dimension.</span>
+
+<span class="sd">    imax : int</span>
+<span class="sd">       Maximum index in energy dimension.</span>
+
+<span class="sd">    wmap :  `~numpy.ndarray`</span>
+<span class="sd">       2-D map containing a sequence of 1-D HEALPix maps of weights.  First</span>
+<span class="sd">       dimension should be energy. This map should have the same dimension as m.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">islice</span> <span class="o">=</span> <span class="nb">slice</span><span class="p">(</span><span class="n">imin</span><span class="p">,</span> <span class="n">imax</span><span class="p">)</span>
+
+    <span class="n">o</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+    <span class="n">nside</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">nside</span>
+    <span class="n">nest</span> <span class="o">=</span> <span class="n">m</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">nest</span>
+
+    <span class="c1"># Loop over energy</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">ms</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">islice</span><span class="p">,</span> <span class="o">...</span><span class="p">]):</span>
+        <span class="n">sigma</span> <span class="o">=</span> <span class="n">sigmas</span><span class="p">[</span><span class="n">islice</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+        <span class="c1"># Need to be in RING scheme</span>
+        <span class="k">if</span> <span class="n">nest</span><span class="p">:</span>
+            <span class="n">ms</span> <span class="o">=</span> <span class="n">hp</span><span class="o">.</span><span class="n">pixelfunc</span><span class="o">.</span><span class="n">reorder</span><span class="p">(</span><span class="n">ms</span><span class="p">,</span> <span class="n">n2r</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">o</span><span class="p">[</span><span class="n">islice</span><span class="p">,</span> <span class="o">...</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">hp</span><span class="o">.</span><span class="n">sphtfunc</span><span class="o">.</span><span class="n">smoothing</span><span class="p">(</span><span class="n">ms</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="n">sigma</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">nest</span><span class="p">:</span>
+            <span class="n">o</span><span class="p">[</span><span class="n">islice</span><span class="p">,</span> <span class="o">...</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">hp</span><span class="o">.</span><span class="n">pixelfunc</span><span class="o">.</span><span class="n">reorder</span><span class="p">(</span>
+                <span class="n">o</span><span class="p">[</span><span class="n">islice</span><span class="p">,</span> <span class="o">...</span><span class="p">][</span><span class="n">i</span><span class="p">],</span> <span class="n">r2n</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">wmap</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">o</span><span class="p">[</span><span class="n">islice</span><span class="p">,</span> <span class="o">...</span><span class="p">][</span><span class="n">i</span><span class="p">]</span> <span class="o">*=</span> <span class="n">wmap</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">islice</span><span class="p">,</span> <span class="o">...</span><span class="p">][</span><span class="n">i</span><span class="p">]</span>
+
+    <span class="k">return</span> <span class="n">HpxNDMap</span><span class="p">(</span><span class="n">m</span><span class="o">.</span><span class="n">geom</span><span class="p">,</span> <span class="n">o</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="get_source_kernel"><a class="viewcode-back" href="../../fermipy.html#fermipy.gtanalysis.get_source_kernel">[docs]</a><span class="k">def</span> <span class="nf">get_source_kernel</span><span class="p">(</span><span class="n">gta</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">kernel</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Get the PDF for the given source.&quot;&quot;&quot;</span>
+
+    <span class="n">sm</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">zs</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">gta</span><span class="o">.</span><span class="n">components</span><span class="p">:</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">model_counts_map</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">kernel</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">z</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],)</span> <span class="o">+</span> <span class="n">kernel</span><span class="o">.</span><span class="n">shape</span>
+            <span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">apply_over_axes</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">axes</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span>
+                <span class="n">shape</span><span class="p">)</span> <span class="o">*</span> <span class="n">kernel</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
+            <span class="n">zs</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">zs</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+
+        <span class="n">sm</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+
+    <span class="n">sm2</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sm</span><span class="p">):</span>
+        <span class="n">sm</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/=</span> <span class="n">zs</span>
+        <span class="n">sm2</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">sm</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">m</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">sm</span><span class="p">):</span>
+        <span class="n">sm</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">/=</span> <span class="n">sm2</span>
+
+    <span class="k">return</span> <span class="n">sm</span></div>
+
+
+<div class="viewcode-block" id="ResidMapGenerator"><a class="viewcode-back" href="../../fermipy.html#fermipy.gtanalysis.ResidMapGenerator">[docs]</a><span class="k">class</span> <span class="nc">ResidMapGenerator</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Mixin class for `~fermipy.gtanalysis.GTAnalysis` that generates</span>
+<span class="sd">    spatial residual maps from the difference of data and model maps</span>
+<span class="sd">    smoothed with a user-defined spatial/spectral template.  The map</span>
+<span class="sd">    of residual significance can be interpreted in the same way as a</span>
+<span class="sd">    TS map (the likelihood of a source at the given location).&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ResidMapGenerator.residmap"><a class="viewcode-back" href="../../fermipy.html#fermipy.gtanalysis.ResidMapGenerator.residmap">[docs]</a>    <span class="k">def</span> <span class="nf">residmap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Generate 2-D spatial residual maps using the current ROI</span>
+<span class="sd">        model and the convolution kernel defined with the `model`</span>
+<span class="sd">        argument.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        prefix : str</span>
+<span class="sd">            String that will be prefixed to the output residual map files.</span>
+
+<span class="sd">        {options}</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        maps : dict</span>
+<span class="sd">           A dictionary containing the `~fermipy.utils.Map` objects</span>
+<span class="sd">           for the residual significance and amplitude.    </span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">timer</span> <span class="o">=</span> <span class="n">Timer</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Generating residual maps&#39;</span><span class="p">)</span>
+
+        <span class="n">schema</span> <span class="o">=</span> <span class="n">ConfigSchema</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">defaults</span><span class="p">[</span><span class="s1">&#39;residmap&#39;</span><span class="p">])</span>
+
+        <span class="n">config</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">create_config</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;residmap&#39;</span><span class="p">],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># Defining default properties of test source model</span>
+        <span class="n">config</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;Index&#39;</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">)</span>
+        <span class="n">config</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;SpectrumType&#39;</span><span class="p">,</span> <span class="s1">&#39;PowerLaw&#39;</span><span class="p">)</span>
+        <span class="n">config</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;SpatialModel&#39;</span><span class="p">,</span> <span class="s1">&#39;PointSource&#39;</span><span class="p">)</span>
+        <span class="n">config</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;Prefactor&#39;</span><span class="p">,</span> <span class="mf">1E-13</span><span class="p">)</span>
+
+        <span class="n">o</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_residual_map</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="o">**</span><span class="n">config</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;make_plots&#39;</span><span class="p">]:</span>
+            <span class="n">plotter</span> <span class="o">=</span> <span class="n">plotting</span><span class="o">.</span><span class="n">AnalysisPlotter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;plotting&#39;</span><span class="p">],</span>
+                                               <span class="n">fileio</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;fileio&#39;</span><span class="p">],</span>
+                                               <span class="n">logging</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;logging&#39;</span><span class="p">])</span>
+
+            <span class="n">plotter</span><span class="o">.</span><span class="n">make_residmap_plots</span><span class="p">(</span><span class="n">o</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Finished residual maps&#39;</span><span class="p">)</span>
+
+        <span class="n">outfile</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">format_filename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">workdir</span><span class="p">,</span> <span class="s1">&#39;residmap&#39;</span><span class="p">,</span>
+                                        <span class="n">prefix</span><span class="o">=</span><span class="p">[</span><span class="n">o</span><span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">]])</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;write_fits&#39;</span><span class="p">]:</span>
+            <span class="n">o</span><span class="p">[</span><span class="s1">&#39;file&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">outfile</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.fits&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_make_residmap_fits</span><span class="p">(</span><span class="n">o</span><span class="p">,</span> <span class="n">outfile</span> <span class="o">+</span> <span class="s1">&#39;.fits&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;write_npy&#39;</span><span class="p">]:</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">outfile</span> <span class="o">+</span> <span class="s1">&#39;.npy&#39;</span><span class="p">,</span> <span class="n">o</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Execution time: </span><span class="si">%.2f</span><span class="s1"> s&#39;</span><span class="p">,</span> <span class="n">timer</span><span class="o">.</span><span class="n">elapsed_time</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">o</span></div>
+
+    <span class="k">def</span> <span class="nf">_make_residmap_fits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">maps</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;DATA_MAP&#39;</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span>
+                <span class="s1">&#39;MODEL_MAP&#39;</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">],</span>
+                <span class="s1">&#39;EXCESS_MAP&#39;</span><span class="p">:</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;excess&#39;</span><span class="p">]}</span>
+
+        <span class="n">hdu_images</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">maps</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+            <span class="k">if</span> <span class="n">v</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">hdu_images</span> <span class="o">+=</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">make_hdu</span><span class="p">(</span><span class="n">k</span><span class="p">)]</span>
+
+        <span class="k">if</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;projtype&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;WCS&#39;</span><span class="p">:</span>
+            <span class="n">hdus</span> <span class="o">=</span> <span class="p">[</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;sigma&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">make_hdu</span><span class="p">(</span><span class="n">hdu</span><span class="o">=</span><span class="s1">&#39;PRIMARY&#39;</span><span class="p">)]</span> <span class="o">+</span> <span class="n">hdu_images</span>
+            <span class="n">hdus</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;CONFIG&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">])</span>
+            <span class="n">hdus</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;CONFIG&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">])</span>
+        <span class="k">elif</span> <span class="n">data</span><span class="p">[</span><span class="s1">&#39;projtype&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;HPX&#39;</span><span class="p">:</span>
+            <span class="n">hdus</span> <span class="o">=</span> <span class="p">[</span><span class="n">fits</span><span class="o">.</span><span class="n">PrimaryHDU</span><span class="p">(),</span>
+                    <span class="n">data</span><span class="p">[</span><span class="s1">&#39;sigma&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">make_hdu</span><span class="p">(</span><span class="n">hdu</span><span class="o">=</span><span class="s2">&quot;SIGMA&quot;</span><span class="p">)]</span> <span class="o">+</span> <span class="n">hdu_images</span>
+            <span class="n">hdus</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;CONFIG&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">])</span>
+            <span class="n">hdus</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;CONFIG&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">])</span>
+        <span class="n">fits_utils</span><span class="o">.</span><span class="n">write_hdus</span><span class="p">(</span><span class="n">hdus</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_make_residual_map</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">projtype</span> <span class="o">==</span> <span class="s1">&#39;HPX&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_residual_map_hpx</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">projtype</span> <span class="o">==</span> <span class="s2">&quot;WCS&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_make_residual_map_wcs</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                <span class="s2">&quot;Did not recognize projection type </span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">projtype</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_make_residual_map_wcs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">src_dict</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="p">{}))</span>
+        <span class="n">exclude</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;exclude&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">loge_bounds</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;loge_bounds&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">use_weights</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;use_weights&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">loge_bounds</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">loge_bounds</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Wrong size of loge_bounds array.&#39;</span><span class="p">)</span>
+            <span class="n">loge_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">loge_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">loge_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                              <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_energies</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">loge_bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">loge_bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">loge_bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                              <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_energies</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">loge_bounds</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">log_energies</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_energies</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+
+        <span class="c1"># Put the test source at the pixel closest to the ROI center</span>
+        <span class="n">xpix</span><span class="p">,</span> <span class="n">ypix</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">npix</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span><span class="p">),</span>
+                      <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">npix</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.</span><span class="p">))</span>
+        <span class="n">cpix</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">xpix</span><span class="p">,</span> <span class="n">ypix</span><span class="p">])</span>
+
+        <span class="n">geom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">to_image</span><span class="p">()</span>
+        <span class="n">skywcs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">wcs</span>
+        <span class="n">skydir</span> <span class="o">=</span> <span class="n">wcs_utils</span><span class="o">.</span><span class="n">pix_to_skydir</span><span class="p">(</span><span class="n">cpix</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">cpix</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">skywcs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">src_dict</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">src_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;ra&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">skydir</span><span class="o">.</span><span class="n">ra</span><span class="o">.</span><span class="n">deg</span>
+        <span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;dec&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">skydir</span><span class="o">.</span><span class="n">dec</span><span class="o">.</span><span class="n">deg</span>
+        <span class="n">src_dict</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;SpatialModel&#39;</span><span class="p">,</span> <span class="s1">&#39;PointSource&#39;</span><span class="p">)</span>
+        <span class="n">src_dict</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;SpatialWidth&#39;</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">)</span>
+        <span class="n">src_dict</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;Index&#39;</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">)</span>
+
+        <span class="n">kernel</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;SpatialModel&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;Gaussian&#39;</span><span class="p">:</span>
+            <span class="n">kernel</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">make_gaussian_kernel</span><span class="p">(</span><span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;SpatialWidth&#39;</span><span class="p">],</span>
+                                                <span class="n">cdelt</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">binsz</span><span class="p">,</span>
+                                                <span class="n">npix</span><span class="o">=</span><span class="mi">101</span><span class="p">)</span>
+            <span class="n">kernel</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">kernel</span><span class="p">)</span>
+            <span class="n">cpix</span> <span class="o">=</span> <span class="p">[</span><span class="mi">50</span><span class="p">,</span> <span class="mi">50</span><span class="p">]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="s1">&#39;residmap_testsource&#39;</span><span class="p">,</span> <span class="n">src_dict</span><span class="p">,</span> <span class="n">free</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="n">init_source</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">save_source_maps</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">get_source_by_name</span><span class="p">(</span><span class="s1">&#39;residmap_testsource&#39;</span><span class="p">)</span>
+
+        <span class="n">modelname</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">create_model_name</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
+        <span class="n">npix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">npix</span>
+
+        <span class="n">mmst</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">npix</span><span class="p">,</span> <span class="n">npix</span><span class="p">))</span>
+        <span class="n">cmst</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">npix</span><span class="p">,</span> <span class="n">npix</span><span class="p">))</span>
+        <span class="n">emst</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">npix</span><span class="p">,</span> <span class="n">npix</span><span class="p">))</span>
+
+        <span class="n">sm</span> <span class="o">=</span> <span class="n">get_source_kernel</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;residmap_testsource&#39;</span><span class="p">,</span> <span class="n">kernel</span><span class="p">)</span>
+        <span class="n">ts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">npix</span><span class="p">,</span> <span class="n">npix</span><span class="p">))</span>
+        <span class="n">sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">npix</span><span class="p">,</span> <span class="n">npix</span><span class="p">))</span>
+        <span class="n">excess</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">npix</span><span class="p">,</span> <span class="n">npix</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">delete_source</span><span class="p">(</span><span class="s1">&#39;residmap_testsource&#39;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">):</span>
+
+            <span class="n">imin</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">val_to_edge</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">log_energies</span><span class="p">,</span> <span class="n">loge_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">imax</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">val_to_edge</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">log_energies</span><span class="p">,</span> <span class="n">loge_bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="n">mc</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">model_counts_map</span><span class="p">(</span><span class="n">exclude</span><span class="o">=</span><span class="n">exclude</span><span class="p">)</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float&#39;</span><span class="p">)</span>
+            <span class="n">cc</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">counts_map</span><span class="p">()</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s1">&#39;float&#39;</span><span class="p">)</span>
+            <span class="n">ec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">mc</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">use_weights</span><span class="p">:</span>
+                <span class="n">wmap</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">weight_map</span><span class="p">()</span><span class="o">.</span><span class="n">data</span>
+                <span class="n">mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">wmap</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">wmap</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="n">mask</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="n">ccs</span> <span class="o">=</span> <span class="n">convolve_map</span><span class="p">(</span>
+                <span class="n">cc</span><span class="p">,</span> <span class="n">sm</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">cpix</span><span class="p">,</span> <span class="n">imin</span><span class="o">=</span><span class="n">imin</span><span class="p">,</span> <span class="n">imax</span><span class="o">=</span><span class="n">imax</span><span class="p">,</span> <span class="n">wmap</span><span class="o">=</span><span class="n">wmap</span><span class="p">)</span>
+            <span class="n">mcs</span> <span class="o">=</span> <span class="n">convolve_map</span><span class="p">(</span>
+                <span class="n">mc</span><span class="p">,</span> <span class="n">sm</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">cpix</span><span class="p">,</span> <span class="n">imin</span><span class="o">=</span><span class="n">imin</span><span class="p">,</span> <span class="n">imax</span><span class="o">=</span><span class="n">imax</span><span class="p">,</span> <span class="n">wmap</span><span class="o">=</span><span class="n">wmap</span><span class="p">)</span>
+            <span class="n">ecs</span> <span class="o">=</span> <span class="n">convolve_map</span><span class="p">(</span>
+                <span class="n">ec</span><span class="p">,</span> <span class="n">sm</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">cpix</span><span class="p">,</span> <span class="n">imin</span><span class="o">=</span><span class="n">imin</span><span class="p">,</span> <span class="n">imax</span><span class="o">=</span><span class="n">imax</span><span class="p">,</span> <span class="n">wmap</span><span class="o">=</span><span class="n">wmap</span><span class="p">)</span>
+
+            <span class="n">cms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">ccs</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">mms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">mcs</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">ems</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">ecs</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="n">cmst</span> <span class="o">+=</span> <span class="n">cms</span>
+            <span class="n">mmst</span> <span class="o">+=</span> <span class="n">mms</span>
+            <span class="n">emst</span> <span class="o">+=</span> <span class="n">ems</span>
+
+            <span class="c1"># cts = 2.0 * (poisson_lnl(cms, cms) - poisson_lnl(cms, mms))</span>
+            <span class="n">excess</span> <span class="o">+=</span> <span class="n">cms</span> <span class="o">-</span> <span class="n">mms</span>
+
+        <span class="n">ts</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">poisson_lnl</span><span class="p">(</span><span class="n">cmst</span><span class="p">,</span> <span class="n">cmst</span><span class="p">)</span> <span class="o">-</span> <span class="n">poisson_lnl</span><span class="p">(</span><span class="n">cmst</span><span class="p">,</span> <span class="n">mmst</span><span class="p">))</span>
+        <span class="n">sigma</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">ts</span><span class="p">)</span>
+        <span class="n">sigma</span><span class="p">[</span><span class="n">excess</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">emst</span> <span class="o">/=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">emst</span><span class="p">)</span>
+
+        <span class="n">sigma_map</span> <span class="o">=</span> <span class="n">WcsNDMap</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">sigma</span><span class="p">)</span>
+        <span class="n">model_map</span> <span class="o">=</span> <span class="n">WcsNDMap</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">mmst</span> <span class="o">/</span> <span class="n">emst</span><span class="p">)</span>
+        <span class="n">data_map</span> <span class="o">=</span> <span class="n">WcsNDMap</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">cmst</span> <span class="o">/</span> <span class="n">emst</span><span class="p">)</span>
+        <span class="n">excess_map</span> <span class="o">=</span> <span class="n">WcsNDMap</span><span class="p">(</span><span class="n">geom</span><span class="p">,</span> <span class="n">excess</span> <span class="o">/</span> <span class="n">emst</span><span class="p">)</span>
+
+        <span class="n">o</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">utils</span><span class="o">.</span><span class="n">join_strings</span><span class="p">([</span><span class="n">prefix</span><span class="p">,</span> <span class="n">modelname</span><span class="p">]),</span>
+             <span class="s1">&#39;projtype&#39;</span><span class="p">:</span> <span class="s1">&#39;WCS&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;file&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="s1">&#39;sigma&#39;</span><span class="p">:</span> <span class="n">sigma_map</span><span class="p">,</span>
+             <span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="n">model_map</span><span class="p">,</span>
+             <span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="n">data_map</span><span class="p">,</span>
+             <span class="s1">&#39;excess&#39;</span><span class="p">:</span> <span class="n">excess_map</span><span class="p">,</span>
+             <span class="s1">&#39;mask&#39;</span><span class="p">:</span> <span class="n">mask</span><span class="p">,</span>
+             <span class="s1">&#39;config&#39;</span><span class="p">:</span> <span class="n">kwargs</span><span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">o</span>
+
+    <span class="k">def</span> <span class="nf">_make_residual_map_hpx</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">src_dict</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="p">{}))</span>
+        <span class="n">exclude</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;exclude&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">loge_bounds</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;loge_bounds&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">use_weights</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;use_weights&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">loge_bounds</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">loge_bounds</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Wrong size of loge_bounds array.&#39;</span><span class="p">)</span>
+            <span class="n">loge_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">loge_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">if</span> <span class="n">loge_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                              <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_energies</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">loge_bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">loge_bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">loge_bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                              <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_energies</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">loge_bounds</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">log_energies</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">log_energies</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+
+        <span class="n">kernel</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="n">gauss_width</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="mf">0.3</span><span class="p">)</span>
+
+        <span class="n">hpxsky</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">counts_map</span><span class="p">()</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">to_image</span><span class="p">()</span>
+
+        <span class="n">mmst</span> <span class="o">=</span> <span class="n">HpxNDMap</span><span class="o">.</span><span class="n">from_geom</span><span class="p">(</span><span class="n">hpxsky</span><span class="p">)</span>
+        <span class="n">cmst</span> <span class="o">=</span> <span class="n">HpxNDMap</span><span class="o">.</span><span class="n">from_geom</span><span class="p">(</span><span class="n">hpxsky</span><span class="p">)</span>
+        <span class="n">emst</span> <span class="o">=</span> <span class="n">HpxNDMap</span><span class="o">.</span><span class="n">from_geom</span><span class="p">(</span><span class="n">hpxsky</span><span class="p">)</span>
+        <span class="n">ts</span> <span class="o">=</span> <span class="n">HpxNDMap</span><span class="o">.</span><span class="n">from_geom</span><span class="p">(</span><span class="n">hpxsky</span><span class="p">)</span>
+        <span class="n">sigma</span> <span class="o">=</span> <span class="n">HpxNDMap</span><span class="o">.</span><span class="n">from_geom</span><span class="p">(</span><span class="n">hpxsky</span><span class="p">)</span>
+        <span class="n">excess</span> <span class="o">=</span> <span class="n">HpxNDMap</span><span class="o">.</span><span class="n">from_geom</span><span class="p">(</span><span class="n">hpxsky</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">components</span><span class="p">):</span>
+
+            <span class="n">imin</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">val_to_edge</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">log_energies</span><span class="p">,</span> <span class="n">loge_bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">imax</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">val_to_edge</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">log_energies</span><span class="p">,</span> <span class="n">loge_bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="n">cc</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">counts_map</span><span class="p">()</span>
+            <span class="n">mc</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">model_counts_map</span><span class="p">(</span><span class="n">exclude</span><span class="o">=</span><span class="n">exclude</span><span class="p">)</span>
+            <span class="n">ec</span> <span class="o">=</span> <span class="n">HpxNDMap</span><span class="p">(</span><span class="n">cc</span><span class="o">.</span><span class="n">geom</span><span class="p">,</span> <span class="n">cc</span><span class="o">.</span><span class="n">data</span> <span class="o">-</span> <span class="n">mc</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">use_weights</span><span class="p">:</span>
+                <span class="n">wmap</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">weight_map</span><span class="p">()</span>
+                <span class="n">mask</span> <span class="o">=</span> <span class="n">wmap</span><span class="o">.</span><span class="n">sum_over_axes</span><span class="p">()</span>
+                <span class="n">mask</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">mask</span><span class="o">.</span><span class="n">data</span> <span class="o">&gt;</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">wmap</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="n">mask</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="n">sigmas</span> <span class="o">=</span> <span class="n">gauss_width</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">cc</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">ccs</span> <span class="o">=</span> <span class="n">convolve_map_hpx_gauss</span><span class="p">(</span>
+                <span class="n">cc</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">,</span> <span class="n">imin</span><span class="o">=</span><span class="n">imin</span><span class="p">,</span> <span class="n">imax</span><span class="o">=</span><span class="n">imax</span><span class="p">,</span> <span class="n">wmap</span><span class="o">=</span><span class="n">wmap</span><span class="p">)</span>
+            <span class="n">mcs</span> <span class="o">=</span> <span class="n">convolve_map_hpx_gauss</span><span class="p">(</span>
+                <span class="n">mc</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">,</span> <span class="n">imin</span><span class="o">=</span><span class="n">imin</span><span class="p">,</span> <span class="n">imax</span><span class="o">=</span><span class="n">imax</span><span class="p">,</span> <span class="n">wmap</span><span class="o">=</span><span class="n">wmap</span><span class="p">)</span>
+            <span class="n">ecs</span> <span class="o">=</span> <span class="n">convolve_map_hpx_gauss</span><span class="p">(</span>
+                <span class="n">ec</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">,</span> <span class="n">imin</span><span class="o">=</span><span class="n">imin</span><span class="p">,</span> <span class="n">imax</span><span class="o">=</span><span class="n">imax</span><span class="p">,</span> <span class="n">wmap</span><span class="o">=</span><span class="n">wmap</span><span class="p">)</span>
+
+            <span class="n">cms</span> <span class="o">=</span> <span class="n">ccs</span><span class="o">.</span><span class="n">sum_over_axes</span><span class="p">()</span>
+            <span class="n">mms</span> <span class="o">=</span> <span class="n">mcs</span><span class="o">.</span><span class="n">sum_over_axes</span><span class="p">()</span>
+            <span class="n">ems</span> <span class="o">=</span> <span class="n">ecs</span><span class="o">.</span><span class="n">sum_over_axes</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">cms</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">order</span> <span class="o">!=</span> <span class="n">hpxsky</span><span class="o">.</span><span class="n">order</span><span class="p">:</span>
+                <span class="n">cms</span> <span class="o">=</span> <span class="n">cms</span><span class="o">.</span><span class="n">to_ud_graded</span><span class="p">(</span><span class="n">hpxsky</span><span class="o">.</span><span class="n">nside</span><span class="p">,</span> <span class="n">preserve_counts</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">mms</span> <span class="o">=</span> <span class="n">mms</span><span class="o">.</span><span class="n">to_ud_graded</span><span class="p">(</span><span class="n">hpxsky</span><span class="o">.</span><span class="n">nside</span><span class="p">,</span> <span class="n">preserve_counts</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">ems</span> <span class="o">=</span> <span class="n">ems</span><span class="o">.</span><span class="n">to_ud_graded</span><span class="p">(</span><span class="n">hpxsky</span><span class="o">.</span><span class="n">nside</span><span class="p">,</span> <span class="n">preserve_counts</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="n">cmst</span><span class="o">.</span><span class="n">data</span> <span class="o">+=</span> <span class="n">cms</span><span class="o">.</span><span class="n">data</span>
+            <span class="n">mmst</span><span class="o">.</span><span class="n">data</span> <span class="o">+=</span> <span class="n">mms</span><span class="o">.</span><span class="n">data</span>
+            <span class="n">emst</span><span class="o">.</span><span class="n">data</span> <span class="o">+=</span> <span class="n">ems</span><span class="o">.</span><span class="n">data</span>
+
+        <span class="n">ts</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">poisson_lnl</span><span class="p">(</span><span class="n">cmst</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">cmst</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="o">-</span>
+                         <span class="n">poisson_lnl</span><span class="p">(</span><span class="n">cmst</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">mmst</span><span class="o">.</span><span class="n">data</span><span class="p">))</span>
+        <span class="n">sigma</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">ts</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">sigma</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">emst</span><span class="o">.</span><span class="n">data</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*=</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">modelname</span> <span class="o">=</span> <span class="s1">&#39;gauss_0p3&#39;</span>
+
+        <span class="n">o</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;name&#39;</span><span class="p">:</span> <span class="n">utils</span><span class="o">.</span><span class="n">join_strings</span><span class="p">([</span><span class="n">prefix</span><span class="p">,</span> <span class="n">modelname</span><span class="p">]),</span>
+             <span class="s1">&#39;projtype&#39;</span><span class="p">:</span> <span class="s1">&#39;HPX&#39;</span><span class="p">,</span>
+             <span class="s1">&#39;file&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+             <span class="s1">&#39;sigma&#39;</span><span class="p">:</span> <span class="n">sigma</span><span class="p">,</span>
+             <span class="s1">&#39;model&#39;</span><span class="p">:</span> <span class="n">mmst</span><span class="p">,</span>
+             <span class="s1">&#39;data&#39;</span><span class="p">:</span> <span class="n">cmst</span><span class="p">,</span>
+             <span class="s1">&#39;excess&#39;</span><span class="p">:</span> <span class="n">emst</span><span class="p">,</span>
+             <span class="s1">&#39;mask&#39;</span><span class="p">:</span> <span class="n">mask</span><span class="p">,</span>
+             <span class="s1">&#39;config&#39;</span><span class="p">:</span> <span class="n">kwargs</span><span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">o</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

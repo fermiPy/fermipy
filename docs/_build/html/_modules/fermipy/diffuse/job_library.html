@@ -1,0 +1,846 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fermipy.diffuse.job_library &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../../fermipy.html">fermipy</a> &raquo;</li>
+        
+      <li>fermipy.diffuse.job_library</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for fermipy.diffuse.job_library</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module to collect configuration to run specific jobs</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+
+<span class="kn">from</span> <span class="nn">fermipy.jobs.file_archive</span> <span class="k">import</span> <span class="n">FileFlags</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.link</span> <span class="k">import</span> <span class="n">Link</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.gtlink</span> <span class="k">import</span> <span class="n">Gtlink</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.app_link</span> <span class="k">import</span> <span class="n">AppLink</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.scatter_gather</span> <span class="k">import</span> <span class="n">ScatterGather</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.slac_impl</span> <span class="k">import</span> <span class="n">make_nfs_path</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.utils</span> <span class="k">import</span> <span class="n">create_inputlist</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.name_policy</span> <span class="k">import</span> <span class="n">NameFactory</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.binning</span> <span class="k">import</span> <span class="n">Component</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.diffuse_src_manager</span> <span class="k">import</span> <span class="n">make_ring_dicts</span><span class="p">,</span>\
+    <span class="n">make_diffuse_comp_info_dict</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.catalog_src_manager</span> <span class="k">import</span> <span class="n">make_catalog_comp_dict</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse</span> <span class="k">import</span> <span class="n">defaults</span> <span class="k">as</span> <span class="n">diffuse_defaults</span>
+
+<span class="n">NAME_FACTORY</span> <span class="o">=</span> <span class="n">NameFactory</span><span class="p">()</span>
+
+
+<span class="k">def</span> <span class="nf">_make_ltcube_file_list</span><span class="p">(</span><span class="n">ltsumfile</span><span class="p">,</span> <span class="n">num_files</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Make the list of input files for a particular energy bin X psf type &quot;&quot;&quot;</span>
+    <span class="n">outbasename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">ltsumfile</span><span class="p">)</span>
+    <span class="n">lt_list_file</span> <span class="o">=</span> <span class="n">ltsumfile</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;fits&#39;</span><span class="p">,</span> <span class="s1">&#39;lst&#39;</span><span class="p">)</span>
+    <span class="n">outfile</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">lt_list_file</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_files</span><span class="p">):</span>
+        <span class="n">split_key</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%06i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">i</span>
+        <span class="n">output_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">base_dict</span><span class="p">[</span><span class="s1">&#39;basedir&#39;</span><span class="p">],</span> <span class="s1">&#39;counts_cubes&#39;</span><span class="p">,</span> <span class="n">split_key</span><span class="p">)</span>
+        <span class="n">filepath</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">outbasename</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.fits&#39;</span><span class="p">,</span> <span class="s1">&#39;_</span><span class="si">%s</span><span class="s1">.fits&#39;</span> <span class="o">%</span> <span class="n">split_key</span><span class="p">))</span>
+        <span class="n">outfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+        <span class="n">outfile</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">outfile</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="s1">&#39;@&#39;</span> <span class="o">+</span> <span class="n">lt_list_file</span>
+
+
+<div class="viewcode-block" id="Gtlink_select"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.Gtlink_select">[docs]</a><span class="k">class</span> <span class="nc">Gtlink_select</span><span class="p">(</span><span class="n">Gtlink</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small wrapper to run gtselect &quot;&quot;&quot;</span>
+
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;gtselect&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;gtselect&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Link to run </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">emin</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;emin&#39;</span><span class="p">],</span>
+                           <span class="n">emax</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;emax&#39;</span><span class="p">],</span>
+                           <span class="n">infile</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;infile&#39;</span><span class="p">],</span>
+                           <span class="n">outfile</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;outfile&#39;</span><span class="p">],</span>
+                           <span class="n">zmax</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;zmax&#39;</span><span class="p">],</span>
+                           <span class="n">evclass</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;evclass&#39;</span><span class="p">],</span>
+                           <span class="n">evtype</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;evtype&#39;</span><span class="p">],</span>
+                           <span class="n">pfiles</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;pfiles&#39;</span><span class="p">])</span>
+
+    <span class="n">default_file_args</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">infile</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">input_mask</span><span class="p">,</span>
+                             <span class="n">outfile</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">output_mask</span><span class="p">)</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="Gtlink_bin"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.Gtlink_bin">[docs]</a><span class="k">class</span> <span class="nc">Gtlink_bin</span><span class="p">(</span><span class="n">Gtlink</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small wrapper to run gtbin &quot;&quot;&quot;</span>
+
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;gtbin&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;gtbin&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Link to run </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">algorithm</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;HEALPIX&#39;</span><span class="p">,</span> <span class="s2">&quot;Binning alogrithm&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">coordsys</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;coordsys&#39;</span><span class="p">],</span>
+                           <span class="n">hpx_order</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;hpx_order&#39;</span><span class="p">],</span>
+                           <span class="n">evfile</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;evfile&#39;</span><span class="p">],</span>
+                           <span class="n">outfile</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;outfile&#39;</span><span class="p">],</span>
+                           <span class="n">emin</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;emin&#39;</span><span class="p">],</span>
+                           <span class="n">emax</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;emax&#39;</span><span class="p">],</span>
+                           <span class="n">enumbins</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;enumbins&#39;</span><span class="p">],</span>
+                           <span class="n">pfiles</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;pfiles&#39;</span><span class="p">])</span>
+
+    <span class="n">default_file_args</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">evfile</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">in_stage_mask</span><span class="p">,</span>
+                             <span class="n">outfile</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">out_stage_mask</span><span class="p">)</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Gtlink_expcube2"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.Gtlink_expcube2">[docs]</a><span class="k">class</span> <span class="nc">Gtlink_expcube2</span><span class="p">(</span><span class="n">Gtlink</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small wrapper to run gtexpcube2 &quot;&quot;&quot;</span>
+
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;gtexpcube2&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;gtexpcube2&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Link to run </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">irfs</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;irfs&#39;</span><span class="p">],</span>
+                           <span class="n">evtype</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;evtype&#39;</span><span class="p">],</span>
+                           <span class="n">hpx_order</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;hpx_order&#39;</span><span class="p">],</span>
+                           <span class="n">infile</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;Input livetime cube file&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">cmap</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;cmap&#39;</span><span class="p">],</span>
+                           <span class="n">outfile</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;outfile&#39;</span><span class="p">],</span>
+                           <span class="n">coordsys</span><span class="o">=</span><span class="p">(</span><span class="s1">&#39;GAL&#39;</span><span class="p">,</span> <span class="s2">&quot;Coordinate system&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">))</span>
+    <span class="n">default_file_args</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">infile</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">input_mask</span><span class="p">,</span>
+                             <span class="n">cmap</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">input_mask</span><span class="p">,</span>
+                             <span class="n">outfile</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">output_mask</span><span class="p">)</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Gtlink_scrmaps"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.Gtlink_scrmaps">[docs]</a><span class="k">class</span> <span class="nc">Gtlink_scrmaps</span><span class="p">(</span><span class="n">Gtlink</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small wrapper to run gtscrmaps &quot;&quot;&quot;</span>
+
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;gtscrmaps&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;gtscrmaps&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Link to run </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">irfs</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;irfs&#39;</span><span class="p">],</span>
+                           <span class="n">expcube</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;expcube&#39;</span><span class="p">],</span>
+                           <span class="n">bexpmap</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;bexpmap&#39;</span><span class="p">],</span>
+                           <span class="n">cmap</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;cmap&#39;</span><span class="p">],</span>
+                           <span class="n">srcmdl</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;srcmdl&#39;</span><span class="p">],</span>
+                           <span class="n">outfile</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;outfile&#39;</span><span class="p">])</span>
+
+    <span class="n">default_file_args</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">expcube</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">input_mask</span><span class="p">,</span>
+                             <span class="n">cmap</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">input_mask</span><span class="p">,</span>
+                             <span class="n">bexpmap</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">input_mask</span><span class="p">,</span>
+                             <span class="n">srcmdl</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">input_mask</span><span class="p">,</span>
+                             <span class="n">outfile</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">output_mask</span><span class="p">)</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Gtlink_ltsum"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.Gtlink_ltsum">[docs]</a><span class="k">class</span> <span class="nc">Gtlink_ltsum</span><span class="p">(</span><span class="n">Gtlink</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small wrapper to run gtltsum &quot;&quot;&quot;</span>
+
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;gtltsum&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;gtltsum&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Link to run </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">infile1</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;Livetime cube 1 or list of files&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">infile2</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;none&quot;</span><span class="p">,</span> <span class="s2">&quot;Livetime cube 2&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">outfile</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;Output file&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">))</span>
+    <span class="n">default_file_args</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">infile1</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">input_mask</span><span class="p">,</span>
+                             <span class="n">outfile</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">output_mask</span><span class="p">)</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Gtlink_mktime"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.Gtlink_mktime">[docs]</a><span class="k">class</span> <span class="nc">Gtlink_mktime</span><span class="p">(</span><span class="n">Gtlink</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small wrapper to run gtmktime &quot;&quot;&quot;</span>
+
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;gtmktime&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;gtmktime&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Link to run </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">evfile</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Input FT1 File&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">outfile</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Output FT1 File&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">scfile</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Input FT2 file&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">roicut</span><span class="o">=</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;Apply ROI-based zenith angle cut&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">),</span>
+                           <span class="nb">filter</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Filter expression&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">pfiles</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;PFILES directory&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">))</span>
+
+    <span class="n">default_file_args</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">evfile</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">in_stage_mask</span><span class="p">,</span>
+                             <span class="n">scfile</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">in_stage_mask</span><span class="p">,</span>
+                             <span class="n">outfile</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">out_stage_mask</span><span class="p">)</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Gtlink_ltcube"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.Gtlink_ltcube">[docs]</a><span class="k">class</span> <span class="nc">Gtlink_ltcube</span><span class="p">(</span><span class="n">Gtlink</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small wrapper to run gtltcube &quot;&quot;&quot;</span>
+
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;gtltcube&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;gtltcube&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Link to run </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">evfile</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Input FT1 File&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">scfile</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Input FT2 file&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">outfile</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Output Livetime cube File&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">dcostheta</span><span class="o">=</span><span class="p">(</span><span class="mf">0.025</span><span class="p">,</span> <span class="s1">&#39;Step size in cos(theta)&#39;</span><span class="p">,</span> <span class="nb">float</span><span class="p">),</span>
+                           <span class="n">binsz</span><span class="o">=</span><span class="p">(</span><span class="mf">1.</span><span class="p">,</span> <span class="s1">&#39;Pixel size (degrees)&#39;</span><span class="p">,</span> <span class="nb">float</span><span class="p">),</span>
+                           <span class="n">phibins</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;Number of phi bins&#39;</span><span class="p">,</span> <span class="nb">int</span><span class="p">),</span>
+                           <span class="n">zmin</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;Minimum zenith angle&#39;</span><span class="p">,</span> <span class="nb">float</span><span class="p">),</span>
+                           <span class="n">zmax</span><span class="o">=</span><span class="p">(</span><span class="mi">105</span><span class="p">,</span> <span class="s1">&#39;Maximum zenith angle&#39;</span><span class="p">,</span> <span class="nb">float</span><span class="p">),</span>
+                           <span class="n">pfiles</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;PFILES directory&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">))</span>
+
+    <span class="n">default_file_args</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">evfile</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">in_stage_mask</span><span class="p">,</span>
+                             <span class="n">scfile</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">in_stage_mask</span><span class="p">,</span>
+                             <span class="n">outfile</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">out_stage_mask</span><span class="p">)</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Link_FermipyCoadd"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.Link_FermipyCoadd">[docs]</a><span class="k">class</span> <span class="nc">Link_FermipyCoadd</span><span class="p">(</span><span class="n">AppLink</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small wrapper to run fermipy-coadd &quot;&quot;&quot;</span>
+
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-coadd&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;coadd&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Link to run </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">args</span><span class="o">=</span><span class="p">([],</span> <span class="s2">&quot;List of input files&quot;</span><span class="p">,</span> <span class="nb">list</span><span class="p">),</span>
+                           <span class="n">output</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;Output file&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">))</span>
+    <span class="n">default_file_args</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">args</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">input_mask</span><span class="p">,</span>
+                             <span class="n">output</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">output_mask</span><span class="p">)</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Link_FermipyGatherSrcmaps"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.Link_FermipyGatherSrcmaps">[docs]</a><span class="k">class</span> <span class="nc">Link_FermipyGatherSrcmaps</span><span class="p">(</span><span class="n">AppLink</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small wrapper to run fermipy-gather-srcmaps &quot;&quot;&quot;</span>
+
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-gather-srcmaps&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;gather-srcmaps&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Link to run </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">output</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;Output file name&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">args</span><span class="o">=</span><span class="p">([],</span> <span class="s2">&quot;List of input files&quot;</span><span class="p">,</span> <span class="nb">list</span><span class="p">),</span>
+                           <span class="n">gzip</span><span class="o">=</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;Compress output&quot;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">),</span>
+                           <span class="n">rm</span><span class="o">=</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;Remove input files&quot;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">),</span>
+                           <span class="n">clobber</span><span class="o">=</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;Overwrite output&quot;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">))</span>
+    <span class="n">default_file_args</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">args</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">input_mask</span><span class="p">,</span>
+                             <span class="n">output</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">output_mask</span><span class="p">)</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Link_FermipyVstack"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.Link_FermipyVstack">[docs]</a><span class="k">class</span> <span class="nc">Link_FermipyVstack</span><span class="p">(</span><span class="n">AppLink</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small wrapper to run fermipy-vstack &quot;&quot;&quot;</span>
+
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-vstack&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;vstack&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Link to run </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">output</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;Output file name&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">hdu</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;Name of HDU to stack&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">args</span><span class="o">=</span><span class="p">([],</span> <span class="s2">&quot;List of input files&quot;</span><span class="p">,</span> <span class="nb">list</span><span class="p">),</span>
+                           <span class="n">gzip</span><span class="o">=</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;Compress output&quot;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">),</span>
+                           <span class="n">rm</span><span class="o">=</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;Remove input files&quot;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">),</span>
+                           <span class="n">clobber</span><span class="o">=</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;Overwrite output&quot;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">))</span>
+    <span class="n">default_file_args</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">args</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">input_mask</span><span class="p">,</span>
+                             <span class="n">output</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">output_mask</span><span class="p">)</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Link_FermipyHealview"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.Link_FermipyHealview">[docs]</a><span class="k">class</span> <span class="nc">Link_FermipyHealview</span><span class="p">(</span><span class="n">AppLink</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small wrapper to run fermipy-healview &quot;&quot;&quot;</span>
+
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-healview&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;fermipy-healview&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Link to run </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;Input file&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">output</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;Output file name&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">extension</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;FITS HDU with HEALPix map&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">zscale</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;log&quot;</span><span class="p">,</span> <span class="s2">&quot;Scaling for color scale&quot;</span><span class="p">,</span> <span class="nb">str</span><span class="p">))</span>
+    <span class="n">default_file_args</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">args</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">input_mask</span><span class="p">,</span>
+                             <span class="n">output</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">output_mask</span><span class="p">)</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Gtexpcube2_SG"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.Gtexpcube2_SG">[docs]</a><span class="k">class</span> <span class="nc">Gtexpcube2_SG</span><span class="p">(</span><span class="n">ScatterGather</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small class to generate configurations for `Gtlink_expcube2`</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-gtexcube2-sg&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> [options]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Submit gtexpube2 jobs in parallel&quot;</span>
+    <span class="n">clientclass</span> <span class="o">=</span> <span class="n">Gtlink_expcube2</span>
+
+    <span class="n">job_time</span> <span class="o">=</span> <span class="mi">300</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">comp</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">],</span>
+                           <span class="n">data</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span>
+                           <span class="n">hpx_order_max</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;hpx_order_expcube&#39;</span><span class="p">])</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Gtexpcube2_SG.build_job_configs"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.Gtexpcube2_SG.build_job_configs">[docs]</a>    <span class="k">def</span> <span class="nf">build_job_configs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Hook to build job configurations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">job_configs</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">components</span> <span class="o">=</span> <span class="n">Component</span><span class="o">.</span><span class="n">build_from_yamlfile</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">])</span>
+        <span class="n">datafile</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">datafile</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">datafile</span> <span class="o">==</span> <span class="s1">&#39;None&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">job_configs</span>
+        <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">update_base_dict</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">])</span>
+
+        <span class="k">for</span> <span class="n">comp</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
+            <span class="n">zcut</span> <span class="o">=</span> <span class="s2">&quot;zmax</span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">comp</span><span class="o">.</span><span class="n">zmax</span>
+
+            <span class="n">mktimelist</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">comp</span><span class="o">.</span><span class="n">mktimefilters</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">mktimelist</span><span class="p">:</span>
+                <span class="n">mktimelist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;none&#39;</span><span class="p">)</span>
+            <span class="n">evtclasslist_keys</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">comp</span><span class="o">.</span><span class="n">evtclasses</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">evtclasslist_keys</span><span class="p">:</span>
+                <span class="n">evtclasslist_vals</span> <span class="o">=</span> <span class="p">[</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">base_dict</span><span class="p">[</span><span class="s1">&#39;evclass&#39;</span><span class="p">]]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">evtclasslist_vals</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">evtclasslist_keys</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">mktimekey</span> <span class="ow">in</span> <span class="n">mktimelist</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">evtclassval</span> <span class="ow">in</span> <span class="n">evtclasslist_vals</span><span class="p">:</span>
+                    <span class="n">fullkey</span> <span class="o">=</span> <span class="n">comp</span><span class="o">.</span><span class="n">make_key</span><span class="p">(</span>
+                        <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">_</span><span class="si">%s</span><span class="s1">_</span><span class="si">{ebin_name}</span><span class="s1">_</span><span class="si">%s</span><span class="s1">_</span><span class="si">{evtype_name}</span><span class="s1">&#39;</span> <span class="o">%</span>
+                        <span class="p">(</span><span class="n">evtclassval</span><span class="p">,</span> <span class="n">zcut</span><span class="p">,</span> <span class="n">mktimekey</span><span class="p">))</span>
+                    <span class="n">name_keys</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">zcut</span><span class="o">=</span><span class="n">zcut</span><span class="p">,</span>
+                                     <span class="n">ebin</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">ebin_name</span><span class="p">,</span>
+                                     <span class="n">psftype</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">evtype_name</span><span class="p">,</span>
+                                     <span class="n">coordsys</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">coordsys</span><span class="p">,</span>
+                                     <span class="n">irf_ver</span><span class="o">=</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">irf_ver</span><span class="p">(),</span>
+                                     <span class="n">mktime</span><span class="o">=</span><span class="n">mktimekey</span><span class="p">,</span>
+                                     <span class="n">evclass</span><span class="o">=</span><span class="n">evtclassval</span><span class="p">,</span>
+                                     <span class="n">fullpath</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                    <span class="n">outfile</span> <span class="o">=</span> <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">bexpcube</span><span class="p">(</span><span class="o">**</span><span class="n">name_keys</span><span class="p">)</span>
+                    <span class="n">cmap</span> <span class="o">=</span> <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">ccube</span><span class="p">(</span><span class="o">**</span><span class="n">name_keys</span><span class="p">)</span>
+                    <span class="n">infile</span> <span class="o">=</span> <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">ltcube</span><span class="p">(</span><span class="o">**</span><span class="n">name_keys</span><span class="p">)</span>
+                    <span class="n">logfile</span> <span class="o">=</span> <span class="n">make_nfs_path</span><span class="p">(</span><span class="n">outfile</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.fits&#39;</span><span class="p">,</span> <span class="s1">&#39;.log&#39;</span><span class="p">))</span>
+                    <span class="n">job_configs</span><span class="p">[</span><span class="n">fullkey</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">cmap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span>
+                                                <span class="n">infile</span><span class="o">=</span><span class="n">infile</span><span class="p">,</span>
+                                                <span class="n">outfile</span><span class="o">=</span><span class="n">outfile</span><span class="p">,</span>
+                                                <span class="n">irfs</span><span class="o">=</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">irfs</span><span class="p">(</span><span class="o">**</span><span class="n">name_keys</span><span class="p">),</span>
+                                                <span class="n">hpx_order</span><span class="o">=</span><span class="nb">min</span><span class="p">(</span>
+                                                    <span class="n">comp</span><span class="o">.</span><span class="n">hpx_order</span><span class="p">,</span> <span class="n">args</span><span class="p">[</span><span class="s1">&#39;hpx_order_max&#39;</span><span class="p">]),</span>
+                                                <span class="n">evtype</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">evtype</span><span class="p">,</span>
+                                                <span class="n">logfile</span><span class="o">=</span><span class="n">logfile</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">job_configs</span></div></div>
+
+
+<div class="viewcode-block" id="Gtltsum_SG"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.Gtltsum_SG">[docs]</a><span class="k">class</span> <span class="nc">Gtltsum_SG</span><span class="p">(</span><span class="n">ScatterGather</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small class to generate configurations for `Gtlink_ltsum`</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-gtltsum-sg&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> [options]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Submit gtltsum jobs in parallel&quot;</span>
+    <span class="n">clientclass</span> <span class="o">=</span> <span class="n">Gtlink_ltsum</span>
+
+    <span class="n">job_time</span> <span class="o">=</span> <span class="mi">300</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">comp</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">],</span>
+                           <span class="n">data</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span>
+                           <span class="n">ft1file</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Input FT1 file&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">))</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Gtltsum_SG.build_job_configs"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.Gtltsum_SG.build_job_configs">[docs]</a>    <span class="k">def</span> <span class="nf">build_job_configs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Hook to build job configurations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">job_configs</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">components</span> <span class="o">=</span> <span class="n">Component</span><span class="o">.</span><span class="n">build_from_yamlfile</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">])</span>
+        <span class="n">datafile</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">datafile</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">datafile</span> <span class="o">==</span> <span class="s1">&#39;None&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">job_configs</span>
+        <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">update_base_dict</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">])</span>
+
+        <span class="n">inputfiles</span> <span class="o">=</span> <span class="n">create_inputlist</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;ft1file&#39;</span><span class="p">])</span>
+        <span class="n">num_files</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">inputfiles</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">comp</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
+            <span class="n">zcut</span> <span class="o">=</span> <span class="s2">&quot;zmax</span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">comp</span><span class="o">.</span><span class="n">zmax</span>
+
+            <span class="n">mktimelist</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">comp</span><span class="o">.</span><span class="n">mktimefilters</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">mktimelist</span><span class="p">:</span>
+                <span class="n">mktimelist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;none&#39;</span><span class="p">)</span>
+            <span class="n">evtclasslist_keys</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">comp</span><span class="o">.</span><span class="n">evtclasses</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">evtclasslist_keys</span><span class="p">:</span>
+                <span class="n">evtclasslist_vals</span> <span class="o">=</span> <span class="p">[</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">base_dict</span><span class="p">[</span><span class="s1">&#39;evclass&#39;</span><span class="p">]]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">evtclasslist_vals</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">evtclasslist_keys</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">mktimekey</span> <span class="ow">in</span> <span class="n">mktimelist</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">evtclassval</span> <span class="ow">in</span> <span class="n">evtclasslist_vals</span><span class="p">:</span>
+                    <span class="n">fullkey</span> <span class="o">=</span> <span class="n">comp</span><span class="o">.</span><span class="n">make_key</span><span class="p">(</span>
+                        <span class="s1">&#39;</span><span class="si">%s</span><span class="s1">_</span><span class="si">%s</span><span class="s1">_</span><span class="si">{ebin_name}</span><span class="s1">_</span><span class="si">%s</span><span class="s1">_</span><span class="si">{evtype_name}</span><span class="s1">&#39;</span> <span class="o">%</span>
+                        <span class="p">(</span><span class="n">evtclassval</span><span class="p">,</span> <span class="n">zcut</span><span class="p">,</span> <span class="n">mktimekey</span><span class="p">))</span>
+
+                    <span class="n">name_keys</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">zcut</span><span class="o">=</span><span class="n">zcut</span><span class="p">,</span>
+                                     <span class="n">ebin</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">ebin_name</span><span class="p">,</span>
+                                     <span class="n">psftype</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">evtype_name</span><span class="p">,</span>
+                                     <span class="n">coordsys</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">coordsys</span><span class="p">,</span>
+                                     <span class="n">irf_ver</span><span class="o">=</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">irf_ver</span><span class="p">(),</span>
+                                     <span class="n">mktime</span><span class="o">=</span><span class="n">mktimekey</span><span class="p">,</span>
+                                     <span class="n">evclass</span><span class="o">=</span><span class="n">evtclassval</span><span class="p">,</span>
+                                     <span class="n">fullpath</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                    <span class="n">outfile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">base_dict</span><span class="p">[</span><span class="s1">&#39;basedir&#39;</span><span class="p">],</span>
+                                           <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">ltcube</span><span class="p">(</span><span class="o">**</span><span class="n">name_keys</span><span class="p">))</span>
+                    <span class="n">infile1</span> <span class="o">=</span> <span class="n">_make_ltcube_file_list</span><span class="p">(</span><span class="n">outfile</span><span class="p">,</span> <span class="n">num_files</span><span class="p">)</span>
+                    <span class="n">logfile</span> <span class="o">=</span> <span class="n">make_nfs_path</span><span class="p">(</span><span class="n">outfile</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.fits&#39;</span><span class="p">,</span> <span class="s1">&#39;.log&#39;</span><span class="p">))</span>
+                    <span class="n">job_configs</span><span class="p">[</span><span class="n">fullkey</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">infile1</span><span class="o">=</span><span class="n">infile1</span><span class="p">,</span>
+                                                <span class="n">outfile</span><span class="o">=</span><span class="n">outfile</span><span class="p">,</span>
+                                                <span class="n">logfile</span><span class="o">=</span><span class="n">logfile</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">job_configs</span></div></div>
+
+
+<div class="viewcode-block" id="SumRings_SG"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.SumRings_SG">[docs]</a><span class="k">class</span> <span class="nc">SumRings_SG</span><span class="p">(</span><span class="n">ScatterGather</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small class to generate configurations for `Link_FermipyCoadd`</span>
+<span class="sd">    to sum galprop ring gasmaps</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-sum-rings-sg&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> [options]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Submit fermipy-coadd jobs in parallel to sum GALProp rings&quot;</span>
+    <span class="n">clientclass</span> <span class="o">=</span> <span class="n">Link_FermipyCoadd</span>
+
+    <span class="n">job_time</span> <span class="o">=</span> <span class="mi">300</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">library</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;library&#39;</span><span class="p">],</span>
+                           <span class="n">outdir</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Output directory&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),)</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SumRings_SG.build_job_configs"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.SumRings_SG.build_job_configs">[docs]</a>    <span class="k">def</span> <span class="nf">build_job_configs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Hook to build job configurations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">job_configs</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">gmm</span> <span class="o">=</span> <span class="n">make_ring_dicts</span><span class="p">(</span><span class="n">library</span><span class="o">=</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;library&#39;</span><span class="p">],</span> <span class="n">basedir</span><span class="o">=</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">galkey</span> <span class="ow">in</span> <span class="n">gmm</span><span class="o">.</span><span class="n">galkeys</span><span class="p">():</span>
+            <span class="n">ring_dict</span> <span class="o">=</span> <span class="n">gmm</span><span class="o">.</span><span class="n">ring_dict</span><span class="p">(</span><span class="n">galkey</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">ring_key</span><span class="p">,</span> <span class="n">ring_info</span> <span class="ow">in</span> <span class="n">ring_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">output_file</span> <span class="o">=</span> <span class="n">ring_info</span><span class="o">.</span><span class="n">merged_gasmap</span>
+                <span class="n">file_string</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+                <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="n">ring_info</span><span class="o">.</span><span class="n">files</span><span class="p">:</span>
+                    <span class="n">file_string</span> <span class="o">+=</span> <span class="s2">&quot; </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">fname</span>
+                <span class="n">logfile</span> <span class="o">=</span> <span class="n">make_nfs_path</span><span class="p">(</span><span class="n">output_file</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.fits&#39;</span><span class="p">,</span> <span class="s1">&#39;.log&#39;</span><span class="p">))</span>
+                <span class="n">job_configs</span><span class="p">[</span><span class="n">ring_key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">output</span><span class="o">=</span><span class="n">output_file</span><span class="p">,</span>
+                                             <span class="n">args</span><span class="o">=</span><span class="n">file_string</span><span class="p">,</span>
+                                             <span class="n">logfile</span><span class="o">=</span><span class="n">logfile</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">job_configs</span></div></div>
+
+
+<div class="viewcode-block" id="Vstack_SG"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.Vstack_SG">[docs]</a><span class="k">class</span> <span class="nc">Vstack_SG</span><span class="p">(</span><span class="n">ScatterGather</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small class to generate configurations for `Link_FermipyVstack`</span>
+<span class="sd">    to merge source maps</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-vstack-sg&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> [options]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Submit fermipy-vstack jobs in parallel&quot;</span>
+    <span class="n">clientclass</span> <span class="o">=</span> <span class="n">Link_FermipyVstack</span>
+
+    <span class="n">job_time</span> <span class="o">=</span> <span class="mi">300</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">comp</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">],</span>
+                           <span class="n">data</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span>
+                           <span class="n">library</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;library&#39;</span><span class="p">],)</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Vstack_SG.build_job_configs"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.Vstack_SG.build_job_configs">[docs]</a>    <span class="k">def</span> <span class="nf">build_job_configs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Hook to build job configurations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">job_configs</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">components</span> <span class="o">=</span> <span class="n">Component</span><span class="o">.</span><span class="n">build_from_yamlfile</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">])</span>
+        <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">update_base_dict</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">])</span>
+
+        <span class="n">ret_dict</span> <span class="o">=</span> <span class="n">make_diffuse_comp_info_dict</span><span class="p">(</span><span class="n">components</span><span class="o">=</span><span class="n">components</span><span class="p">,</span>
+                                               <span class="n">library</span><span class="o">=</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;library&#39;</span><span class="p">],</span>
+                                               <span class="n">basedir</span><span class="o">=</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">base_dict</span><span class="p">[</span><span class="s1">&#39;basedir&#39;</span><span class="p">])</span>
+        <span class="n">diffuse_comp_info_dict</span> <span class="o">=</span> <span class="n">ret_dict</span><span class="p">[</span><span class="s1">&#39;comp_info_dict&#39;</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">diffuse_comp_info_key</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">diffuse_comp_info_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="n">diffuse_comp_info_value</span> <span class="o">=</span> <span class="n">diffuse_comp_info_dict</span><span class="p">[</span><span class="n">diffuse_comp_info_key</span><span class="p">]</span>
+
+            <span class="k">for</span> <span class="n">comp</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
+                <span class="n">zcut</span> <span class="o">=</span> <span class="s2">&quot;zmax</span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">comp</span><span class="o">.</span><span class="n">zmax</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="n">comp</span><span class="o">.</span><span class="n">make_key</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{ebin_name}</span><span class="s1">_</span><span class="si">{evtype_name}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">diffuse_comp_info_value</span><span class="o">.</span><span class="n">components</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">sub_comp_info</span> <span class="o">=</span> <span class="n">diffuse_comp_info_value</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">sub_comp_info</span> <span class="o">=</span> <span class="n">diffuse_comp_info_value</span><span class="o">.</span><span class="n">get_component_info</span><span class="p">(</span><span class="n">comp</span><span class="p">)</span>
+                <span class="n">name_keys</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">zcut</span><span class="o">=</span><span class="n">zcut</span><span class="p">,</span>
+                                 <span class="n">sourcekey</span><span class="o">=</span><span class="n">sub_comp_info</span><span class="o">.</span><span class="n">sourcekey</span><span class="p">,</span>
+                                 <span class="n">ebin</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">ebin_name</span><span class="p">,</span>
+                                 <span class="n">psftype</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">evtype_name</span><span class="p">,</span>
+                                 <span class="n">mktime</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span>
+                                 <span class="n">coordsys</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">coordsys</span><span class="p">,</span>
+                                 <span class="n">irf_ver</span><span class="o">=</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">irf_ver</span><span class="p">(),</span>
+                                 <span class="n">fullpath</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="n">outfile</span> <span class="o">=</span> <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">srcmaps</span><span class="p">(</span><span class="o">**</span><span class="n">name_keys</span><span class="p">)</span>
+                <span class="n">outfile_tokens</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">outfile</span><span class="p">)</span>
+                <span class="n">infile_regexp</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_*.fits*&quot;</span> <span class="o">%</span> <span class="n">outfile_tokens</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">full_key</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">sub_comp_info</span><span class="o">.</span><span class="n">sourcekey</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+                <span class="n">logfile</span> <span class="o">=</span> <span class="n">make_nfs_path</span><span class="p">(</span><span class="n">outfile</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.fits&#39;</span><span class="p">,</span> <span class="s1">&#39;.log&#39;</span><span class="p">))</span>
+                <span class="n">job_configs</span><span class="p">[</span><span class="n">full_key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">output</span><span class="o">=</span><span class="n">outfile</span><span class="p">,</span>
+                                             <span class="n">args</span><span class="o">=</span><span class="n">infile_regexp</span><span class="p">,</span>
+                                             <span class="n">hdu</span><span class="o">=</span><span class="n">sub_comp_info</span><span class="o">.</span><span class="n">source_name</span><span class="p">,</span>
+                                             <span class="n">logfile</span><span class="o">=</span><span class="n">logfile</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">job_configs</span></div></div>
+
+
+<div class="viewcode-block" id="GatherSrcmaps_SG"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.GatherSrcmaps_SG">[docs]</a><span class="k">class</span> <span class="nc">GatherSrcmaps_SG</span><span class="p">(</span><span class="n">ScatterGather</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small class to generate configurations for `Link_FermipyGatherSrcmaps`</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-gather-srcmaps-sg&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> [options]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Submit fermipy-gather-srcmaps  jobs in parallel&quot;</span>
+    <span class="n">clientclass</span> <span class="o">=</span> <span class="n">Link_FermipyGatherSrcmaps</span>
+
+    <span class="n">job_time</span> <span class="o">=</span> <span class="mi">300</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">comp</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">],</span>
+                           <span class="n">data</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span>
+                           <span class="n">library</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;library&#39;</span><span class="p">])</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GatherSrcmaps_SG.build_job_configs"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.GatherSrcmaps_SG.build_job_configs">[docs]</a>    <span class="k">def</span> <span class="nf">build_job_configs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Hook to build job configurations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">job_configs</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">components</span> <span class="o">=</span> <span class="n">Component</span><span class="o">.</span><span class="n">build_from_yamlfile</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">])</span>
+        <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">update_base_dict</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">])</span>
+
+        <span class="n">ret_dict</span> <span class="o">=</span> <span class="n">make_catalog_comp_dict</span><span class="p">(</span><span class="n">library</span><span class="o">=</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;library&#39;</span><span class="p">],</span>
+                                          <span class="n">basedir</span><span class="o">=</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">base_dict</span><span class="p">[</span><span class="s1">&#39;basedir&#39;</span><span class="p">])</span>
+        <span class="n">catalog_info_dict</span> <span class="o">=</span> <span class="n">ret_dict</span><span class="p">[</span><span class="s1">&#39;catalog_info_dict&#39;</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">catalog_name</span>  <span class="ow">in</span> <span class="n">catalog_info_dict</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">comp</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
+                <span class="n">zcut</span> <span class="o">=</span> <span class="s2">&quot;zmax</span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">comp</span><span class="o">.</span><span class="n">zmax</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="n">comp</span><span class="o">.</span><span class="n">make_key</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{ebin_name}</span><span class="s1">_</span><span class="si">{evtype_name}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="n">name_keys</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">zcut</span><span class="o">=</span><span class="n">zcut</span><span class="p">,</span>
+                                 <span class="n">sourcekey</span><span class="o">=</span><span class="n">catalog_name</span><span class="p">,</span>
+                                 <span class="n">ebin</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">ebin_name</span><span class="p">,</span>
+                                 <span class="n">psftype</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">evtype_name</span><span class="p">,</span>
+                                 <span class="n">coordsys</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">coordsys</span><span class="p">,</span>
+                                 <span class="n">irf_ver</span><span class="o">=</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">irf_ver</span><span class="p">(),</span>
+                                 <span class="n">mktime</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span>
+                                 <span class="n">fullpath</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="n">outfile</span> <span class="o">=</span> <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">srcmaps</span><span class="p">(</span><span class="o">**</span><span class="n">name_keys</span><span class="p">)</span>
+                <span class="n">outfile_tokens</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">outfile</span><span class="p">)</span>
+                <span class="n">infile_regexp</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_*.fits&quot;</span> <span class="o">%</span> <span class="n">outfile_tokens</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">logfile</span> <span class="o">=</span> <span class="n">make_nfs_path</span><span class="p">(</span><span class="n">outfile</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.fits&#39;</span><span class="p">,</span> <span class="s1">&#39;.log&#39;</span><span class="p">))</span>
+                <span class="n">job_configs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">output</span><span class="o">=</span><span class="n">outfile</span><span class="p">,</span>
+                                        <span class="n">args</span><span class="o">=</span><span class="n">infile_regexp</span><span class="p">,</span>
+                                        <span class="n">logfile</span><span class="o">=</span><span class="n">logfile</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">job_configs</span></div></div>
+
+
+<div class="viewcode-block" id="Healview_SG"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.Healview_SG">[docs]</a><span class="k">class</span> <span class="nc">Healview_SG</span><span class="p">(</span><span class="n">ScatterGather</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small class to generate configurations for `Link_FermipyHealview`</span>
+<span class="sd">    </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-healviw-sg&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> [options]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Submit fermipy-healviw jobs in parallel&quot;</span>
+    <span class="n">clientclass</span> <span class="o">=</span> <span class="n">Link_FermipyHealview</span>
+
+    <span class="n">job_time</span> <span class="o">=</span> <span class="mi">60</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">comp</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">],</span>
+                           <span class="n">data</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span>
+                           <span class="n">library</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;library&#39;</span><span class="p">])</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Healview_SG.build_job_configs"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.job_library.Healview_SG.build_job_configs">[docs]</a>    <span class="k">def</span> <span class="nf">build_job_configs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Hook to build job configurations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">job_configs</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">components</span> <span class="o">=</span> <span class="n">Component</span><span class="o">.</span><span class="n">build_from_yamlfile</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">])</span>
+        <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">update_base_dict</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">])</span>
+
+        <span class="n">ret_dict</span> <span class="o">=</span> <span class="n">make_diffuse_comp_info_dict</span><span class="p">(</span><span class="n">components</span><span class="o">=</span><span class="n">components</span><span class="p">,</span>
+                                               <span class="n">library</span><span class="o">=</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;library&#39;</span><span class="p">],</span>
+                                               <span class="n">basedir</span><span class="o">=</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">base_dict</span><span class="p">[</span><span class="s1">&#39;basedir&#39;</span><span class="p">])</span>
+        <span class="n">diffuse_comp_info_dict</span> <span class="o">=</span> <span class="n">ret_dict</span><span class="p">[</span><span class="s1">&#39;comp_info_dict&#39;</span><span class="p">]</span>
+
+        <span class="k">for</span> <span class="n">diffuse_comp_info_key</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">diffuse_comp_info_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="n">diffuse_comp_info_value</span> <span class="o">=</span> <span class="n">diffuse_comp_info_dict</span><span class="p">[</span><span class="n">diffuse_comp_info_key</span><span class="p">]</span>
+
+            <span class="k">for</span> <span class="n">comp</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
+                <span class="n">zcut</span> <span class="o">=</span> <span class="s2">&quot;zmax</span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">comp</span><span class="o">.</span><span class="n">zmax</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="n">comp</span><span class="o">.</span><span class="n">make_key</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{ebin_name}</span><span class="s1">_</span><span class="si">{evtype_name}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">diffuse_comp_info_value</span><span class="o">.</span><span class="n">components</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">sub_comp_info</span> <span class="o">=</span> <span class="n">diffuse_comp_info_value</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">sub_comp_info</span> <span class="o">=</span> <span class="n">diffuse_comp_info_value</span><span class="o">.</span><span class="n">get_component_info</span><span class="p">(</span><span class="n">comp</span><span class="p">)</span>
+
+                <span class="n">full_key</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">sub_comp_info</span><span class="o">.</span><span class="n">sourcekey</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span>
+
+                <span class="n">name_keys</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">zcut</span><span class="o">=</span><span class="n">zcut</span><span class="p">,</span>
+                                 <span class="n">sourcekey</span><span class="o">=</span><span class="n">sub_comp_info</span><span class="o">.</span><span class="n">sourcekey</span><span class="p">,</span>
+                                 <span class="n">ebin</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">ebin_name</span><span class="p">,</span>
+                                 <span class="n">psftype</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">evtype_name</span><span class="p">,</span>
+                                 <span class="n">coordsys</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">coordsys</span><span class="p">,</span>
+                                 <span class="n">irf_ver</span><span class="o">=</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">irf_ver</span><span class="p">(),</span>
+                                 <span class="n">mktime</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span>
+                                 <span class="n">fullpath</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="n">infile</span> <span class="o">=</span> <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">srcmaps</span><span class="p">(</span><span class="o">**</span><span class="n">name_keys</span><span class="p">)</span>
+                <span class="n">outfile</span> <span class="o">=</span> <span class="n">infile</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.fits&#39;</span><span class="p">,</span> <span class="s1">&#39;.png&#39;</span><span class="p">)</span>
+
+                <span class="n">logfile</span> <span class="o">=</span> <span class="n">make_nfs_path</span><span class="p">(</span><span class="n">outfile</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.png&#39;</span><span class="p">,</span> <span class="s1">&#39;_png.log&#39;</span><span class="p">))</span>
+                <span class="n">job_configs</span><span class="p">[</span><span class="n">full_key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">input</span><span class="o">=</span><span class="n">infile</span><span class="p">,</span>
+                                             <span class="n">output</span><span class="o">=</span><span class="n">outfile</span><span class="p">,</span>
+                                             <span class="n">extension</span><span class="o">=</span><span class="n">sub_comp_info</span><span class="o">.</span><span class="n">source_name</span><span class="p">,</span>
+                                             <span class="n">zscale</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;zscale&#39;</span><span class="p">,</span> <span class="s1">&#39;log&#39;</span><span class="p">),</span>
+                                             <span class="n">logfile</span><span class="o">=</span><span class="n">logfile</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">job_configs</span></div></div>
+
+
+<span class="k">def</span> <span class="nf">register_classes</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Register these classes with the `LinkFactory` &quot;&quot;&quot;</span>
+    <span class="n">Gtlink_select</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">Gtlink_bin</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">Gtlink_expcube2</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">Gtlink_scrmaps</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">Gtlink_mktime</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">Gtlink_ltcube</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">Link_FermipyCoadd</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">Link_FermipyGatherSrcmaps</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">Link_FermipyVstack</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">Link_FermipyHealview</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">Gtexpcube2_SG</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">Gtltsum_SG</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">SumRings_SG</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">Vstack_SG</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">GatherSrcmaps_SG</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">Healview_SG</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

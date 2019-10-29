@@ -1,0 +1,428 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fermipy.diffuse.diffuse_analysis &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../../fermipy.html">fermipy</a> &raquo;</li>
+        
+      <li>fermipy.diffuse.diffuse_analysis</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for fermipy.diffuse.diffuse_analysis</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Scripts to run the all-sky diffuse analysis</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+
+<span class="kn">from</span> <span class="nn">fermipy.utils</span> <span class="k">import</span> <span class="n">load_yaml</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.link</span> <span class="k">import</span> <span class="n">Link</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.chain</span> <span class="k">import</span> <span class="n">Chain</span>
+
+<span class="kn">from</span> <span class="nn">fermipy.diffuse</span> <span class="k">import</span> <span class="n">defaults</span> <span class="k">as</span> <span class="n">diffuse_defaults</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.name_policy</span> <span class="k">import</span> <span class="n">NameFactory</span>
+
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.job_library</span> <span class="k">import</span> <span class="n">SumRings_SG</span><span class="p">,</span> <span class="n">Vstack_SG</span><span class="p">,</span> <span class="n">GatherSrcmaps_SG</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.gt_srcmap_partial</span> <span class="k">import</span> <span class="n">SrcmapsDiffuse_SG</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.gt_merge_srcmaps</span> <span class="k">import</span> <span class="n">MergeSrcmaps_SG</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.gt_srcmaps_catalog</span> <span class="k">import</span> <span class="n">SrcmapsCatalog_SG</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.gt_split_and_bin</span> <span class="k">import</span> <span class="n">SplitAndBinChain</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.gt_assemble_model</span> <span class="k">import</span> <span class="n">AssembleModelChain</span>
+
+
+<span class="n">NAME_FACTORY</span> <span class="o">=</span> <span class="n">NameFactory</span><span class="p">()</span>
+
+<div class="viewcode-block" id="DiffuseCompChain"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_analysis.DiffuseCompChain">[docs]</a><span class="k">class</span> <span class="nc">DiffuseCompChain</span><span class="p">(</span><span class="n">Chain</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Chain to build srcmaps for diffuse components</span>
+
+<span class="sd">    This chain consists of:</span>
+
+<span class="sd">    sum-rings : SumRings_SG</span>
+<span class="sd">        Merge GALProp gas maps by type and ring</span>
+
+<span class="sd">    srcmaps-diffuse : SrcmapsDiffuse_SG</span>
+<span class="sd">        Compute diffuse component source maps in parallel</span>
+
+<span class="sd">    vstack-diffuse : Vstack_SG</span>
+<span class="sd">        Combine diffuse component source maps</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-diffuse-comp-chain&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;diffuse-comp&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s1">&#39;Run diffuse component analysis&#39;</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">comp</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">],</span>
+                           <span class="n">data</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span>
+                           <span class="n">library</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;library&#39;</span><span class="p">],</span>
+                           <span class="n">make_xml</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;make_xml&#39;</span><span class="p">],</span>
+                           <span class="n">outdir</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Output directory&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">dry_run</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;dry_run&#39;</span><span class="p">])</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;C&#39;tor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">DiffuseCompChain</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">comp_dict</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span> <span class="nf">_map_arguments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Map from the top-level arguments to the arguments provided to</span>
+<span class="sd">        the indiviudal links &quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">)</span>
+        <span class="n">comp</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;comp&#39;</span><span class="p">)</span>
+        <span class="n">library</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;library&#39;</span><span class="p">)</span>
+        <span class="n">dry_run</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dry_run&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_link</span><span class="p">(</span><span class="s1">&#39;sum-rings&#39;</span><span class="p">,</span> <span class="n">SumRings_SG</span><span class="p">,</span>
+                       <span class="n">library</span><span class="o">=</span><span class="n">library</span><span class="p">,</span>
+                       <span class="n">outdir</span><span class="o">=</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;outdir&#39;</span><span class="p">],</span>
+                       <span class="n">dry_run</span><span class="o">=</span><span class="n">dry_run</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_link</span><span class="p">(</span><span class="s1">&#39;srcmaps-diffuse&#39;</span><span class="p">,</span> <span class="n">SrcmapsDiffuse_SG</span><span class="p">,</span>
+                       <span class="n">comp</span><span class="o">=</span><span class="n">comp</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                       <span class="n">library</span><span class="o">=</span><span class="n">library</span><span class="p">,</span>
+                       <span class="n">make_xml</span><span class="o">=</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;make_xml&#39;</span><span class="p">],</span>
+                       <span class="n">dry_run</span><span class="o">=</span><span class="n">dry_run</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_link</span><span class="p">(</span><span class="s1">&#39;vstack-diffuse&#39;</span><span class="p">,</span> <span class="n">Vstack_SG</span><span class="p">,</span>
+                       <span class="n">comp</span><span class="o">=</span><span class="n">comp</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                       <span class="n">library</span><span class="o">=</span><span class="n">library</span><span class="p">,</span>
+                       <span class="n">dry_run</span><span class="o">=</span><span class="n">dry_run</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CatalogCompChain"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_analysis.CatalogCompChain">[docs]</a><span class="k">class</span> <span class="nc">CatalogCompChain</span><span class="p">(</span><span class="n">Chain</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small class to build srcmaps for catalog components</span>
+
+<span class="sd">    This chain consists of:</span>
+
+<span class="sd">    srcmaps-catalog  : SrcmapsCatalog_SG</span>
+<span class="sd">        Build source maps for all catalog sources in parallel</span>
+
+<span class="sd">    gather-srcmaps : GatherSrcmaps_SG</span>
+<span class="sd">        Gather source maps into </span>
+
+<span class="sd">    merge-srcmaps : MergeSrcmaps_SG</span>
+<span class="sd">        Compute source maps for merged sources</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-catalog-comp-chain&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;catalog-comp&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s1">&#39;Run catalog component analysis&#39;</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">comp</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">],</span>
+                           <span class="n">data</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span>
+                           <span class="n">library</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;library&#39;</span><span class="p">],</span>
+                           <span class="n">nsrc</span><span class="o">=</span><span class="p">(</span><span class="mi">500</span><span class="p">,</span> <span class="s1">&#39;Number of sources per job&#39;</span><span class="p">,</span> <span class="nb">int</span><span class="p">),</span>
+                           <span class="n">make_xml</span><span class="o">=</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;Make XML files for diffuse components&quot;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">),</span>
+                           <span class="n">dry_run</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;dry_run&#39;</span><span class="p">])</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;C&#39;tor</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">CatalogCompChain</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">comp_dict</span> <span class="o">=</span> <span class="kc">None</span>
+
+
+    <span class="k">def</span> <span class="nf">_map_arguments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Map from the top-level arguments to the arguments provided to</span>
+<span class="sd">        the indiviudal links &quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">)</span>
+        <span class="n">comp</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;comp&#39;</span><span class="p">)</span>
+        <span class="n">library</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;library&#39;</span><span class="p">)</span>
+        <span class="n">dry_run</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dry_run&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_link</span><span class="p">(</span><span class="s1">&#39;srcmaps-catalog&#39;</span><span class="p">,</span> <span class="n">SrcmapsCatalog_SG</span><span class="p">,</span>
+                       <span class="n">comp</span><span class="o">=</span><span class="n">comp</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                       <span class="n">library</span><span class="o">=</span><span class="n">library</span><span class="p">,</span>
+                       <span class="n">nsrc</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nsrc&#39;</span><span class="p">,</span> <span class="mi">500</span><span class="p">),</span>
+                       <span class="n">dry_run</span><span class="o">=</span><span class="n">dry_run</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_link</span><span class="p">(</span><span class="s1">&#39;gather-srcmaps&#39;</span><span class="p">,</span> <span class="n">GatherSrcmaps_SG</span><span class="p">,</span>
+                       <span class="n">comp</span><span class="o">=</span><span class="n">comp</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                       <span class="n">library</span><span class="o">=</span><span class="n">library</span><span class="p">,</span>
+                       <span class="n">dry_run</span><span class="o">=</span><span class="n">dry_run</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_link</span><span class="p">(</span><span class="s1">&#39;merge-srcmaps&#39;</span><span class="p">,</span> <span class="n">MergeSrcmaps_SG</span><span class="p">,</span>
+                       <span class="n">comp</span><span class="o">=</span><span class="n">comp</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                       <span class="n">library</span><span class="o">=</span><span class="n">library</span><span class="p">,</span>
+                       <span class="n">dry_run</span><span class="o">=</span><span class="n">dry_run</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="DiffuseAnalysisChain"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.diffuse_analysis.DiffuseAnalysisChain">[docs]</a><span class="k">class</span> <span class="nc">DiffuseAnalysisChain</span><span class="p">(</span><span class="n">Chain</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Chain to define diffuse all-sky analysis</span>
+
+<span class="sd">    This chain consists of:</span>
+
+<span class="sd">    prepare : `SplitAndBinChain`</span>
+<span class="sd">        Bin the data and make the exposure maps</span>
+
+<span class="sd">    diffuse-comp : `DiffuseCompChain`</span>
+<span class="sd">        Make source maps for diffuse components</span>
+
+<span class="sd">    catalog-comp : `CatalogCompChain`</span>
+<span class="sd">        Make source maps for catalog components</span>
+
+<span class="sd">    assemble-model : `AssembleModelChain`</span>
+<span class="sd">        Assemble the models for fitting</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-diffuse-analysis&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;diffuse&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s1">&#39;Run diffuse analysis chain&#39;</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">config</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">],</span>
+                           <span class="n">dry_run</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;dry_run&#39;</span><span class="p">])</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_map_arguments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Map from the top-level arguments to the arguments provided to</span>
+<span class="sd">        the indiviudal links &quot;&quot;&quot;</span>
+        <span class="n">config_yaml</span> <span class="o">=</span> <span class="n">args</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">]</span>
+        <span class="n">config_dict</span> <span class="o">=</span> <span class="n">load_yaml</span><span class="p">(</span><span class="n">config_yaml</span><span class="p">)</span>
+
+        <span class="n">dry_run</span> <span class="o">=</span> <span class="n">args</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dry_run&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+        <span class="n">data</span> <span class="o">=</span> <span class="n">config_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;data&#39;</span><span class="p">)</span>
+        <span class="n">comp</span> <span class="o">=</span> <span class="n">config_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;comp&#39;</span><span class="p">)</span>
+        <span class="n">library</span> <span class="o">=</span> <span class="n">config_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;library&#39;</span><span class="p">)</span>
+        <span class="n">models</span> <span class="o">=</span> <span class="n">config_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;models&#39;</span><span class="p">)</span>
+        <span class="n">scratch</span> <span class="o">=</span> <span class="n">config_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;scratch&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_link</span><span class="p">(</span><span class="s1">&#39;prepare&#39;</span><span class="p">,</span> <span class="n">SplitAndBinChain</span><span class="p">,</span>
+                       <span class="n">comp</span><span class="o">=</span><span class="n">comp</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                       <span class="n">ft1file</span><span class="o">=</span><span class="n">config_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;ft1file&#39;</span><span class="p">),</span>
+                       <span class="n">hpx_order_ccube</span><span class="o">=</span><span class="n">config_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;hpx_order_ccube&#39;</span><span class="p">),</span>
+                       <span class="n">hpx_order_expcube</span><span class="o">=</span><span class="n">config_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;hpx_order_expcube&#39;</span><span class="p">),</span>
+                       <span class="n">scratch</span><span class="o">=</span><span class="n">scratch</span><span class="p">,</span>
+                       <span class="n">dry_run</span><span class="o">=</span><span class="n">dry_run</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_link</span><span class="p">(</span><span class="s1">&#39;diffuse-comp&#39;</span><span class="p">,</span> <span class="n">DiffuseCompChain</span><span class="p">,</span>
+                       <span class="n">comp</span><span class="o">=</span><span class="n">comp</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                       <span class="n">library</span><span class="o">=</span><span class="n">library</span><span class="p">,</span>
+                       <span class="n">make_xml</span><span class="o">=</span><span class="n">config_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;make_diffuse_comp_xml&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+                       <span class="n">outdir</span><span class="o">=</span><span class="n">config_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;merged_gasmap_dir&#39;</span><span class="p">,</span> <span class="s1">&#39;merged_gasmap&#39;</span><span class="p">),</span>
+                       <span class="n">dry_run</span><span class="o">=</span><span class="n">dry_run</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_link</span><span class="p">(</span><span class="s1">&#39;catalog-comp&#39;</span><span class="p">,</span> <span class="n">CatalogCompChain</span><span class="p">,</span>
+                       <span class="n">comp</span><span class="o">=</span><span class="n">comp</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                       <span class="n">library</span><span class="o">=</span><span class="n">library</span><span class="p">,</span>
+                       <span class="n">make_xml</span><span class="o">=</span><span class="n">config_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;make_catalog_comp_xml&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+                       <span class="n">nsrc</span><span class="o">=</span><span class="n">config_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;catalog_nsrc&#39;</span><span class="p">,</span> <span class="mi">500</span><span class="p">),</span>
+                       <span class="n">dry_run</span><span class="o">=</span><span class="n">dry_run</span><span class="p">)</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_link</span><span class="p">(</span><span class="s1">&#39;assemble-model&#39;</span><span class="p">,</span> <span class="n">AssembleModelChain</span><span class="p">,</span>
+                       <span class="n">comp</span><span class="o">=</span><span class="n">comp</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span>
+                       <span class="n">library</span><span class="o">=</span><span class="n">library</span><span class="p">,</span>
+                       <span class="n">models</span><span class="o">=</span><span class="n">models</span><span class="p">,</span>
+                       <span class="n">hpx_order</span><span class="o">=</span><span class="n">config_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;hpx_order_fitting&#39;</span><span class="p">),</span>
+                       <span class="n">dry_run</span><span class="o">=</span><span class="n">dry_run</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">register_classes</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Register these classes with the `LinkFactory` &quot;&quot;&quot;</span>
+    <span class="n">DiffuseCompChain</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">CatalogCompChain</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">DiffuseAnalysisChain</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

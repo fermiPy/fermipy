@@ -1,0 +1,645 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Output File &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="ROI Optimization and Fitting" href="fitting.html" />
+    <link rel="prev" title="Configuration" href="config.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Output File</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#roi-dictionary">ROI Dictionary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#source-dictionary">Source Dictionary</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Output File</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/output.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="output-file">
+<span id="output"></span><h1>Output File<a class="headerlink" href="#output-file" title="Permalink to this headline">¶</a></h1>
+<p>The current state of the ROI can be written at any point by calling
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.write_roi" title="fermipy.gtanalysis.GTAnalysis.write_roi"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_roi</span></code></a>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">gta</span><span class="o">.</span><span class="n">write_roi</span><span class="p">(</span><span class="s1">&#39;output.npy&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The output file will contain all information about the state of the
+ROI as calculated up to that point in the analysis including model
+parameters and measured source characteristics (flux, TS, NPred).  An
+XML model file will also be saved for each analysis component.</p>
+<p>The output file can be read with <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.load.html#numpy.load" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">o</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="s1">&#39;output.npy&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span><span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+<span class="go">[&#39;roi&#39;, &#39;config&#39;, &#39;sources&#39;,&#39;version&#39;]</span>
+</pre></div>
+</div>
+<p>The output file is organized in four top-level of dictionaries:</p>
+<table border="1" class="colwidths-given docutils" id="id1">
+<caption><span class="caption-text">File Dictionary</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">roi</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></td>
+<td>A dictionary containing information about the ROI as a whole.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">sources</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></td>
+<td>A dictionary containing information about individual sources in the model (diffuse and point-like).  Each element of this dictionary maps to a single source in the ROI model.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">config</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></td>
+<td>The configuration dictionary of the <a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis" title="fermipy.gtanalysis.GTAnalysis"><code class="xref py py-class docutils literal notranslate"><span class="pre">GTAnalysis</span></code></a> instance.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">version</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a></td>
+<td>The version of the Fermipy package that was used to run the analysis.  This is automatically generated from the git release tag.</td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="roi-dictionary">
+<h2>ROI Dictionary<a class="headerlink" href="#roi-dictionary" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="source-dictionary">
+<h2>Source Dictionary<a class="headerlink" href="#source-dictionary" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">sources</span></code> dictionary contains one element per source keyed to the
+source name.  The following table lists the elements of the source
+dictionary and their descriptions.</p>
+<table border="1" class="colwidths-given docutils" id="id2">
+<caption><span class="caption-text">Source Dictionary</span><a class="headerlink" href="#id2" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">name</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a></td>
+<td>Name of the source.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">Source_Name</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a></td>
+<td>Name of the source.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">SpatialModel</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a></td>
+<td>Spatial model.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">SpatialWidth</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Spatial size parameter.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">SpatialType</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a></td>
+<td>Spatial type string.  This corresponds to the type attribute of the spatialModel component in the XML model.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">SourceType</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a></td>
+<td>Source type string (PointSource or DiffuseSource).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">SpectrumType</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a></td>
+<td>Spectrum type string.  This corresponds to the type attribute of the spectrum component in the XML model (e.g. PowerLaw, LogParabola, etc.).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">Spatial_Filename</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a></td>
+<td>Path to spatial template associated to this source.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">Spectrum_Filename</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a></td>
+<td>Path to file associated to the spectral model of this source.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">correlation</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></td>
+<td>Dictionary of correlation coefficients.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">model_counts</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Vector of predicted counts for this source in each analysis energy bin.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">model_counts_wt</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Vector of predicted counts for this source in each analysis energy bin.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">sed</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></td>
+<td>Output of SED analysis.  See <a class="reference internal" href="advanced/sed.html#sed"><span class="std std-ref">SED Analysis</span></a> for more information.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">ra</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Right ascension of the source (deg).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dec</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Declination of the source (deg).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">glon</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Galactic longitude of the source (deg).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">glat</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Galactic latitude of the source (deg).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">ra_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Std. deviation of positional uncertainty in right ascension (deg).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dec_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Std. deviation of positional uncertainty in declination (deg).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">glon_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Std. deviation of positional uncertainty in galactic longitude (deg).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">glat_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Std. deviation of positional uncertainty in galactic latitude (deg).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">pos_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>1-sigma positional uncertainty (deg).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">pos_r68</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>68% positional uncertainty (deg).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">pos_r95</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>95% positional uncertainty (deg).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">pos_r99</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>99% positional uncertainty (deg).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">pos_err_semimajor</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>1-sigma uncertainty (deg) along major axis of uncertainty ellipse.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">pos_err_semiminor</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>1-sigma uncertainty (deg) along minor axis of uncertainty ellipse.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">pos_angle</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Position angle of uncertainty ellipse with respect to major axis.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">pos_gal_cov</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Covariance matrix of positional uncertainties in local projection in galactic coordinates.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">pos_gal_corr</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Correlation matrix of positional uncertainties in local projection in galactic coordinates.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">pos_cel_cov</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Covariance matrix of positional uncertainties in local projection in celestial coordinates.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">pos_cel_corr</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Correlation matrix of positional uncertainties in local projection in celestial coordinates.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">offset_ra</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Right ascension offset from ROI center in local celestial projection (deg).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">offset_dec</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Declination offset from ROI center in local celestial projection (deg).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">offset_glon</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Galactic longitude offset from ROI center in local galactic projection (deg).</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">offset_glat</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Galactic latitude offset from ROI center in local galactic projection (deg).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">offset_roi_edge</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Distance from the edge of the ROI (deg).  Negative (positive) values indicate locations inside (outside) the ROI.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">offset</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Angular offset from ROI center (deg).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">param_names</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Names of spectral parameters.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">param_values</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Spectral parameter values.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">param_errors</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Spectral parameters errors.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">ts</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Source test statistic.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">loglike</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Log-likelihood of the model evaluated at the best-fit normalization of the source.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">loglike_scan</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Log-likelihood values for scan of source normalization.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dloglike_scan</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Delta Log-likelihood values for scan of source normalization.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">eflux_scan</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Energy flux values for scan of source normalization.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">flux_scan</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Flux values for scan of source normalization.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">norm_scan</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Normalization parameters values for scan of source normalization.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">npred</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Number of predicted counts from this source integrated over the analysis energy range.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">npred_wt</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Number of predicted counts from this source integrated over the analysis energy range.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">pivot_energy</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Decorrelation energy in MeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">flux</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated over analysis energy range</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">flux100</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 100 MeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">flux1000</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 1 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">flux10000</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 10 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">flux_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Photon flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated over analysis energy range</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">flux100_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Photon flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 100 MeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">flux1000_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Photon flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 1 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">flux10000_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Photon flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 10 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">flux_ul95</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>95% CL upper limit on the photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated over analysis energy range</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">flux100_ul95</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>95% CL upper limit on the photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 100 MeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">flux1000_ul95</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>95% CL upper limit on the photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 1 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">flux10000_ul95</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>95% CL upper limit on the photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 10 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">eflux</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Energy flux (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated over analysis energy range</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">eflux100</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Energy flux (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 100 MeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">eflux1000</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Energy flux (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 1 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">eflux10000</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Energy flux (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 10 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">eflux_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Energy flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated over analysis energy range</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">eflux100_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Energy flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 100 MeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">eflux1000_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Energy flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 1 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">eflux10000_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Energy flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 10 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">eflux_ul95</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>95% CL upper limit on the energy flux (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated over analysis energy range</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">eflux100_ul95</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>95% CL upper limit on the energy flux (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 100 MeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">eflux1000_ul95</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>95% CL upper limit on the energy flux (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 1 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">eflux10000_ul95</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>95% CL upper limit on the energy flux (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 10 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dnde</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Differential photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>) evaluated at the pivot energy.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dnde100</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Differential photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>) evaluated at 100 MeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dnde1000</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Differential photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>) evaluated at 1 GeV.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dnde10000</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Differential photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>) evaluated at 10 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dnde_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Differential photon flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>) evaluated at the pivot energy.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dnde100_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Differential photon flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>) evaluated at 100 MeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dnde1000_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Differential photon flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>) evaluated at 1 GeV.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dnde10000_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Differential photon flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>) evaluated at 10 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dnde_index</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Logarithmic slope of the differential photon spectrum evaluated at the pivot energy.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dnde100_index</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Logarithmic slope of the differential photon spectrum evaluated at 100 MeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dnde1000_index</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Logarithmic slope of the differential photon spectrum evaluated evaluated at 1 GeV.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dnde10000_index</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Logarithmic slope of the differential photon spectrum evaluated at 10 GeV.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="fitting.html" class="btn btn-neutral float-right" title="ROI Optimization and Fitting" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="config.html" class="btn btn-neutral float-left" title="Configuration" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

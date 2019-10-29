@@ -1,0 +1,614 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Installation &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Quickstart Guide" href="quickstart.html" />
+    <link rel="prev" title="Welcome to Fermipy’s documentation!" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#installing-the-fermi-science-tools">Installing the Fermi Science Tools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#installing-with-pip">Installing with pip</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#installing-with-anaconda-python">Installing with Anaconda Python</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#installing-with-docker">Installing with Docker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#installing-development-versions">Installing Development Versions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#running-at-slac">Running at SLAC</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#upgrading">Upgrading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#developer-installation">Developer Installation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#issues">Issues</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>Installation</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/install.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="installation">
+<span id="install"></span><h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Fermipy is only compatible with Science Tools v10r0p5 or later.  If
+you are using an earlier version, you will need to download and
+install the latest version from the <a class="reference external" href="http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/">FSSC</a>.  Note
+that it is recommended to use the <em>non-ROOT</em> binary distributions
+of the Science Tools.</p>
+</div>
+<p>These instructions assume that you already have a local installation
+of the Fermi Science Tools (STs).  For more information about
+installing and setting up the STs see <a class="reference internal" href="#stinstall"><span class="std std-ref">Installing the Fermi Science Tools</span></a>.  If you are
+running at SLAC you can follow the <a class="reference internal" href="#running-at-slac">Running at SLAC</a> instructions.
+For Unix/Linux users we currently recommend following the
+<a class="reference internal" href="#condainstall"><span class="std std-ref">Installing with Anaconda Python</span></a> instructions.  For OSX users we recommend
+following the <a class="reference internal" href="#pipinstall"><span class="std std-ref">Installing with pip</span></a> instructions.  The
+<a class="reference internal" href="#dockerinstall"><span class="std std-ref">Installing with Docker</span></a> instructions can be used to install the STs on
+OSX and Linux machines that are new enough to support Docker.  To
+install the development version of Fermipy follow the
+<a class="reference internal" href="#devinstall"><span class="std std-ref">Installing Development Versions</span></a> instructions.</p>
+<div class="section" id="installing-the-fermi-science-tools">
+<span id="stinstall"></span><h2>Installing the Fermi Science Tools<a class="headerlink" href="#installing-the-fermi-science-tools" title="Permalink to this headline">¶</a></h2>
+<p>The Fermi STs are a prerequisite for fermipy.  To install the STs we
+recommend using one of the non-ROOT binary distributions available
+from the <a class="reference external" href="http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/">FSSC</a>.  The
+following example illustrates how to install the binary distribution
+on a Linux machine running Ubuntu Trusty:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ curl -OL http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/tar/ScienceTools-v10r0p5-fssc-20150518-x86_64-unknown-linux-gnu-libc2.19-10-without-rootA.tar.gz
+$ tar xzf ScienceTools-v10r0p5-fssc-20150518-x86_64-unknown-linux-gnu-libc2.19-10-without-rootA.tar.gz
+$ <span class="nb">export</span> <span class="nv">FERMI_DIR</span><span class="o">=</span>ScienceTools-v10r0p5-fssc-20150518-x86_64-unknown-linux-gnu-libc2.19-10-without-rootA/x86_64-unknown-linux-gnu-libc2.19-10
+$ <span class="nb">source</span> <span class="nv">$FERMI_DIR</span>/fermi-init.sh
+</pre></div>
+</div>
+<p>More information about installing the STs as well as the complete list
+of the available binary distributions is available on the <a class="reference external" href="http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/">FSSC
+software page</a>.</p>
+</div>
+<div class="section" id="installing-with-pip">
+<span id="pipinstall"></span><h2>Installing with pip<a class="headerlink" href="#installing-with-pip" title="Permalink to this headline">¶</a></h2>
+<p>These instructions cover installation with the <code class="docutils literal notranslate"><span class="pre">pip</span></code> package
+management tool.  This will install fermipy and its dependencies into
+the python distribution that comes with the Fermi Science Tools.
+First verify that you’re running the python from the Science Tools</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ which python
+</pre></div>
+</div>
+<p>If this doesn’t point to the python in your Science Tools install
+(i.e. it returns /usr/bin/python or /usr/local/bin/python) then the
+Science Tools are not properly setup.</p>
+<p>Before starting the installation process, you will need to determine
+whether you have setuptools and pip installed in your local python
+environment.  You may need to install these packages if you are
+running with the binary version of the Fermi Science Tools distributed
+by the FSSC.  The following command will install both packages in your
+local environment:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ curl https://bootstrap.pypa.io/get-pip.py <span class="p">|</span> python -
+</pre></div>
+</div>
+<p>Check if pip is correctly installed:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ which pip
+</pre></div>
+</div>
+<p>Once again, if this isn’t the pip in the Science Tools, something went
+wrong.  Now install fermipy by running</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ pip install fermipy
+</pre></div>
+</div>
+<p>To run the ipython notebook examples you will also need to install
+jupyter notebook:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ pip install jupyter
+</pre></div>
+</div>
+<p>Finally, check that fermipy imports:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ python
+Python <span class="m">2</span>.7.8 <span class="o">(</span>default, Aug <span class="m">20</span> <span class="m">2015</span>, <span class="m">11</span>:36:15<span class="o">)</span>
+<span class="o">[</span>GCC <span class="m">4</span>.2.1 Compatible Apple LLVM <span class="m">6</span>.0 <span class="o">(</span>clang-600.0.56<span class="o">)]</span> on darwin
+Type <span class="s2">&quot;help&quot;</span>, <span class="s2">&quot;copyright&quot;</span>, <span class="s2">&quot;credits&quot;</span> or <span class="s2">&quot;license&quot;</span> <span class="k">for</span> more information.
+&gt;&gt;&gt; from fermipy.gtanalysis import GTAnalysis
+&gt;&gt;&gt; help<span class="o">(</span>GTAnalysis<span class="o">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="installing-with-anaconda-python">
+<span id="condainstall"></span><h2>Installing with Anaconda Python<a class="headerlink" href="#installing-with-anaconda-python" title="Permalink to this headline">¶</a></h2>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">The following instructions have only been verified to work with
+binary Linux distributions of the Fermi STs.  If you are using OSX
+or you have installed the STs from source you should follow the
+<a class="reference internal" href="#pipinstall"><span class="std std-ref">Installing with pip</span></a> thread above.</p>
+</div>
+<p>These instructions cover how to use fermipy with a new or existing
+anaconda python installation.  These instructions assume that you have
+already downloaded and installed the Fermi STs from the FSSC and you
+have set the <code class="docutils literal notranslate"><span class="pre">FERMI_DIR</span></code> environment variable to point to the location
+of this installation.</p>
+<p>If you already have an existing anaconda python installation then fermipy
+can be installed from the conda-forge channel as follows:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ conda config --append channels conda-forge
+$ conda install fermipy
+</pre></div>
+</div>
+<p>If you do not have an anaconda installation, the <code class="docutils literal notranslate"><span class="pre">condainstall.sh</span></code>
+script can be used to create a minimal anaconda installation from
+scratch.  First download and source the <code class="docutils literal notranslate"><span class="pre">condainstall.sh</span></code> script
+from the fermipy repository:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ curl -OL https://raw.githubusercontent.com/fermiPy/fermipy/master/condainstall.sh
+$ <span class="nb">source</span> condainstall.sh
+</pre></div>
+</div>
+<p>If you do not already have anaconda python installed on your system
+this script will create a new installation under <code class="docutils literal notranslate"><span class="pre">$HOME/miniconda</span></code>.
+If you already have anaconda installed and the <code class="docutils literal notranslate"><span class="pre">conda</span></code> command is in
+your path the script will use your existing installation.  After
+running <code class="docutils literal notranslate"><span class="pre">condainstall.sh</span></code> fermipy can be installed with conda:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ conda install fermipy
+</pre></div>
+</div>
+<p>Once fermipy is installed you can initialize the ST/fermipy
+environment by running <code class="docutils literal notranslate"><span class="pre">condasetup.sh</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ curl -OL https://raw.githubusercontent.com/fermiPy/fermipy/master/condasetup.sh
+$ <span class="nb">source</span> condasetup.sh
+</pre></div>
+</div>
+<p>If you installed fermipy in a specific conda environment you should
+switch to this environment before running the script:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">source</span> activate fermi-env
+$ <span class="nb">source</span> condasetup.sh
+</pre></div>
+</div>
+</div>
+<div class="section" id="installing-with-docker">
+<span id="dockerinstall"></span><h2>Installing with Docker<a class="headerlink" href="#installing-with-docker" title="Permalink to this headline">¶</a></h2>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">This method for installing the STs is currently experimental
+and has not been fully tested on all operating systems.  If you
+encounter issues please try either the pip- or anaconda-based
+installation instructions.</p>
+</div>
+<p>Docker is a virtualization tool that can be used to deploy software in
+portable containers that can be run on any operating system that
+supports Docker.  Before following these instruction you should first
+install docker on your machine following the <a class="reference external" href="https://docs.docker.com/engine/installation/">installation instructions</a> for your operating
+system.  Docker is currently supported on the following operating
+systems:</p>
+<ul class="simple">
+<li>macOS 10.10.3 Yosemite or later</li>
+<li>Ubuntu Precise 12.04 or later</li>
+<li>Debian 8.0 or later</li>
+<li>RHEL7 or later</li>
+<li>Windows 10 or later</li>
+</ul>
+<p>Note that Docker is not supported by RHEL6 or its variants (CentOS6,
+Scientific Linux 6).</p>
+<p>These instructions describe how to create a docker-based ST
+installation that comes preinstalled with anaconda python and fermipy.
+The installation is fully contained in a docker image that is roughly
+2GB in size.  To see a list of the available images go to the <a class="reference external" href="https://hub.docker.com/r/fermipy/fermipy/tags/">fermipy
+Docker Hub page</a>.
+Images are tagged with the release version of the STs that was used to
+build the image (e.g. 11-05-00).  The <em>latest</em> tag points to the image
+for the most recent ST release.</p>
+<p>To install the <em>latest</em> image first download the image file:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ docker pull fermipy/fermipy
+</pre></div>
+</div>
+<p>Now switch to the directory where you plan to run your analysis and execute
+the following command to launch a docker container instance:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ docker run -it --rm -p <span class="m">8888</span>:8888 -v <span class="nv">$PWD</span>:/workdir -w /workdir fermipy/fermipy
+</pre></div>
+</div>
+<p>This will start an ipython notebook server that will be attached to
+port 8888.  Once you start the server it will print a URL that you can
+use to connect to it with the web browser on your host machine.  The
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">-v</span> <span class="pre">$PWD:/workdir</span></code> argument mounts the current directory to the
+working area of the container.  Additional directories may be mounted
+by adding more volume arguments <code class="docutils literal notranslate"><span class="pre">-v</span></code> with host and container paths
+separated by a colon.</p>
+<p>The same docker image may be used to launch python, ipython, or a bash
+shell by passing the command as an argument to <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">run</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ docker run -it --rm -v <span class="nv">$PWD</span>:/workdir -w /workdir fermipy/fermipy ipython
+$ docker run -it --rm -v <span class="nv">$PWD</span>:/workdir -w /workdir fermipy/fermipy python
+$ docker run -it --rm -v <span class="nv">$PWD</span>:/workdir -w /workdir fermipy/fermipy /bin/bash
+</pre></div>
+</div>
+<p>By default interactive graphics will not be enabled.  The following
+commands can be used to enable X11 forwarding for interactive graphics
+on an OSX machine.  This requires you to have installed XQuartz 2.7.10
+or later.  First enable remote connections by default and start the X
+server:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ defaults write org.macosforge.xquartz.X11 nolisten_tcp -boolean <span class="nb">false</span>
+$ open -a XQuartz
+</pre></div>
+</div>
+<p>Now check that the X server is running and listening on port 6000:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ lsof -i :6000
+</pre></div>
+</div>
+<p>If you don’t see X11 listening on port 6000 then try restarting XQuartz.</p>
+<p>Once you have XQuartz configured you can enable forwarding by setting
+DISPLAY environment variable to the IP address of the host machine:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">export</span> <span class="nv">HOST_IP</span><span class="o">=</span><span class="sb">`</span>ifconfig en0 <span class="p">|</span> grep <span class="s2">&quot;inet &quot;</span> <span class="p">|</span> cut -d <span class="s2">&quot; &quot;</span> -f2<span class="sb">`</span>
+$ xhost +local:
+$ docker run -it --rm -e <span class="nv">DISPLAY</span><span class="o">=</span><span class="nv">$HOST_IP</span>:0 -v <span class="nv">$PWD</span>:/workdir -w /workdir fermipy ipython
+</pre></div>
+</div>
+</div>
+<div class="section" id="installing-development-versions">
+<span id="devinstall"></span><h2>Installing Development Versions<a class="headerlink" href="#installing-development-versions" title="Permalink to this headline">¶</a></h2>
+<p>The instructions describe how to install development versions of
+Fermipy.  Before installing a development version we recommend first
+installing a tagged release following the <a class="reference internal" href="#pipinstall"><span class="std std-ref">Installing with pip</span></a> or
+<a class="reference internal" href="#condainstall"><span class="std std-ref">Installing with Anaconda Python</span></a> instructions above.</p>
+<p>The development version of Fermipy can be installed by running <code class="docutils literal notranslate"><span class="pre">pip</span>
+<span class="pre">install</span></code> with the URL of the git repository:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ pip install git+https://github.com/fermiPy/fermipy.git
+</pre></div>
+</div>
+<p>This will install the most recent commit on the master branch.  Note
+that care should be taken when using development versions as
+features/APIs under active development may change in subsequent
+versions without notice.</p>
+</div>
+<div class="section" id="running-at-slac">
+<h2>Running at SLAC<a class="headerlink" href="#running-at-slac" title="Permalink to this headline">¶</a></h2>
+<p>This section provides specific installation instructions for running
+in the SLAC computing environment.
+We suggest to follow these instruction if you are running Fermipy at SLAC.
+You will create your own conda installation in this way you will not depend on old version of programs present in the SLAC machines.
+First grab the installation and setup scripts from the fermipy github repository:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ curl -OL https://raw.githubusercontent.com/fermiPy/fermipy/master/condainstall.sh
+$ curl -OL https://raw.githubusercontent.com/fermiPy/fermipy/master/slacsetup.sh
+</pre></div>
+</div>
+<p>Now choose an installation path. This should be a new directory (e.g. $HOME/anaconda) that has at least 2-4 GB available.
+We will assign this location to the <code class="docutils literal notranslate"><span class="pre">CONDABASE</span></code> environment variable which is used by the setup script to find the location of your python installation.
+To avoid setting this every time you log in it’s recommended to set <code class="docutils literal notranslate"><span class="pre">CONDABASE</span></code> into your .bashrc file.</p>
+<p>Now run the following commands to install anaconda and fermipy. This will take about 5-10 minutes.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">export</span> <span class="nv">CONDABASE</span><span class="o">=</span>&lt;path to install directory&gt;
+$ bash condainstall.sh <span class="nv">$CONDABASE</span>
+</pre></div>
+</div>
+<p>Once anaconda is installed you will initialize your python and ST environment by running the slacsetup function in <code class="docutils literal notranslate"><span class="pre">slacsetup.sh</span></code>.
+This function will set the appropriate environment variables needed to run the STs and python.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="nb">source</span> slacsetup.sh
+$ slacsetup
+</pre></div>
+</div>
+<p>For convenience you can also copy this function into your .bashrc file so that it will automatically be available when you launch a new shell session.
+By default the function will setup your environment to point to a recent version of the STs and the installation of python in <code class="docutils literal notranslate"><span class="pre">CONDABASE</span></code>.
+If <code class="docutils literal notranslate"><span class="pre">CONDABASE</span></code> is not defined then it will use the installation of python that is packaged with a given release of the STs.
+The slacsetup function takes two optional arguments which can be used to override the ST version or python installation path.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Use ST 10-00-05</span>
+$ slacsetup <span class="m">10</span>-00-05
+<span class="c1"># Use ST 11-01-01 and python distribution located at &lt;PATH&gt;</span>
+$ slacsetup <span class="m">11</span>-01-01 &lt;PATH&gt;
+</pre></div>
+</div>
+<p>The installation script only installs packages that are required by fermipy and the STs.
+Once you’ve initialized your shell environment you are free to install additional python packages with the conda package manager tool with conda install &lt;package name&gt;.
+Packages that are not available on conda can also be installed with pip.</p>
+<p>conda can also be used to upgrade packages. For instance you can upgrade fermipy to the newest version with the conda update command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ conda update fermipy
+</pre></div>
+</div>
+<p>You can verify that the installation has succeeded by importing <code class="docutils literal notranslate"><span class="pre">GTAnalysis</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ python
+Python <span class="m">2</span>.7.8 <span class="p">|</span>Anaconda <span class="m">2</span>.1.0 <span class="o">(</span><span class="m">64</span>-bit<span class="o">)</span><span class="p">|</span> <span class="o">(</span>default, Aug <span class="m">21</span> <span class="m">2014</span>, <span class="m">18</span>:22:21<span class="o">)</span>
+<span class="o">[</span>GCC <span class="m">4</span>.4.7 <span class="m">20120313</span> <span class="o">(</span>Red Hat <span class="m">4</span>.4.7-1<span class="o">)]</span> on linux2
+Type <span class="s2">&quot;help&quot;</span>, <span class="s2">&quot;copyright&quot;</span>, <span class="s2">&quot;credits&quot;</span> or <span class="s2">&quot;license&quot;</span> <span class="k">for</span> more information.
+Anaconda is brought to you by Continuum Analytics.
+Please check out: http://continuum.io/thanks and https://binstar.org
+&gt;&gt;&gt; from fermipy.gtanalysis import GTAnalysis
+</pre></div>
+</div>
+</div>
+<div class="section" id="upgrading">
+<h2>Upgrading<a class="headerlink" href="#upgrading" title="Permalink to this headline">¶</a></h2>
+<p>By default installing fermipy with <code class="docutils literal notranslate"><span class="pre">pip</span></code> or <code class="docutils literal notranslate"><span class="pre">conda</span></code> will get the latest tagged
+released available on the <a class="reference external" href="https://pypi.python.org/pypi">PyPi</a>
+package respository.  You can check your currently installed version
+of fermipy with <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">show</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ pip show fermipy
+</pre></div>
+</div>
+<p>or <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">info</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ conda info fermipy
+</pre></div>
+</div>
+<p>To upgrade your fermipy installation to the latest version run the pip
+installation command with <code class="docutils literal notranslate"><span class="pre">--upgrade</span> <span class="pre">--no-deps</span></code> (remember to also
+include the <code class="docutils literal notranslate"><span class="pre">--user</span></code> option if you’re running at SLAC):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ pip install fermipy --upgrade --no-deps
+Collecting fermipy
+Installing collected packages: fermipy
+  Found existing installation: fermipy <span class="m">0</span>.6.6
+    Uninstalling fermipy-0.6.6:
+      Successfully uninstalled fermipy-0.6.6
+Successfully installed fermipy-0.6.7
+</pre></div>
+</div>
+<p>If you installed fermipy with <code class="docutils literal notranslate"><span class="pre">conda</span></code> the equivalent command is:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ conda update fermipy
+</pre></div>
+</div>
+</div>
+<div class="section" id="developer-installation">
+<span id="gitinstall"></span><h2>Developer Installation<a class="headerlink" href="#developer-installation" title="Permalink to this headline">¶</a></h2>
+<p>These instructions describe how to install fermipy from its git source
+code repository using the <code class="docutils literal notranslate"><span class="pre">setup.py</span></code> script.  Installing from source
+can be useful if you want to make your own modifications to the
+fermipy source code.  Note that non-developers are recommended to
+install a tagged release of fermipy following the <a class="reference internal" href="#pipinstall"><span class="std std-ref">Installing with pip</span></a> or
+<a class="reference internal" href="#condainstall"><span class="std std-ref">Installing with Anaconda Python</span></a> instructions above.</p>
+<p>First clone the fermipy git repository and cd to the root directory of
+the repository:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ git clone https://github.com/fermiPy/fermipy.git
+$ <span class="nb">cd</span> fermipy
+</pre></div>
+</div>
+<p>To install the latest commit in the master branch run <code class="docutils literal notranslate"><span class="pre">setup.py</span>
+<span class="pre">install</span></code> from the root directory:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Install the latest commit</span>
+$ git checkout master
+$ python setup.py install --user
+</pre></div>
+</div>
+<p>A useful option if you are doing active code development is to install
+your working copy of the package.  This will create an installation in
+your python distribution that is linked to the copy of the code in
+your local repository.  This allows you to run with any local
+modifications without having to reinstall the package each time you
+make a change.  To install your working copy of fermipy run with the
+<code class="docutils literal notranslate"><span class="pre">develop</span></code> argument:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Install a link to your source code installation</span>
+$ python setup.py develop --user
+</pre></div>
+</div>
+<p>You can later remove the link to your working copy by running the same
+command with the <code class="docutils literal notranslate"><span class="pre">--uninstall</span></code> flag:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Install a link to your source code installation</span>
+$ python setup.py develop --user --uninstall
+</pre></div>
+</div>
+<p>Specific release tags can be installed by running <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">checkout</span></code>
+before running the installation command:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Checkout a specific release tag</span>
+$ git checkout X.X.X
+$ python setup.py install --user
+</pre></div>
+</div>
+<p>To see the list of available release tags run <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">tag</span></code>.</p>
+</div>
+<div class="section" id="issues">
+<h2>Issues<a class="headerlink" href="#issues" title="Permalink to this headline">¶</a></h2>
+<p>If you get an error about importing matplotlib (specifically something
+about the macosx backend) you might change your default backend to get
+it working.  The <a class="reference external" href="http://matplotlib.org/users/customizing.html">customizing matplotlib page</a> details the
+instructions to modify your default matplotlibrc file (you can pick
+GTK or WX as an alternative).  Specifically the <code class="docutils literal notranslate"><span class="pre">TkAgg</span></code> and
+<code class="docutils literal notranslate"><span class="pre">macosx</span></code> backends currently do not work on OSX if you upgrade
+matplotlib to the version required by fermipy.  To get around this
+issue you can switch to the <code class="docutils literal notranslate"><span class="pre">Agg</span></code> backend at runtime before
+importing fermipy:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>&gt;&gt;&gt; import matplotlib
+&gt;&gt;&gt; matplotlib.use<span class="o">(</span><span class="s1">&#39;Agg&#39;</span><span class="o">)</span>
+</pre></div>
+</div>
+<p>However note that this backend does not support interactive plotting.</p>
+<p>If you are running OSX El Capitan or newer you may see errors like the following:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>dyld: Library not loaded
+</pre></div>
+</div>
+<p>In this case you will need to disable the System Integrity Protections
+(SIP).  See <a class="reference external" href="http://www.macworld.com/article/2986118/security/how-to-modify-system-integrity-protection-in-el-capitan.html">here</a>
+for instructions on disabling SIP on your machine.</p>
+<p>In some cases the setup.py script will fail to properly install the
+fermipy package dependecies.  If installation fails you can try
+running a forced upgrade of these packages with <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">--upgrade</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ pip install --upgrade --user numpy matplotlib scipy astropy pyyaml healpy wcsaxes ipython jupyter
+</pre></div>
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="quickstart.html" class="btn btn-neutral float-right" title="Quickstart Guide" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="index.html" class="btn btn-neutral float-left" title="Welcome to Fermipy’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

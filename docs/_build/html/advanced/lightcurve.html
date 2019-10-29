@@ -1,0 +1,640 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>Light Curves &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../_static/jquery.js"></script>
+        <script type="text/javascript" src="../_static/underscore.js"></script>
+        <script type="text/javascript" src="../_static/doctools.js"></script>
+        <script type="text/javascript" src="../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Extension Fitting" href="extension.html" />
+    <link rel="prev" title="SED Analysis" href="sed.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../developer.html">Developer Notes</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Advanced Analysis Methods</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="sed.html">SED Analysis</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Light Curves</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#examples">Examples</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#optimizing-computation-speed">Optimizing Computation Speed</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#output">Output</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#reference-api">Reference/API</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="extension.html">Extension Fitting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tsmap.html">TS Map</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tscube.html">TS Cube</a></li>
+<li class="toctree-l2"><a class="reference internal" href="residmap.html">Residual Map</a></li>
+<li class="toctree-l2"><a class="reference internal" href="detection.html">Source Finding</a></li>
+<li class="toctree-l2"><a class="reference internal" href="localization.html">Source Localization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="phased.html">Phased Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sensitivity.html">Sensitivity Tools</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="index.html">Advanced Analysis Methods</a> &raquo;</li>
+        
+      <li>Light Curves</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/advanced/lightcurve.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="light-curves">
+<span id="lightcurve"></span><h1>Light Curves<a class="headerlink" href="#light-curves" title="Permalink to this headline">¶</a></h1>
+<p><a class="reference internal" href="../fermipy.html#fermipy.gtanalysis.GTAnalysis.lightcurve" title="fermipy.gtanalysis.GTAnalysis.lightcurve"><code class="xref py py-meth docutils literal notranslate"><span class="pre">lightcurve()</span></code></a> fits the
+charateristics of a source (flux, TS, etc.) in a sequence of time
+bins.  This method uses the data selection and model of a baseline
+analysis (e.g. the full mission) and is therefore restricted to
+analyzing time bins that are encompassed by the time selection of the
+baseline analysis.  In general when using this method it is
+recommended to use a baseline time selection of at least several years
+or more to ensure the best characterization of background sources in
+the ROI.</p>
+<p>When fitting a time bin the method will initialize the model to the
+current parameters of the baseline analysis.  The parameters to be
+refit in each time bin may be controlled with <code class="docutils literal notranslate"><span class="pre">free_background</span></code>,
+<code class="docutils literal notranslate"><span class="pre">free_sources</span></code>, <code class="docutils literal notranslate"><span class="pre">free_radius</span></code>, <code class="docutils literal notranslate"><span class="pre">free_params</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">shape_ts_threshold</span></code> options.</p>
+<div class="section" id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Generate a lightcurve with two bins</span>
+<span class="n">lc</span> <span class="o">=</span> <span class="n">gta</span><span class="o">.</span><span class="n">lightcurve</span><span class="p">(</span><span class="s1">&#39;sourceA&#39;</span><span class="p">,</span> <span class="n">nbins</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+
+<span class="c1"># Generate a lightcurve with 1-week binning</span>
+<span class="n">lc</span> <span class="o">=</span> <span class="n">gta</span><span class="o">.</span><span class="n">lightcurve</span><span class="p">(</span><span class="s1">&#39;sourceA&#39;</span><span class="p">,</span> <span class="n">binsz</span><span class="o">=</span><span class="mf">86400.</span><span class="o">*</span><span class="mf">7.0</span><span class="p">)</span>
+
+<span class="c1"># Generate a lightcurve freeing sources within 3 deg of the source</span>
+<span class="c1"># of interest</span>
+<span class="n">lc</span> <span class="o">=</span> <span class="n">gta</span><span class="o">.</span><span class="n">lightcurve</span><span class="p">(</span><span class="s1">&#39;sourceA&#39;</span><span class="p">,</span> <span class="n">binsz</span><span class="o">=</span><span class="mf">86400.</span><span class="o">*</span><span class="mf">7.0</span><span class="p">,</span> <span class="n">free_radius</span><span class="o">=</span><span class="mf">3.0</span><span class="p">)</span>
+
+<span class="c1"># Generate a lightcurve with arbitrary MET binning</span>
+<span class="n">lc</span> <span class="o">=</span> <span class="n">gta</span><span class="o">.</span><span class="n">lightcurve</span><span class="p">(</span><span class="s1">&#39;sourceA&#39;</span><span class="p">,</span> <span class="n">time_bins</span><span class="o">=</span><span class="p">[</span><span class="mi">239557414</span><span class="p">,</span><span class="mi">242187214</span><span class="p">,</span><span class="mi">250076614</span><span class="p">],</span>
+                    <span class="n">free_radius</span><span class="o">=</span><span class="mf">3.0</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="optimizing-computation-speed">
+<h2>Optimizing Computation Speed<a class="headerlink" href="#optimizing-computation-speed" title="Permalink to this headline">¶</a></h2>
+<p>By default the <code class="docutils literal notranslate"><span class="pre">lightcurve</span></code> method will run an end-to-end analysis
+in each time bin using the same processing steps as the baseline analysis.
+Depending on the data selection and ROI size each time bin may take
+10-15 minutes to process.  There are several options which can be used
+to reduce the lightcurve computation time.  The <code class="docutils literal notranslate"><span class="pre">multithread</span></code> option splits the
+analysis of time bins across multiple cores:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Split lightcurve across all available cores</span>
+<span class="n">lc</span> <span class="o">=</span> <span class="n">gta</span><span class="o">.</span><span class="n">lightcurve</span><span class="p">(</span><span class="s1">&#39;sourceA&#39;</span><span class="p">,</span> <span class="n">nbins</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">multithread</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+
+<span class="c1"># split lightcurve across 2 cores</span>
+<span class="n">lc</span> <span class="o">=</span> <span class="n">gta</span><span class="o">.</span><span class="n">lightcurve</span><span class="p">(</span><span class="s1">&#39;sourceA&#39;</span><span class="p">,</span> <span class="n">nbins</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">multithread</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">nthread</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that when using the <code class="docutils literal notranslate"><span class="pre">multithread</span></code> option in a computing cluster
+environment one should reserve the appropriate number of cores when
+submitting the job.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">use_scaled_srcmap</span></code> option generates an approximate source map
+for each time bin by scaling the source map of the baseline analysis
+by the relative exposure.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Enable scaled source map</span>
+<span class="n">lc</span> <span class="o">=</span> <span class="n">gta</span><span class="o">.</span><span class="n">lightcurve</span><span class="p">(</span><span class="s1">&#39;sourceA&#39;</span><span class="p">,</span> <span class="n">nbins</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">use_scaled_srcmap</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Enabling this option can speed up the lightcurve calculation by at
+least a factor of 2 or 3 at the cost of slightly reduced accuracy in the
+model evaluation.  For point-source analysis on medium to long
+timescales (days to years) the additional systematic uncertainty
+incurred by using scaled source maps should be no more than 1-2%.  For
+analysis of diffuse sources or short time scales (&lt; day) one should
+verify the systematic uncertainty is less than the systematic
+uncertainty of the IRFs.</p>
+</div>
+<div class="section" id="output">
+<span id="lightcurve-dict"></span><h2>Output<a class="headerlink" href="#output" title="Permalink to this headline">¶</a></h2>
+<p>The following tables describe the contents of the method output:</p>
+<table border="1" class="colwidths-given docutils" id="id1">
+<caption><span class="caption-text"><em>lightcurve</em> Output</span><a class="headerlink" href="#id1" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">name</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">str</span></code></a></td>
+<td>Name of Source,</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">tmin</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Lower edge of time bin in MET.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">tmax</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Upper edge of time bin in MET.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">fit_success</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Did the likelihood fit converge? True if yes.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">config</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></td>
+<td>Copy of the input configuration to this method.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">ts_var</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>TS of variability. Should be distributed as <span class="math notranslate nohighlight">\(\chi^2\)</span> with <span class="math notranslate nohighlight">\(n-1\)</span> degrees of freedom, where <span class="math notranslate nohighlight">\(n\)</span> is the number of time bins.</td>
+</tr>
+</tbody>
+</table>
+<table border="1" class="colwidths-given docutils" id="id2">
+<caption><span class="caption-text"><em>lightcurve</em> Source Output</span><a class="headerlink" href="#id2" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">param_names</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Names of spectral parameters.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">param_values</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Spectral parameter values.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">param_errors</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Spectral parameters errors.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">ts</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Source test statistic.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">loglike</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Log-likelihood of the model evaluated at the best-fit normalization of the source.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">loglike_scan</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Log-likelihood values for scan of source normalization.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dloglike_scan</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Delta Log-likelihood values for scan of source normalization.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">eflux_scan</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Energy flux values for scan of source normalization.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">flux_scan</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Flux values for scan of source normalization.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">norm_scan</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Normalization parameters values for scan of source normalization.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">npred</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Number of predicted counts from this source integrated over the analysis energy range.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">npred_wt</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Number of predicted counts from this source integrated over the analysis energy range.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">pivot_energy</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Decorrelation energy in MeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">flux</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated over analysis energy range</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">flux100</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 100 MeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">flux1000</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 1 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">flux10000</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 10 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">flux_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Photon flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated over analysis energy range</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">flux100_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Photon flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 100 MeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">flux1000_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Photon flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 1 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">flux10000_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Photon flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 10 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">flux_ul95</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>95% CL upper limit on the photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated over analysis energy range</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">flux100_ul95</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>95% CL upper limit on the photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 100 MeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">flux1000_ul95</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>95% CL upper limit on the photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 1 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">flux10000_ul95</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>95% CL upper limit on the photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 10 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">eflux</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Energy flux (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated over analysis energy range</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">eflux100</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Energy flux (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 100 MeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">eflux1000</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Energy flux (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 1 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">eflux10000</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Energy flux (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 10 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">eflux_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Energy flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated over analysis energy range</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">eflux100_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Energy flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 100 MeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">eflux1000_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Energy flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 1 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">eflux10000_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Energy flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 10 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">eflux_ul95</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>95% CL upper limit on the energy flux (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated over analysis energy range</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">eflux100_ul95</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>95% CL upper limit on the energy flux (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 100 MeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">eflux1000_ul95</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>95% CL upper limit on the energy flux (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 1 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">eflux10000_ul95</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>95% CL upper limit on the energy flux (<span class="math notranslate nohighlight">\(\mathrm{MeV}~\mathrm{cm}^{-2}~\mathrm{s}^{-1}\)</span>) integrated from 10 GeV to 316 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dnde</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Differential photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>) evaluated at the pivot energy.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dnde100</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Differential photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>) evaluated at 100 MeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dnde1000</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Differential photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>) evaluated at 1 GeV.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dnde10000</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Differential photon flux (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>) evaluated at 10 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dnde_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Differential photon flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>) evaluated at the pivot energy.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dnde100_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Differential photon flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>) evaluated at 100 MeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dnde1000_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Differential photon flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>) evaluated at 1 GeV.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dnde10000_err</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Differential photon flux uncertainty (<span class="math notranslate nohighlight">\(\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}\)</span>) evaluated at 10 GeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dnde_index</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Logarithmic slope of the differential photon spectrum evaluated at the pivot energy.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dnde100_index</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Logarithmic slope of the differential photon spectrum evaluated at 100 MeV.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dnde1000_index</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Logarithmic slope of the differential photon spectrum evaluated evaluated at 1 GeV.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dnde10000_index</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Logarithmic slope of the differential photon spectrum evaluated at 10 GeV.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="reference-api">
+<h2>Reference/API<a class="headerlink" href="#reference-api" title="Permalink to this headline">¶</a></h2>
+<dl class="method">
+<dt>
+<code class="descclassname">GTAnalysis.</code><code class="descname">lightcurve</code><span class="sig-paren">(</span><em>name</em>, <em>**kwargs</em><span class="sig-paren">)</span></dt>
+<dd><p>Generate a lightcurve for the named source. The function will
+complete the basic analysis steps for each bin and perform a
+likelihood fit for each bin. Extracted values (along with
+errors) are Integral Flux, spectral model, Spectral index, TS
+value, pred. # of photons. Note: successful calculation of
+TS:subscript:<code class="xref py py-obj docutils literal notranslate"><span class="pre">var</span></code> requires at least one free background
+parameter and a previously optimized ROI model.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – source name</li>
+<li><strong>binsz</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – Set the lightcurve bin size in seconds. (default : 86400.0)</li>
+<li><strong>free_background</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Leave background parameters free when performing the fit. If
+True then any parameters that are currently free in the
+model will be fit simultaneously with the source of
+interest. (default : False)</li>
+<li><strong>free_params</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.8)"><em>list</em></a>) – Set the parameters of the source of interest that will be
+re-fit in each time bin. If this list is empty then all
+parameters will be freed. (default : None)</li>
+<li><strong>free_radius</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – Free normalizations of background sources within this
+angular distance in degrees from the source of interest.  If
+None then no sources will be freed. (default : None)</li>
+<li><strong>free_sources</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.8)"><em>list</em></a>) – List of sources to be freed.  These sources will be added to
+the list of sources satisfying the free_radius selection.
+(default : None)</li>
+<li><strong>make_plots</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Generate diagnostic plots. (default : False)</li>
+<li><strong>max_free_sources</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Maximum number of sources that will be fit simultaneously
+with the source of interest. (default : 5)</li>
+<li><strong>multithread</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Split the calculation across number of processes set by
+nthread option. (default : False)</li>
+<li><strong>nbins</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Set the number of lightcurve bins.  The total time range
+will be evenly split into this number of time bins. (default
+: None)</li>
+<li><strong>nthread</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Number of processes to create when multithread is True.  If
+None then one process will be created for each available
+core. (default : None)</li>
+<li><strong>outdir</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Store all data in this directory (e.g. “30days”). If None
+then use current directory. (default : None)</li>
+<li><strong>save_bin_data</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Save analysis directories for individual time bins.  If
+False then only the analysis results table will be saved.
+(default : True)</li>
+<li><strong>shape_ts_threshold</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – Set the TS threshold at which shape parameters of sources
+will be freed.  If a source is detected with TS less than
+this value then its shape parameters will be fixed to values
+derived from the analysis of the full time range. (default :
+16.0)</li>
+<li><strong>systematic</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – Systematic correction factor for TS:subscript:<code class="xref py py-obj docutils literal notranslate"><span class="pre">var</span></code>. See
+Sect. 3.6 in 2FGL for details. (default : 0.02)</li>
+<li><strong>time_bins</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.8)"><em>list</em></a>) – Set the lightcurve bin edge sequence in MET.  This option
+takes precedence over binsz and nbins. (default : None)</li>
+<li><strong>use_local_ltcube</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Generate a fast LT cube. (default : True)</li>
+<li><strong>use_scaled_srcmap</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Generate approximate source maps for each time bin by
+scaling the current source maps by the exposure ratio with
+respect to that time bin. (default : False)</li>
+<li><strong>write_fits</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Write the output to a FITS file. (default : True)</li>
+<li><strong>write_npy</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Write the output dictionary to a numpy file. (default :
+True)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>LightCurve</strong> – Dictionary containing output of the LC analysis</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)">dict</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="extension.html" class="btn btn-neutral float-right" title="Extension Fitting" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="sed.html" class="btn btn-neutral float-left" title="SED Analysis" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

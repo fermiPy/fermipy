@@ -1,0 +1,455 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fermipy.diffuse.gt_srcmap_partial &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../../fermipy.html">fermipy</a> &raquo;</li>
+        
+      <li>fermipy.diffuse.gt_srcmap_partial</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for fermipy.diffuse.gt_srcmap_partial</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Run gtsrcmaps for a single energy plane for a single source</span>
+
+<span class="sd">This is useful to parallize the production of the source maps</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">import</span> <span class="nn">xml.etree.cElementTree</span> <span class="k">as</span> <span class="nn">ElementTree</span>
+
+<span class="kn">import</span> <span class="nn">BinnedAnalysis</span> <span class="k">as</span> <span class="nn">BinnedAnalysis</span>
+<span class="kn">import</span> <span class="nn">pyLikelihood</span> <span class="k">as</span> <span class="nn">pyLike</span>
+
+<span class="kn">from</span> <span class="nn">fermipy</span> <span class="k">import</span> <span class="n">utils</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.file_archive</span> <span class="k">import</span> <span class="n">FileFlags</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.link</span> <span class="k">import</span> <span class="n">Link</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.scatter_gather</span> <span class="k">import</span> <span class="n">ScatterGather</span>
+<span class="kn">from</span> <span class="nn">fermipy.jobs.slac_impl</span> <span class="k">import</span> <span class="n">make_nfs_path</span>
+
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.name_policy</span> <span class="k">import</span> <span class="n">NameFactory</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.binning</span> <span class="k">import</span> <span class="n">Component</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.diffuse_src_manager</span> <span class="k">import</span> <span class="n">make_diffuse_comp_info_dict</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse.source_factory</span> <span class="k">import</span> <span class="n">make_sources</span>
+<span class="kn">from</span> <span class="nn">fermipy.diffuse</span> <span class="k">import</span> <span class="n">defaults</span> <span class="k">as</span> <span class="n">diffuse_defaults</span>
+
+
+<span class="n">NAME_FACTORY</span> <span class="o">=</span> <span class="n">NameFactory</span><span class="p">()</span>
+<span class="n">HPX_ORDER_TO_KSTEP</span> <span class="o">=</span> <span class="p">{</span><span class="mi">5</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">6</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">7</span><span class="p">:</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">8</span><span class="p">:</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">9</span><span class="p">:</span> <span class="mi">1</span><span class="p">}</span>
+
+
+<div class="viewcode-block" id="GtSrcmapsDiffuse"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.gt_srcmap_partial.GtSrcmapsDiffuse">[docs]</a><span class="k">class</span> <span class="nc">GtSrcmapsDiffuse</span><span class="p">(</span><span class="n">Link</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small class to create srcmaps for only once source in a model,</span>
+<span class="sd">    and optionally for only some of the energy layers.</span>
+
+<span class="sd">    This is useful for parallelizing source map creation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">NULL_MODEL</span> <span class="o">=</span> <span class="s1">&#39;srcmdls/null.xml&#39;</span>
+
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-srcmaps-diffuse&#39;</span>
+    <span class="n">linkname_default</span> <span class="o">=</span> <span class="s1">&#39;srcmaps-diffuse&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="si">%s</span><span class="s1"> [options]&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Run gtsrcmaps for one or more energy planes for a single source&quot;</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">irfs</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;irfs&#39;</span><span class="p">],</span>
+                           <span class="n">expcube</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;expcube&#39;</span><span class="p">],</span>
+                           <span class="n">bexpmap</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;bexpmap&#39;</span><span class="p">],</span>
+                           <span class="n">cmap</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;cmap&#39;</span><span class="p">],</span>
+                           <span class="n">srcmdl</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;srcmdl&#39;</span><span class="p">],</span>
+                           <span class="n">outfile</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">gtopts</span><span class="p">[</span><span class="s1">&#39;outfile&#39;</span><span class="p">],</span>
+                           <span class="n">source</span><span class="o">=</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;Input source&#39;</span><span class="p">,</span> <span class="nb">str</span><span class="p">),</span>
+                           <span class="n">kmin</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;Minimum Energy Bin&#39;</span><span class="p">,</span> <span class="nb">int</span><span class="p">),</span>
+                           <span class="n">kmax</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="s1">&#39;Maximum Energy Bin&#39;</span><span class="p">,</span> <span class="nb">int</span><span class="p">),</span>
+                           <span class="n">no_psf</span><span class="o">=</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s2">&quot;Do not apply PSF smearing&quot;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">),</span>
+                           <span class="n">gzip</span><span class="o">=</span><span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="s1">&#39;Compress output file&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">))</span>
+
+    <span class="n">default_file_args</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">expcube</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">input_mask</span><span class="p">,</span>
+                             <span class="n">cmap</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">input_mask</span><span class="p">,</span>
+                             <span class="n">bexpmap</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">input_mask</span><span class="p">,</span>
+                             <span class="n">srcmdl</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">input_mask</span><span class="p">,</span>
+                             <span class="n">outfile</span><span class="o">=</span><span class="n">FileFlags</span><span class="o">.</span><span class="n">output_mask</span><span class="p">)</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span>
+
+<div class="viewcode-block" id="GtSrcmapsDiffuse.run_analysis"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.gt_srcmap_partial.GtSrcmapsDiffuse.run_analysis">[docs]</a>    <span class="k">def</span> <span class="nf">run_analysis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">argv</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Run this analysis&quot;&quot;&quot;</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">(</span><span class="n">argv</span><span class="p">)</span>
+        <span class="n">obs</span> <span class="o">=</span> <span class="n">BinnedAnalysis</span><span class="o">.</span><span class="n">BinnedObs</span><span class="p">(</span><span class="n">irfs</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">irfs</span><span class="p">,</span>
+                                       <span class="n">expCube</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">expcube</span><span class="p">,</span>
+                                       <span class="n">srcMaps</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">cmap</span><span class="p">,</span>
+                                       <span class="n">binnedExpMap</span><span class="o">=</span><span class="n">args</span><span class="o">.</span><span class="n">bexpmap</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">no_psf</span><span class="p">:</span>
+            <span class="n">performConvolution</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">performConvolution</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="n">config</span> <span class="o">=</span> <span class="n">BinnedAnalysis</span><span class="o">.</span><span class="n">BinnedConfig</span><span class="p">(</span><span class="n">performConvolution</span><span class="o">=</span><span class="n">performConvolution</span><span class="p">)</span>
+        <span class="n">like</span> <span class="o">=</span> <span class="n">BinnedAnalysis</span><span class="o">.</span><span class="n">BinnedAnalysis</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span>
+                                             <span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;MINUIT&#39;</span><span class="p">,</span>
+                                             <span class="n">srcModel</span><span class="o">=</span><span class="n">GtSrcmapsDiffuse</span><span class="o">.</span><span class="n">NULL_MODEL</span><span class="p">,</span>
+                                             <span class="n">wmap</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                                             <span class="n">config</span><span class="o">=</span><span class="n">config</span><span class="p">)</span>
+
+        <span class="n">source_factory</span> <span class="o">=</span> <span class="n">pyLike</span><span class="o">.</span><span class="n">SourceFactory</span><span class="p">(</span><span class="n">obs</span><span class="o">.</span><span class="n">observation</span><span class="p">)</span>
+        <span class="n">source_factory</span><span class="o">.</span><span class="n">readXml</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">srcmdl</span><span class="p">,</span> <span class="n">BinnedAnalysis</span><span class="o">.</span><span class="n">_funcFactory</span><span class="p">,</span>
+                               <span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+
+        <span class="n">source</span> <span class="o">=</span> <span class="n">source_factory</span><span class="o">.</span><span class="n">releaseSource</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">source</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">diffuse_source</span> <span class="o">=</span> <span class="n">pyLike</span><span class="o">.</span><span class="n">DiffuseSource</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">diffuse_source</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">diffuse_source</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">diffuse_source</span><span class="o">.</span><span class="n">mapBaseObject</span><span class="p">()</span><span class="o">.</span><span class="n">projmap</span><span class="p">()</span><span class="o">.</span><span class="n">setExtrapolation</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">RuntimeError</span><span class="p">:</span>
+                <span class="k">pass</span>
+
+        <span class="n">like</span><span class="o">.</span><span class="n">logLike</span><span class="o">.</span><span class="n">saveSourceMap_partial</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">outfile</span><span class="p">,</span> <span class="n">source</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">kmin</span><span class="p">,</span> <span class="n">args</span><span class="o">.</span><span class="n">kmax</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">args</span><span class="o">.</span><span class="n">gzip</span><span class="p">:</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">system</span><span class="p">(</span><span class="s2">&quot;gzip -9 </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">args</span><span class="o">.</span><span class="n">outfile</span><span class="p">)</span></div></div>
+
+
+
+<div class="viewcode-block" id="SrcmapsDiffuse_SG"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.gt_srcmap_partial.SrcmapsDiffuse_SG">[docs]</a><span class="k">class</span> <span class="nc">SrcmapsDiffuse_SG</span><span class="p">(</span><span class="n">ScatterGather</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Small class to generate configurations for `GtSrcmapsDiffuse`</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">appname</span> <span class="o">=</span> <span class="s1">&#39;fermipy-srcmaps-diffuse-sg&#39;</span>
+    <span class="n">usage</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> [options]&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">appname</span><span class="p">)</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="s2">&quot;Run gtsrcmaps for diffuse sources&quot;</span>
+    <span class="n">clientclass</span> <span class="o">=</span> <span class="n">GtSrcmapsDiffuse</span>
+
+    <span class="n">job_time</span> <span class="o">=</span> <span class="mi">1500</span>
+
+    <span class="n">default_options</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">comp</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">],</span>
+                           <span class="n">data</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">],</span>
+                           <span class="n">library</span><span class="o">=</span><span class="n">diffuse_defaults</span><span class="o">.</span><span class="n">diffuse</span><span class="p">[</span><span class="s1">&#39;library&#39;</span><span class="p">],</span>
+                           <span class="n">make_xml</span><span class="o">=</span><span class="p">(</span><span class="kc">True</span><span class="p">,</span> <span class="s1">&#39;Write xml files needed to make source maps&#39;</span><span class="p">,</span> <span class="nb">bool</span><span class="p">))</span>
+
+    <span class="vm">__doc__</span> <span class="o">+=</span> <span class="n">Link</span><span class="o">.</span><span class="n">construct_docstring</span><span class="p">(</span><span class="n">default_options</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_write_xml</span><span class="p">(</span><span class="n">xmlfile</span><span class="p">,</span> <span class="n">srcs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Save the ROI model as an XML &quot;&quot;&quot;</span>
+        <span class="n">root</span> <span class="o">=</span> <span class="n">ElementTree</span><span class="o">.</span><span class="n">Element</span><span class="p">(</span><span class="s1">&#39;source_library&#39;</span><span class="p">)</span>
+        <span class="n">root</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="s1">&#39;title&#39;</span><span class="p">,</span> <span class="s1">&#39;source_library&#39;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">src</span> <span class="ow">in</span> <span class="n">srcs</span><span class="p">:</span>
+            <span class="n">src</span><span class="o">.</span><span class="n">write_xml</span><span class="p">(</span><span class="n">root</span><span class="p">)</span>
+
+        <span class="n">output_file</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">xmlfile</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span>
+        <span class="n">output_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">prettify_xml</span><span class="p">(</span><span class="n">root</span><span class="p">))</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_handle_component</span><span class="p">(</span><span class="n">sourcekey</span><span class="p">,</span> <span class="n">comp_dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Make the source objects and write the xml for a component</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">comp_dict</span><span class="o">.</span><span class="n">comp_key</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">fullkey</span> <span class="o">=</span> <span class="n">sourcekey</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fullkey</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">sourcekey</span><span class="p">,</span> <span class="n">comp_dict</span><span class="o">.</span><span class="n">comp_key</span><span class="p">)</span>
+        <span class="n">srcdict</span> <span class="o">=</span> <span class="n">make_sources</span><span class="p">(</span><span class="n">fullkey</span><span class="p">,</span> <span class="n">comp_dict</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">comp_dict</span><span class="o">.</span><span class="n">model_type</span> <span class="o">==</span> <span class="s1">&#39;IsoSource&#39;</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Writing xml for </span><span class="si">%s</span><span class="s2"> to </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2"> </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">fullkey</span><span class="p">,</span>
+                                                       <span class="n">comp_dict</span><span class="o">.</span><span class="n">srcmdl_name</span><span class="p">,</span>
+                                                       <span class="n">comp_dict</span><span class="o">.</span><span class="n">model_type</span><span class="p">,</span>
+                                                       <span class="n">comp_dict</span><span class="o">.</span><span class="n">Spectral_Filename</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">comp_dict</span><span class="o">.</span><span class="n">model_type</span> <span class="o">==</span> <span class="s1">&#39;MapCubeSource&#39;</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Writing xml for </span><span class="si">%s</span><span class="s2"> to </span><span class="si">%s</span><span class="s2">: </span><span class="si">%s</span><span class="s2"> </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">fullkey</span><span class="p">,</span>
+                                                       <span class="n">comp_dict</span><span class="o">.</span><span class="n">srcmdl_name</span><span class="p">,</span>
+                                                       <span class="n">comp_dict</span><span class="o">.</span><span class="n">model_type</span><span class="p">,</span>
+                                                       <span class="n">comp_dict</span><span class="o">.</span><span class="n">Spatial_Filename</span><span class="p">))</span>
+        <span class="n">SrcmapsDiffuse_SG</span><span class="o">.</span><span class="n">_write_xml</span><span class="p">(</span><span class="n">comp_dict</span><span class="o">.</span><span class="n">srcmdl_name</span><span class="p">,</span> <span class="n">srcdict</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_make_xml_files</span><span class="p">(</span><span class="n">diffuse_comp_info_dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Make all the xml file for individual components</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="s1">&#39;srcmdls&#39;</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+        <span class="k">for</span> <span class="n">sourcekey</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">diffuse_comp_info_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="n">comp_info</span> <span class="o">=</span> <span class="n">diffuse_comp_info_dict</span><span class="p">[</span><span class="n">sourcekey</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">comp_info</span><span class="o">.</span><span class="n">components</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">SrcmapsDiffuse_SG</span><span class="o">.</span><span class="n">_handle_component</span><span class="p">(</span><span class="n">sourcekey</span><span class="p">,</span> <span class="n">comp_info</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">sub_comp_info</span> <span class="ow">in</span> <span class="n">comp_info</span><span class="o">.</span><span class="n">components</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+                    <span class="n">SrcmapsDiffuse_SG</span><span class="o">.</span><span class="n">_handle_component</span><span class="p">(</span><span class="n">sourcekey</span><span class="p">,</span> <span class="n">sub_comp_info</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SrcmapsDiffuse_SG.build_job_configs"><a class="viewcode-back" href="../../../fermipy_diffuse.html#fermipy.diffuse.gt_srcmap_partial.SrcmapsDiffuse_SG.build_job_configs">[docs]</a>    <span class="k">def</span> <span class="nf">build_job_configs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">args</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Hook to build job configurations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">job_configs</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">components</span> <span class="o">=</span> <span class="n">Component</span><span class="o">.</span><span class="n">build_from_yamlfile</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;comp&#39;</span><span class="p">])</span>
+        <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">update_base_dict</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;data&#39;</span><span class="p">])</span>
+
+        <span class="n">ret_dict</span> <span class="o">=</span> <span class="n">make_diffuse_comp_info_dict</span><span class="p">(</span><span class="n">components</span><span class="o">=</span><span class="n">components</span><span class="p">,</span>
+                                               <span class="n">library</span><span class="o">=</span><span class="n">args</span><span class="p">[</span><span class="s1">&#39;library&#39;</span><span class="p">],</span>
+                                               <span class="n">basedir</span><span class="o">=</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+        <span class="n">diffuse_comp_info_dict</span> <span class="o">=</span> <span class="n">ret_dict</span><span class="p">[</span><span class="s1">&#39;comp_info_dict&#39;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">args</span><span class="p">[</span><span class="s1">&#39;make_xml&#39;</span><span class="p">]:</span>
+            <span class="n">SrcmapsDiffuse_SG</span><span class="o">.</span><span class="n">_make_xml_files</span><span class="p">(</span><span class="n">diffuse_comp_info_dict</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">diffuse_comp_info_key</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">diffuse_comp_info_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()):</span>
+            <span class="n">diffuse_comp_info_value</span> <span class="o">=</span> <span class="n">diffuse_comp_info_dict</span><span class="p">[</span><span class="n">diffuse_comp_info_key</span><span class="p">]</span>
+            <span class="n">no_psf</span> <span class="o">=</span> <span class="n">diffuse_comp_info_value</span><span class="o">.</span><span class="n">no_psf</span>
+            <span class="k">for</span> <span class="n">comp</span> <span class="ow">in</span> <span class="n">components</span><span class="p">:</span>
+                <span class="n">zcut</span> <span class="o">=</span> <span class="s2">&quot;zmax</span><span class="si">%i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">comp</span><span class="o">.</span><span class="n">zmax</span>
+                <span class="n">key</span> <span class="o">=</span> <span class="n">comp</span><span class="o">.</span><span class="n">make_key</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{ebin_name}</span><span class="s1">_</span><span class="si">{evtype_name}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">diffuse_comp_info_value</span><span class="o">.</span><span class="n">components</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">sub_comp_info</span> <span class="o">=</span> <span class="n">diffuse_comp_info_value</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">sub_comp_info</span> <span class="o">=</span> <span class="n">diffuse_comp_info_value</span><span class="o">.</span><span class="n">get_component_info</span><span class="p">(</span><span class="n">comp</span><span class="p">)</span>
+                <span class="n">name_keys</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">zcut</span><span class="o">=</span><span class="n">zcut</span><span class="p">,</span>
+                                 <span class="n">sourcekey</span><span class="o">=</span><span class="n">sub_comp_info</span><span class="o">.</span><span class="n">sourcekey</span><span class="p">,</span>
+                                 <span class="n">ebin</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">ebin_name</span><span class="p">,</span>
+                                 <span class="n">psftype</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">evtype_name</span><span class="p">,</span>
+                                 <span class="n">mktime</span><span class="o">=</span><span class="s1">&#39;none&#39;</span><span class="p">,</span>
+                                 <span class="n">coordsys</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">coordsys</span><span class="p">,</span>
+                                 <span class="n">irf_ver</span><span class="o">=</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">irf_ver</span><span class="p">(),</span>
+                                 <span class="n">fullpath</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+                <span class="n">kmin</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">kmax</span> <span class="o">=</span> <span class="n">comp</span><span class="o">.</span><span class="n">enumbins</span> <span class="o">+</span> <span class="mi">1</span>
+                <span class="n">outfile_base</span> <span class="o">=</span> <span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">srcmaps</span><span class="p">(</span><span class="o">**</span><span class="n">name_keys</span><span class="p">)</span>
+                <span class="n">kstep</span> <span class="o">=</span> <span class="n">HPX_ORDER_TO_KSTEP</span><span class="p">[</span><span class="n">comp</span><span class="o">.</span><span class="n">hpx_order</span><span class="p">]</span>
+                <span class="n">base_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">cmap</span><span class="o">=</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">ccube</span><span class="p">(</span><span class="o">**</span><span class="n">name_keys</span><span class="p">),</span>
+                                 <span class="n">expcube</span><span class="o">=</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">ltcube</span><span class="p">(</span><span class="o">**</span><span class="n">name_keys</span><span class="p">),</span>
+                                 <span class="n">irfs</span><span class="o">=</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">irfs</span><span class="p">(</span><span class="o">**</span><span class="n">name_keys</span><span class="p">),</span>
+                                 <span class="n">bexpmap</span><span class="o">=</span><span class="n">NAME_FACTORY</span><span class="o">.</span><span class="n">bexpcube</span><span class="p">(</span><span class="o">**</span><span class="n">name_keys</span><span class="p">),</span>
+                                 <span class="n">srcmdl</span><span class="o">=</span><span class="n">sub_comp_info</span><span class="o">.</span><span class="n">srcmdl_name</span><span class="p">,</span>
+                                 <span class="n">source</span><span class="o">=</span><span class="n">sub_comp_info</span><span class="o">.</span><span class="n">source_name</span><span class="p">,</span>
+                                 <span class="n">no_psf</span><span class="o">=</span><span class="n">no_psf</span><span class="p">,</span>
+                                 <span class="n">evtype</span><span class="o">=</span><span class="n">comp</span><span class="o">.</span><span class="n">evtype</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">kstep</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">kstep</span> <span class="o">=</span> <span class="n">kmax</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">pass</span>
+
+                <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">kmin</span><span class="p">,</span> <span class="n">kmax</span><span class="p">,</span> <span class="n">kstep</span><span class="p">):</span>
+                    <span class="n">full_key</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">%s</span><span class="s2">_</span><span class="si">%s</span><span class="s2">_</span><span class="si">%02i</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">diffuse_comp_info_key</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">k</span><span class="p">)</span>
+                    <span class="n">khi</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">kmax</span><span class="p">,</span> <span class="n">k</span> <span class="o">+</span> <span class="n">kstep</span><span class="p">)</span>
+
+                    <span class="n">full_dict</span> <span class="o">=</span> <span class="n">base_dict</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                    <span class="n">outfile</span> <span class="o">=</span> <span class="n">outfile_base</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.fits&#39;</span><span class="p">,</span> <span class="s1">&#39;_</span><span class="si">%02i</span><span class="s1">.fits&#39;</span> <span class="o">%</span> <span class="n">k</span><span class="p">)</span>
+                    <span class="n">logfile</span> <span class="o">=</span> <span class="n">make_nfs_path</span><span class="p">(</span><span class="n">outfile_base</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.fits&#39;</span><span class="p">,</span> <span class="s1">&#39;_</span><span class="si">%02i</span><span class="s1">.log&#39;</span> <span class="o">%</span> <span class="n">k</span><span class="p">))</span>
+                    <span class="n">full_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">dict</span><span class="p">(</span><span class="n">outfile</span><span class="o">=</span><span class="n">outfile</span><span class="p">,</span>
+                                          <span class="n">kmin</span><span class="o">=</span><span class="n">k</span><span class="p">,</span> <span class="n">kmax</span><span class="o">=</span><span class="n">khi</span><span class="p">,</span>
+                                          <span class="n">logfile</span><span class="o">=</span><span class="n">logfile</span><span class="p">))</span>
+                    <span class="n">job_configs</span><span class="p">[</span><span class="n">full_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">full_dict</span>
+
+        <span class="k">return</span> <span class="n">job_configs</span></div></div>
+
+
+<span class="k">def</span> <span class="nf">register_srcmaps_diffuse</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Register these classes with the `LinkFactory` &quot;&quot;&quot;</span>
+    <span class="n">GtSrcmapsDiffuse</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+    <span class="n">SrcmapsDiffuse_SG</span><span class="o">.</span><span class="n">register_class</span><span class="p">()</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

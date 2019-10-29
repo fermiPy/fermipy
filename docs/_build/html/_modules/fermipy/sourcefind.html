@@ -1,0 +1,945 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>fermipy.sourcefind &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="../../_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script type="text/javascript" src="../../_static/jquery.js"></script>
+        <script type="text/javascript" src="../../_static/underscore.js"></script>
+        <script type="text/javascript" src="../../_static/doctools.js"></script>
+        <script type="text/javascript" src="../../_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../output.html">Output File</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fitting.html">ROI Optimization and Fitting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html">Docs</a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+          <li><a href="../fermipy.html">fermipy</a> &raquo;</li>
+        
+      <li>fermipy.sourcefind</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for fermipy.sourcefind</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Licensed under a 3-clause BSD style license - see LICENSE.rst</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">copy</span>
+<span class="kn">import</span> <span class="nn">pprint</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">astropy.io</span> <span class="k">import</span> <span class="n">fits</span>
+<span class="kn">from</span> <span class="nn">astropy.coordinates</span> <span class="k">import</span> <span class="n">SkyCoord</span>
+<span class="kn">from</span> <span class="nn">astropy.table</span> <span class="k">import</span> <span class="n">Table</span><span class="p">,</span> <span class="n">Column</span>
+<span class="kn">from</span> <span class="nn">gammapy.maps</span> <span class="k">import</span> <span class="n">WcsNDMap</span><span class="p">,</span> <span class="n">MapCoord</span>
+<span class="kn">import</span> <span class="nn">fermipy.config</span>
+<span class="kn">from</span> <span class="nn">fermipy</span> <span class="k">import</span> <span class="n">utils</span>
+<span class="kn">from</span> <span class="nn">fermipy</span> <span class="k">import</span> <span class="n">defaults</span>
+<span class="kn">from</span> <span class="nn">fermipy</span> <span class="k">import</span> <span class="n">wcs_utils</span>
+<span class="kn">from</span> <span class="nn">fermipy</span> <span class="k">import</span> <span class="n">fits_utils</span>
+<span class="kn">from</span> <span class="nn">fermipy.sourcefind_utils</span> <span class="k">import</span> <span class="n">fit_error_ellipse</span>
+<span class="kn">from</span> <span class="nn">fermipy.sourcefind_utils</span> <span class="k">import</span> <span class="n">find_peaks</span>
+<span class="kn">from</span> <span class="nn">fermipy.skymap</span> <span class="k">import</span> <span class="n">Map</span>
+<span class="kn">from</span> <span class="nn">fermipy.config</span> <span class="k">import</span> <span class="n">ConfigSchema</span>
+<span class="kn">from</span> <span class="nn">fermipy.gtutils</span> <span class="k">import</span> <span class="n">FreeParameterState</span><span class="p">,</span> <span class="n">SourceMapState</span>
+<span class="kn">from</span> <span class="nn">fermipy.timing</span> <span class="k">import</span> <span class="n">Timer</span>
+<span class="kn">from</span> <span class="nn">fermipy.model_utils</span> <span class="k">import</span> <span class="n">get_function_norm_par_name</span>
+<span class="kn">from</span> <span class="nn">LikelihoodState</span> <span class="k">import</span> <span class="n">LikelihoodState</span>
+<span class="kn">import</span> <span class="nn">pyLikelihood</span> <span class="k">as</span> <span class="nn">pyLike</span>
+
+
+<div class="viewcode-block" id="SourceFind"><a class="viewcode-back" href="../../fermipy.html#fermipy.gtanalysis.SourceFind">[docs]</a><span class="k">class</span> <span class="nc">SourceFind</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Mixin class which provides source-finding functionality to</span>
+<span class="sd">    `~fermipy.gtanalysis.GTAnalysis`.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="SourceFind.find_sources"><a class="viewcode-back" href="../../fermipy.html#fermipy.gtanalysis.SourceFind.find_sources">[docs]</a>    <span class="k">def</span> <span class="nf">find_sources</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;An iterative source-finding algorithm that uses likelihood</span>
+<span class="sd">        ratio (TS) maps of the region of interest to find new sources.</span>
+<span class="sd">        After each iteration a new TS map is generated incorporating</span>
+<span class="sd">        sources found in the previous iteration.  The method stops</span>
+<span class="sd">        when the number of iterations exceeds ``max_iter`` or no</span>
+<span class="sd">        sources exceeding ``sqrt_ts_threshold`` are found.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        {options}</span>
+
+<span class="sd">        tsmap : dict</span>
+<span class="sd">           Keyword arguments dictionary for tsmap method.</span>
+
+<span class="sd">        tscube : dict</span>
+<span class="sd">           Keyword arguments dictionary for tscube method.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+
+<span class="sd">        peaks : list</span>
+<span class="sd">           List of peak objects.</span>
+
+<span class="sd">        sources : list</span>
+<span class="sd">           List of source objects.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">timer</span> <span class="o">=</span> <span class="n">Timer</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Starting.&#39;</span><span class="p">)</span>
+
+        <span class="n">schema</span> <span class="o">=</span> <span class="n">ConfigSchema</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">defaults</span><span class="p">[</span><span class="s1">&#39;sourcefind&#39;</span><span class="p">],</span>
+                              <span class="n">tsmap</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">defaults</span><span class="p">[</span><span class="s1">&#39;tsmap&#39;</span><span class="p">],</span>
+                              <span class="n">tscube</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">defaults</span><span class="p">[</span><span class="s1">&#39;tscube&#39;</span><span class="p">])</span>
+
+        <span class="n">schema</span><span class="o">.</span><span class="n">add_option</span><span class="p">(</span><span class="s1">&#39;search_skydir&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">SkyCoord</span><span class="p">)</span>
+        <span class="n">schema</span><span class="o">.</span><span class="n">add_option</span><span class="p">(</span><span class="s1">&#39;search_minmax_radius&#39;</span><span class="p">,</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span> <span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span>
+
+        <span class="n">config</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">create_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;sourcefind&#39;</span><span class="p">],</span>
+                                   <span class="n">tsmap</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;tsmap&#39;</span><span class="p">],</span>
+                                   <span class="n">tscube</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;tscube&#39;</span><span class="p">])</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">create_config</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># Defining default properties of test source model</span>
+        <span class="n">config</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;Index&#39;</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">)</span>
+        <span class="n">config</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;SpectrumType&#39;</span><span class="p">,</span> <span class="s1">&#39;PowerLaw&#39;</span><span class="p">)</span>
+        <span class="n">config</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;SpatialModel&#39;</span><span class="p">,</span> <span class="s1">&#39;PointSource&#39;</span><span class="p">)</span>
+        <span class="n">config</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;Prefactor&#39;</span><span class="p">,</span> <span class="mf">1E-13</span><span class="p">)</span>
+
+        <span class="n">o</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;sources&#39;</span><span class="p">:</span> <span class="p">[],</span> <span class="s1">&#39;peaks&#39;</span><span class="p">:</span> <span class="p">[]}</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;max_iter&#39;</span><span class="p">]):</span>
+            <span class="n">srcs</span><span class="p">,</span> <span class="n">peaks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_find_sources_iterate</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="o">**</span><span class="n">config</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Found </span><span class="si">%i</span><span class="s1"> sources in iteration </span><span class="si">%i</span><span class="s1">.&#39;</span> <span class="o">%</span>
+                             <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">srcs</span><span class="p">),</span> <span class="n">i</span><span class="p">))</span>
+
+            <span class="n">o</span><span class="p">[</span><span class="s1">&#39;sources&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">srcs</span>
+            <span class="n">o</span><span class="p">[</span><span class="s1">&#39;peaks&#39;</span><span class="p">]</span> <span class="o">+=</span> <span class="n">peaks</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">srcs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">break</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Done.&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Execution time: </span><span class="si">%.2f</span><span class="s1"> s&#39;</span><span class="p">,</span> <span class="n">timer</span><span class="o">.</span><span class="n">elapsed_time</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">o</span></div>
+
+    <span class="k">def</span> <span class="nf">_build_src_dicts_from_peaks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">peaks</span><span class="p">,</span> <span class="n">maps</span><span class="p">,</span> <span class="n">src_dict_template</span><span class="p">):</span>
+
+        <span class="n">tsmap</span> <span class="o">=</span> <span class="n">maps</span><span class="p">[</span><span class="s1">&#39;ts&#39;</span><span class="p">]</span>
+        <span class="n">amp</span> <span class="o">=</span> <span class="n">maps</span><span class="p">[</span><span class="s1">&#39;amplitude&#39;</span><span class="p">]</span>
+
+        <span class="n">src_dicts</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">peaks</span><span class="p">:</span>
+
+            <span class="n">o</span> <span class="o">=</span> <span class="n">fit_error_ellipse</span><span class="p">(</span><span class="n">tsmap</span><span class="p">,</span> <span class="p">(</span><span class="n">p</span><span class="p">[</span><span class="s1">&#39;ix&#39;</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="s1">&#39;iy&#39;</span><span class="p">]),</span> <span class="n">dpix</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">skydir</span> <span class="o">=</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;skydir&#39;</span><span class="p">]</span>
+            <span class="n">p</span><span class="p">[</span><span class="s1">&#39;fit_loc&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span>
+            <span class="n">p</span><span class="p">[</span><span class="s1">&#39;fit_skydir&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;skydir&#39;</span><span class="p">]</span>
+
+            <span class="n">p</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">o</span><span class="p">)</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">create_source_name</span><span class="p">(</span><span class="n">skydir</span><span class="p">)</span>
+            <span class="n">src_dict</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">src_dict_template</span><span class="p">)</span>
+            <span class="n">norm_par</span> <span class="o">=</span> <span class="n">get_function_norm_par_name</span><span class="p">(</span>
+                <span class="n">src_dict_template</span><span class="p">[</span><span class="s1">&#39;SpectrumType&#39;</span><span class="p">])</span>
+            <span class="n">src_dict</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">norm_par</span><span class="p">:</span> <span class="n">amp</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="s1">&#39;iy&#39;</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="s1">&#39;ix&#39;</span><span class="p">]],</span>
+                             <span class="s1">&#39;ra&#39;</span><span class="p">:</span> <span class="n">skydir</span><span class="o">.</span><span class="n">icrs</span><span class="o">.</span><span class="n">ra</span><span class="o">.</span><span class="n">deg</span><span class="p">,</span>
+                             <span class="s1">&#39;dec&#39;</span><span class="p">:</span> <span class="n">skydir</span><span class="o">.</span><span class="n">icrs</span><span class="o">.</span><span class="n">dec</span><span class="o">.</span><span class="n">deg</span><span class="p">})</span>
+
+            <span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;glon_err&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;glon_err&#39;</span><span class="p">]</span>
+            <span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;glat_err&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;glat_err&#39;</span><span class="p">]</span>
+            <span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;ra_err&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;ra_err&#39;</span><span class="p">]</span>
+            <span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;dec_err&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;dec_err&#39;</span><span class="p">]</span>
+            <span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;pos_err&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;pos_err&#39;</span><span class="p">]</span>
+            <span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;pos_err_semimajor&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;pos_err_semimajor&#39;</span><span class="p">]</span>
+            <span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;pos_err_semiminor&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;pos_err_semiminor&#39;</span><span class="p">]</span>
+            <span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;pos_r68&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;pos_r68&#39;</span><span class="p">]</span>
+            <span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;pos_r95&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;pos_r95&#39;</span><span class="p">]</span>
+            <span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;pos_r99&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;pos_r99&#39;</span><span class="p">]</span>
+            <span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;pos_angle&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;pos_angle&#39;</span><span class="p">]</span>
+            <span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;pos_gal_cov&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;pos_gal_cov&#39;</span><span class="p">]</span>
+            <span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;pos_gal_corr&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;pos_gal_corr&#39;</span><span class="p">]</span>
+            <span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;pos_cel_cov&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;pos_cel_cov&#39;</span><span class="p">]</span>
+            <span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;pos_cel_corr&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="p">[</span><span class="s1">&#39;pos_cel_corr&#39;</span><span class="p">]</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Found source</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span>
+                             <span class="s1">&#39;name: </span><span class="si">%s</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">name</span> <span class="o">+</span>
+                             <span class="s1">&#39;ts: </span><span class="si">%f</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">p</span><span class="p">[</span><span class="s1">&#39;amp&#39;</span><span class="p">]</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+            <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">src_dicts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">src_dict</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">names</span><span class="p">,</span> <span class="n">src_dicts</span>
+
+    <span class="k">def</span> <span class="nf">_find_sources_iterate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prefix</span><span class="p">,</span> <span class="n">iiter</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">src_dict_template</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;model&#39;</span><span class="p">)</span>
+
+        <span class="n">threshold</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;sqrt_ts_threshold&#39;</span><span class="p">)</span>
+        <span class="n">multithread</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;multithread&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">min_separation</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;min_separation&#39;</span><span class="p">)</span>
+        <span class="n">sources_per_iter</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;sources_per_iter&#39;</span><span class="p">)</span>
+        <span class="n">search_skydir</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;search_skydir&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">search_minmax_radius</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;search_minmax_radius&#39;</span><span class="p">,</span> <span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">])</span>
+        <span class="n">tsmap_fitter</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;tsmap_fitter&#39;</span><span class="p">,</span> <span class="s1">&#39;tsmap&#39;</span><span class="p">)</span>
+        <span class="n">free_params</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;free_params&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">free_params</span><span class="p">:</span>
+            <span class="n">free_params</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="n">tsmap_fitter</span> <span class="o">==</span> <span class="s1">&#39;tsmap&#39;</span><span class="p">:</span>
+            <span class="n">kw</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;tsmap&#39;</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="n">kw</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">src_dict_template</span>
+            <span class="n">kw</span><span class="p">[</span><span class="s1">&#39;multithread&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">multithread</span>
+            <span class="n">m</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tsmap</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">join_strings</span><span class="p">([</span><span class="n">prefix</span><span class="p">,</span>
+                                               <span class="s1">&#39;sourcefind_</span><span class="si">%02i</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">iiter</span><span class="p">]),</span>
+                           <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+
+        <span class="k">elif</span> <span class="n">tsmap_fitter</span> <span class="o">==</span> <span class="s1">&#39;tscube&#39;</span><span class="p">:</span>
+            <span class="n">kw</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;tscube&#39;</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="n">kw</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">src_dict_template</span>
+            <span class="n">kw</span><span class="p">[</span><span class="s1">&#39;do_sed&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">m</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tscube</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">join_strings</span><span class="p">([</span><span class="n">prefix</span><span class="p">,</span>
+                                                <span class="s1">&#39;sourcefind_</span><span class="si">%02i</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">iiter</span><span class="p">]),</span>
+                            <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                <span class="s1">&#39;Unrecognized option for fitter: </span><span class="si">%s</span><span class="s1">.&#39;</span> <span class="o">%</span> <span class="n">tsmap_fitter</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">tsmap_fitter</span> <span class="o">==</span> <span class="s1">&#39;tsmap&#39;</span><span class="p">:</span>
+            <span class="n">peaks</span> <span class="o">=</span> <span class="n">find_peaks</span><span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="s1">&#39;sqrt_ts&#39;</span><span class="p">],</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">min_separation</span><span class="p">)</span>
+            <span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">src_dicts</span><span class="p">)</span> <span class="o">=</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">_build_src_dicts_from_peaks</span><span class="p">(</span><span class="n">peaks</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">src_dict_template</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">tsmap_fitter</span> <span class="o">==</span> <span class="s1">&#39;tscube&#39;</span><span class="p">:</span>
+            <span class="n">peaks</span> <span class="o">=</span> <span class="n">find_peaks</span><span class="p">(</span><span class="n">m</span><span class="p">[</span><span class="s1">&#39;sqrt_ts&#39;</span><span class="p">],</span> <span class="n">threshold</span><span class="p">,</span> <span class="n">min_separation</span><span class="p">)</span>
+            <span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">src_dicts</span><span class="p">)</span> <span class="o">=</span> \
+                <span class="bp">self</span><span class="o">.</span><span class="n">_build_src_dicts_from_peaks</span><span class="p">(</span><span class="n">peaks</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">src_dict_template</span><span class="p">)</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            sd = m[&#39;tscube&#39;].find_sources(threshold ** 2, min_separation,</span>
+<span class="sd">                                          use_cumul=False,</span>
+<span class="sd">                                          output_src_dicts=True,</span>
+<span class="sd">                                          output_peaks=True)</span>
+<span class="sd">            peaks = sd[&#39;Peaks&#39;]</span>
+<span class="sd">            names = sd[&#39;Names&#39;]</span>
+<span class="sd">            src_dicts = sd[&#39;SrcDicts&#39;]</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+
+        <span class="c1"># Loop over the seeds and add them to the model</span>
+        <span class="n">new_src_names</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">src_dict</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">names</span><span class="p">,</span> <span class="n">src_dicts</span><span class="p">):</span>
+            <span class="c1"># Protect against finding the same source twice</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">has_source</span><span class="p">(</span><span class="n">name</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Source </span><span class="si">%s</span><span class="s1"> found again.  Ignoring it.&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="c1"># Skip the source if it&#39;s outside the search region</span>
+            <span class="k">if</span> <span class="n">search_skydir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+
+                <span class="n">skydir</span> <span class="o">=</span> <span class="n">SkyCoord</span><span class="p">(</span><span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;ra&#39;</span><span class="p">],</span> <span class="n">src_dict</span><span class="p">[</span><span class="s1">&#39;dec&#39;</span><span class="p">],</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;deg&#39;</span><span class="p">)</span>
+                <span class="n">separation</span> <span class="o">=</span> <span class="n">search_skydir</span><span class="o">.</span><span class="n">separation</span><span class="p">(</span><span class="n">skydir</span><span class="p">)</span><span class="o">.</span><span class="n">deg</span>
+
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">utils</span><span class="o">.</span><span class="n">apply_minmax_selection</span><span class="p">(</span><span class="n">separation</span><span class="p">,</span>
+                                                    <span class="n">search_minmax_radius</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Source </span><span class="si">%s</span><span class="s1"> outside of &#39;</span>
+                                     <span class="s1">&#39;search region.  Ignoring it.&#39;</span><span class="p">,</span>
+                                     <span class="n">name</span><span class="p">)</span>
+                    <span class="k">continue</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">src_dict</span><span class="p">,</span> <span class="n">free</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">free_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+            <span class="n">new_src_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">new_src_names</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">sources_per_iter</span><span class="p">:</span>
+                <span class="k">break</span>
+
+        <span class="c1"># Re-fit spectral parameters of each source individually</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">new_src_names</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Performing spectral fit for </span><span class="si">%s</span><span class="s1">.&#39;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="n">pprint</span><span class="o">.</span><span class="n">pformat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">params</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">free_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="kc">True</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="n">free_params</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">pprint</span><span class="o">.</span><span class="n">pformat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">params</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">free_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+        <span class="n">srcs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">new_src_names</span><span class="p">:</span>
+            <span class="n">srcs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="p">[</span><span class="n">name</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">srcs</span><span class="p">,</span> <span class="n">peaks</span>
+
+<div class="viewcode-block" id="SourceFind.localize"><a class="viewcode-back" href="../../fermipy.html#fermipy.gtanalysis.SourceFind.localize">[docs]</a>    <span class="k">def</span> <span class="nf">localize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Find the best-fit position of a source.  Localization is</span>
+<span class="sd">        performed in two steps.  First a TS map is computed centered</span>
+<span class="sd">        on the source with half-width set by ``dtheta_max``.  A fit is</span>
+<span class="sd">        then performed to the maximum TS peak in this map.  The source</span>
+<span class="sd">        position is then further refined by scanning the likelihood in</span>
+<span class="sd">        the vicinity of the peak found in the first step.  The size of</span>
+<span class="sd">        the scan region is set to encompass the 99% positional</span>
+<span class="sd">        uncertainty contour as determined from the peak fit.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        name : str</span>
+<span class="sd">            Source name.</span>
+
+<span class="sd">        {options}</span>
+
+<span class="sd">        optimizer : dict</span>
+<span class="sd">            Dictionary that overrides the default optimizer settings.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        localize : dict</span>
+<span class="sd">            Dictionary containing results of the localization</span>
+<span class="sd">            analysis.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">timer</span> <span class="o">=</span> <span class="n">Timer</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">get_source_by_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>
+
+        <span class="n">schema</span> <span class="o">=</span> <span class="n">ConfigSchema</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">defaults</span><span class="p">[</span><span class="s1">&#39;localize&#39;</span><span class="p">],</span>
+                              <span class="n">optimizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">defaults</span><span class="p">[</span><span class="s1">&#39;optimizer&#39;</span><span class="p">])</span>
+        <span class="n">schema</span><span class="o">.</span><span class="n">add_option</span><span class="p">(</span><span class="s1">&#39;use_cache&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="n">schema</span><span class="o">.</span><span class="n">add_option</span><span class="p">(</span><span class="s1">&#39;prefix&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">create_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;localize&#39;</span><span class="p">],</span>
+                                   <span class="n">optimizer</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;optimizer&#39;</span><span class="p">])</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">schema</span><span class="o">.</span><span class="n">create_config</span><span class="p">(</span><span class="n">config</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Running localization for </span><span class="si">%s</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="n">name</span><span class="p">)</span>
+
+        <span class="n">free_state</span> <span class="o">=</span> <span class="n">FreeParameterState</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">loc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_localize</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">config</span><span class="p">)</span>
+        <span class="n">free_state</span><span class="o">.</span><span class="n">restore</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Finished localization.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;make_plots&#39;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_plotter</span><span class="o">.</span><span class="n">make_localization_plots</span><span class="p">(</span><span class="n">loc</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="p">,</span>
+                                                  <span class="n">prefix</span><span class="o">=</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;prefix&#39;</span><span class="p">])</span>
+
+        <span class="n">outfile</span> <span class="o">=</span> \
+            <span class="n">utils</span><span class="o">.</span><span class="n">format_filename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">workdir</span><span class="p">,</span> <span class="s1">&#39;loc&#39;</span><span class="p">,</span>
+                                  <span class="n">prefix</span><span class="o">=</span><span class="p">[</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;prefix&#39;</span><span class="p">],</span>
+                                          <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)])</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;write_fits&#39;</span><span class="p">]:</span>
+            <span class="n">loc</span><span class="p">[</span><span class="s1">&#39;file&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">outfile</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.fits&#39;</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_make_localize_fits</span><span class="p">(</span><span class="n">loc</span><span class="p">,</span> <span class="n">outfile</span> <span class="o">+</span> <span class="s1">&#39;.fits&#39;</span><span class="p">,</span>
+                                     <span class="o">**</span><span class="n">config</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">config</span><span class="p">[</span><span class="s1">&#39;write_npy&#39;</span><span class="p">]:</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">outfile</span> <span class="o">+</span> <span class="s1">&#39;.npy&#39;</span><span class="p">,</span> <span class="nb">dict</span><span class="p">(</span><span class="n">loc</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Execution time: </span><span class="si">%.2f</span><span class="s1"> s&#39;</span><span class="p">,</span> <span class="n">timer</span><span class="o">.</span><span class="n">elapsed_time</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">loc</span></div>
+
+    <span class="k">def</span> <span class="nf">_make_localize_fits</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">loc</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">tab</span> <span class="o">=</span> <span class="n">fits_utils</span><span class="o">.</span><span class="n">dict_to_table</span><span class="p">(</span><span class="n">loc</span><span class="p">)</span>
+        <span class="n">hdu_data</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">table_to_hdu</span><span class="p">(</span><span class="n">tab</span><span class="p">)</span>
+        <span class="n">hdu_data</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;LOC_DATA&#39;</span>
+
+        <span class="n">hdus</span> <span class="o">=</span> <span class="p">[</span><span class="n">loc</span><span class="p">[</span><span class="s1">&#39;tsmap_peak&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">make_hdu</span><span class="p">(</span><span class="n">hdu</span><span class="o">=</span><span class="s1">&#39;PRIMARY&#39;</span><span class="p">),</span>
+                <span class="n">loc</span><span class="p">[</span><span class="s1">&#39;tsmap&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">make_hdu</span><span class="p">(</span><span class="n">hdu</span><span class="o">=</span><span class="s1">&#39;TSMAP&#39;</span><span class="p">),</span>
+                <span class="n">hdu_data</span><span class="p">]</span>
+
+        <span class="n">hdus</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;CONFIG&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">loc</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">])</span>
+        <span class="n">hdus</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s1">&#39;CONFIG&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">loc</span><span class="p">[</span><span class="s1">&#39;config&#39;</span><span class="p">])</span>
+        <span class="n">fits_utils</span><span class="o">.</span><span class="n">write_hdus</span><span class="p">(</span><span class="n">hdus</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_localize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">nstep</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;nstep&#39;</span><span class="p">)</span>
+        <span class="n">dtheta_max</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dtheta_max&#39;</span><span class="p">)</span>
+        <span class="n">update</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;update&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;prefix&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">use_cache</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;use_cache&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">free_background</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;free_background&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">free_radius</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;free_radius&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="n">fix_shape</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;fix_shape&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">tsmap_fitter</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;tsmap_fitter&#39;</span><span class="p">,</span> <span class="s1">&#39;tsmap&#39;</span><span class="p">)</span>
+
+        <span class="n">saved_state</span> <span class="o">=</span> <span class="n">LikelihoodState</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">like</span><span class="p">)</span>
+        <span class="n">loglike_init</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">like</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Initial Model Log-Likelihood: </span><span class="si">%f</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">loglike_init</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">free_background</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">free_sources</span><span class="p">(</span><span class="n">free</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">free_radius</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">diff_sources</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">sources</span> <span class="k">if</span> <span class="n">s</span><span class="o">.</span><span class="n">diffuse</span><span class="p">]</span>
+            <span class="n">skydir</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">skydir</span>
+            <span class="n">free_srcs</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">get_sources</span><span class="p">(</span><span class="n">skydir</span><span class="o">=</span><span class="n">skydir</span><span class="p">,</span>
+                                              <span class="n">distance</span><span class="o">=</span><span class="n">free_radius</span><span class="p">,</span>
+                                              <span class="n">exclude</span><span class="o">=</span><span class="n">diff_sources</span><span class="p">)]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">free_sources_by_name</span><span class="p">(</span><span class="n">free_srcs</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="s1">&#39;norm&#39;</span><span class="p">,</span>
+                                      <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+        <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">copy_source</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">skydir</span> <span class="o">=</span> <span class="n">src</span><span class="o">.</span><span class="n">skydir</span>
+        <span class="n">skywcs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">wcs</span>
+        <span class="n">src_pix</span> <span class="o">=</span> <span class="n">skydir</span><span class="o">.</span><span class="n">to_pixel</span><span class="p">(</span><span class="n">skywcs</span><span class="p">)</span>
+
+        <span class="n">fit0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_position_tsmap</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">prefix</span><span class="o">=</span><span class="n">prefix</span><span class="p">,</span>
+                                        <span class="n">dtheta_max</span><span class="o">=</span><span class="n">dtheta_max</span><span class="p">,</span>
+                                        <span class="n">zmin</span><span class="o">=-</span><span class="mf">3.0</span><span class="p">,</span>
+                                        <span class="n">use_pylike</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                        <span class="n">tsmap_fitter</span><span class="o">=</span><span class="n">tsmap_fitter</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Completed localization with TS Map.</span><span class="se">\n</span><span class="s1">&#39;</span>
+                          <span class="s1">&#39;(ra,dec) = (</span><span class="si">%10.4f</span><span class="s1">,</span><span class="si">%10.4f</span><span class="s1">) &#39;</span>
+                          <span class="s1">&#39;(glon,glat) = (</span><span class="si">%10.4f</span><span class="s1">,</span><span class="si">%10.4f</span><span class="s1">)&#39;</span><span class="p">,</span>
+                          <span class="n">fit0</span><span class="p">[</span><span class="s1">&#39;ra&#39;</span><span class="p">],</span> <span class="n">fit0</span><span class="p">[</span><span class="s1">&#39;dec&#39;</span><span class="p">],</span>
+                          <span class="n">fit0</span><span class="p">[</span><span class="s1">&#39;glon&#39;</span><span class="p">],</span> <span class="n">fit0</span><span class="p">[</span><span class="s1">&#39;glat&#39;</span><span class="p">])</span>
+
+        <span class="c1"># Fit baseline (point-source) model</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">free_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">fix_shape</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">free_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">free</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="s1">&#39;shape&#39;</span><span class="p">,</span>
+                             <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="n">fit_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span> <span class="o">**</span>
+                               <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;optimizer&#39;</span><span class="p">,</span> <span class="p">{}))</span>
+
+        <span class="c1"># Save likelihood value for baseline fit</span>
+        <span class="n">loglike_base</span> <span class="o">=</span> <span class="n">fit_output</span><span class="p">[</span><span class="s1">&#39;loglike&#39;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Baseline Model Log-Likelihood: </span><span class="si">%f</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">loglike_base</span><span class="p">)</span>
+
+        <span class="n">o</span> <span class="o">=</span> <span class="n">defaults</span><span class="o">.</span><span class="n">make_default_tuple</span><span class="p">(</span><span class="n">defaults</span><span class="o">.</span><span class="n">localize_output</span><span class="p">)</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">kwargs</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">fit_success</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">loglike_init</span> <span class="o">=</span> <span class="n">loglike_init</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">loglike_base</span> <span class="o">=</span> <span class="n">loglike_base</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">loglike_loc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">dloglike_loc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+
+        <span class="k">if</span> <span class="n">fit0</span><span class="p">[</span><span class="s1">&#39;fit_success&#39;</span><span class="p">]:</span>
+            <span class="n">scan_cdelt</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">fit0</span><span class="p">[</span><span class="s1">&#39;pos_r95&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="n">nstep</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">scan_cdelt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">skywcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cdelt</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Refining localization search to &#39;</span>
+                          <span class="s1">&#39;region of width: </span><span class="si">%.4f</span><span class="s1"> deg&#39;</span><span class="p">,</span>
+                          <span class="n">scan_cdelt</span> <span class="o">*</span> <span class="n">nstep</span><span class="p">)</span>
+
+        <span class="n">fit1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_position_scan</span><span class="p">(</span><span class="n">name</span><span class="p">,</span>
+                                       <span class="n">skydir</span><span class="o">=</span><span class="n">fit0</span><span class="p">[</span><span class="s1">&#39;skydir&#39;</span><span class="p">],</span>
+                                       <span class="n">scan_cdelt</span><span class="o">=</span><span class="n">scan_cdelt</span><span class="p">,</span>
+                                       <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="n">o</span><span class="o">.</span><span class="n">loglike_loc</span> <span class="o">=</span> <span class="n">fit1</span><span class="p">[</span><span class="s1">&#39;loglike&#39;</span><span class="p">]</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">dloglike_loc</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">loglike_loc</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">loglike_base</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">tsmap</span> <span class="o">=</span> <span class="n">fit0</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;tsmap&#39;</span><span class="p">)</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">tsmap_peak</span> <span class="o">=</span> <span class="n">fit1</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;tsmap&#39;</span><span class="p">)</span>
+        <span class="c1"># o.update(fit1)</span>
+
+        <span class="c1"># Best fit position and uncertainty from fit to TS map</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">fit_init</span> <span class="o">=</span> <span class="n">fit0</span>
+
+        <span class="c1"># Best fit position and uncertainty from pylike scan</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">fit_scan</span> <span class="o">=</span> <span class="n">fit1</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">fit1</span><span class="p">)</span>
+
+        <span class="n">cdelt0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">skywcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cdelt</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">cdelt1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">skywcs</span><span class="o">.</span><span class="n">wcs</span><span class="o">.</span><span class="n">cdelt</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">pix</span> <span class="o">=</span> <span class="n">fit1</span><span class="p">[</span><span class="s1">&#39;skydir&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_pixel</span><span class="p">(</span><span class="n">skywcs</span><span class="p">)</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">pos_offset</span> <span class="o">=</span> <span class="n">skydir</span><span class="o">.</span><span class="n">separation</span><span class="p">(</span><span class="n">fit1</span><span class="p">[</span><span class="s1">&#39;skydir&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">deg</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">xpix</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">pix</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">ypix</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">pix</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">deltax</span> <span class="o">=</span> <span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">xpix</span> <span class="o">-</span> <span class="n">src_pix</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">*</span> <span class="n">cdelt0</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">deltay</span> <span class="o">=</span> <span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">ypix</span> <span class="o">-</span> <span class="n">src_pix</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">cdelt1</span>
+
+        <span class="n">o</span><span class="o">.</span><span class="n">ra_preloc</span> <span class="o">=</span> <span class="n">skydir</span><span class="o">.</span><span class="n">ra</span><span class="o">.</span><span class="n">deg</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">dec_preloc</span> <span class="o">=</span> <span class="n">skydir</span><span class="o">.</span><span class="n">dec</span><span class="o">.</span><span class="n">deg</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">glon_preloc</span> <span class="o">=</span> <span class="n">skydir</span><span class="o">.</span><span class="n">galactic</span><span class="o">.</span><span class="n">l</span><span class="o">.</span><span class="n">deg</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">glat_preloc</span> <span class="o">=</span> <span class="n">skydir</span><span class="o">.</span><span class="n">galactic</span><span class="o">.</span><span class="n">b</span><span class="o">.</span><span class="n">deg</span>
+
+        <span class="k">if</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_offset</span> <span class="o">&gt;</span> <span class="n">dtheta_max</span><span class="p">:</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">fit_success</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">o</span><span class="o">.</span><span class="n">fit_success</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;Fit to localization contour failed.&#39;</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="n">o</span><span class="o">.</span><span class="n">fit_inbounds</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;Best-fit position outside of search region.&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Localization succeeded.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">update</span> <span class="ow">and</span> <span class="p">((</span><span class="ow">not</span> <span class="n">o</span><span class="o">.</span><span class="n">fit_success</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="n">o</span><span class="o">.</span><span class="n">fit_inbounds</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s1">&#39;Localization failed.  Keeping existing position.&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">update</span> <span class="ow">and</span> <span class="n">o</span><span class="o">.</span><span class="n">fit_success</span> <span class="ow">and</span> <span class="n">o</span><span class="o">.</span><span class="n">fit_inbounds</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Updating source </span><span class="si">%s</span><span class="s1"> &#39;</span>
+                             <span class="s1">&#39;to localized position.&#39;</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">delete_source</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="n">src</span><span class="o">.</span><span class="n">set_position</span><span class="p">(</span><span class="n">fit1</span><span class="p">[</span><span class="s1">&#39;skydir&#39;</span><span class="p">])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">free</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">free_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">fix_shape</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">free_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">free</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">pars</span><span class="o">=</span><span class="s1">&#39;shape&#39;</span><span class="p">,</span>
+                                 <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+            <span class="n">fit_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">loglike_loc</span> <span class="o">=</span> <span class="n">fit_output</span><span class="p">[</span><span class="s1">&#39;loglike&#39;</span><span class="p">]</span>
+            <span class="n">o</span><span class="o">.</span><span class="n">dloglike_loc</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">loglike_loc</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">loglike_base</span>
+            <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">get_source_by_name</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+            <span class="n">src</span><span class="p">[</span><span class="s1">&#39;glon_err&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">glon_err</span>
+            <span class="n">src</span><span class="p">[</span><span class="s1">&#39;glat_err&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">glat_err</span>
+            <span class="n">src</span><span class="p">[</span><span class="s1">&#39;ra_err&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">ra_err</span>
+            <span class="n">src</span><span class="p">[</span><span class="s1">&#39;dec_err&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">dec_err</span>
+            <span class="n">src</span><span class="p">[</span><span class="s1">&#39;pos_err&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_err</span>
+            <span class="n">src</span><span class="p">[</span><span class="s1">&#39;pos_err_semimajor&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_err_semimajor</span>
+            <span class="n">src</span><span class="p">[</span><span class="s1">&#39;pos_err_semiminor&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_err_semiminor</span>
+            <span class="n">src</span><span class="p">[</span><span class="s1">&#39;pos_r68&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_r68</span>
+            <span class="n">src</span><span class="p">[</span><span class="s1">&#39;pos_r95&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_r95</span>
+            <span class="n">src</span><span class="p">[</span><span class="s1">&#39;pos_r99&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_r99</span>
+            <span class="n">src</span><span class="p">[</span><span class="s1">&#39;pos_angle&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_angle</span>
+            <span class="n">src</span><span class="p">[</span><span class="s1">&#39;pos_gal_cov&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_gal_cov</span>
+            <span class="n">src</span><span class="p">[</span><span class="s1">&#39;pos_gal_corr&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_gal_corr</span>
+            <span class="n">src</span><span class="p">[</span><span class="s1">&#39;pos_cel_cov&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_cel_cov</span>
+            <span class="n">src</span><span class="p">[</span><span class="s1">&#39;pos_cel_corr&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_cel_corr</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">saved_state</span><span class="o">.</span><span class="n">restore</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_sync_params</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_roi</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;Localization completed with new position:</span><span class="se">\n</span><span class="s1">&#39;</span>
+                         <span class="s1">&#39;(  ra, dec) = (</span><span class="si">%10.4f</span><span class="s1"> +/- </span><span class="si">%8.4f</span><span class="s1">,</span><span class="si">%10.4f</span><span class="s1"> +/- </span><span class="si">%8.4f</span><span class="s1">)</span><span class="se">\n</span><span class="s1">&#39;</span>
+                         <span class="s1">&#39;(glon,glat) = (</span><span class="si">%10.4f</span><span class="s1"> +/- </span><span class="si">%8.4f</span><span class="s1">,</span><span class="si">%10.4f</span><span class="s1"> +/- </span><span class="si">%8.4f</span><span class="s1">)</span><span class="se">\n</span><span class="s1">&#39;</span>
+                         <span class="s1">&#39;offset = </span><span class="si">%8.4f</span><span class="s1"> r68 = </span><span class="si">%8.4f</span><span class="s1"> r95 = </span><span class="si">%8.4f</span><span class="s1"> r99 = </span><span class="si">%8.4f</span><span class="s1">&#39;</span><span class="p">,</span>
+                         <span class="n">o</span><span class="o">.</span><span class="n">ra</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">ra_err</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">dec</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">dec_err</span><span class="p">,</span>
+                         <span class="n">o</span><span class="o">.</span><span class="n">glon</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">glon_err</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">glat</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">glat_err</span><span class="p">,</span>
+                         <span class="n">o</span><span class="o">.</span><span class="n">pos_offset</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_r68</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_r95</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">pos_r99</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;LogLike: </span><span class="si">%12.3f</span><span class="s1"> DeltaLogLike: </span><span class="si">%12.3f</span><span class="s1">&#39;</span><span class="p">,</span>
+                         <span class="n">o</span><span class="o">.</span><span class="n">loglike_loc</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">loglike_loc</span> <span class="o">-</span> <span class="n">o</span><span class="o">.</span><span class="n">loglike_init</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">o</span>
+
+    <span class="k">def</span> <span class="nf">_fit_position</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">dtheta_max</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;dtheta_max&#39;</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
+        <span class="n">nstep</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="s1">&#39;nstep&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">fit0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_position_tsmap</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">fit0</span><span class="p">[</span><span class="s1">&#39;pos_r68&#39;</span><span class="p">]):</span>
+            <span class="n">scan_cdelt</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">fit0</span><span class="p">[</span><span class="s1">&#39;pos_r68&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="n">nstep</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">),</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">_binsz</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">scan_cdelt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_binsz</span>
+
+        <span class="n">fit1</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit_position_scan</span><span class="p">(</span><span class="n">name</span><span class="p">,</span>
+                                       <span class="n">skydir</span><span class="o">=</span><span class="n">fit0</span><span class="p">[</span><span class="s1">&#39;skydir&#39;</span><span class="p">],</span>
+                                       <span class="n">scan_cdelt</span><span class="o">=</span><span class="n">scan_cdelt</span><span class="p">,</span>
+                                       <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">fit1</span><span class="p">,</span> <span class="n">fit0</span>
+
+    <span class="k">def</span> <span class="nf">_fit_position_tsmap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Localize a source from its TS map.&quot;&quot;&quot;</span>
+
+        <span class="n">prefix</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;prefix&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+        <span class="n">dtheta_max</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;dtheta_max&#39;</span><span class="p">,</span> <span class="mf">0.5</span><span class="p">)</span>
+        <span class="n">zmin</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;zmin&#39;</span><span class="p">,</span> <span class="o">-</span><span class="mf">3.0</span><span class="p">)</span>
+        <span class="n">tsmap_fitter</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;tsmap_fitter&#39;</span><span class="p">,</span> <span class="s1">&#39;tsmap&#39;</span><span class="p">)</span>
+
+        <span class="n">kw</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;map_size&#39;</span><span class="p">:</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">dtheta_max</span><span class="p">,</span>
+              <span class="s1">&#39;write_fits&#39;</span><span class="p">:</span>  <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;write_fits&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+              <span class="s1">&#39;write_npy&#39;</span><span class="p">:</span>  <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;write_npy&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">),</span>
+              <span class="s1">&#39;max_kernel_radius&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">[</span><span class="s1">&#39;tsmap&#39;</span><span class="p">][</span><span class="s1">&#39;max_kernel_radius&#39;</span><span class="p">],</span>
+              <span class="s1">&#39;loglevel&#39;</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">}</span>
+
+        <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">copy_source</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">src</span><span class="p">[</span><span class="s1">&#39;SpatialModel&#39;</span><span class="p">]</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;RadialDisk&#39;</span><span class="p">,</span> <span class="s1">&#39;RadialGaussian&#39;</span><span class="p">]:</span>
+            <span class="n">kw</span><span class="p">[</span><span class="s1">&#39;max_kernel_radius&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">kw</span><span class="p">[</span><span class="s1">&#39;max_kernel_radius&#39;</span><span class="p">],</span>
+                                          <span class="mf">2.0</span> <span class="o">*</span> <span class="n">src</span><span class="p">[</span><span class="s1">&#39;SpatialWidth&#39;</span><span class="p">])</span>
+
+        <span class="n">skydir</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;skydir&#39;</span><span class="p">,</span> <span class="n">src</span><span class="o">.</span><span class="n">skydir</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">tsmap_fitter</span> <span class="o">==</span> <span class="s1">&#39;tsmap&#39;</span><span class="p">:</span>
+            <span class="n">tsmap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tsmap</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">join_strings</span><span class="p">([</span><span class="n">prefix</span><span class="p">,</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span>
+                                                   <span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)]),</span>
+                               <span class="n">model</span><span class="o">=</span><span class="n">src</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                               <span class="n">map_skydir</span><span class="o">=</span><span class="n">skydir</span><span class="p">,</span>
+                               <span class="n">exclude</span><span class="o">=</span><span class="p">[</span><span class="n">name</span><span class="p">],</span>
+                               <span class="n">use_pylike</span><span class="o">=</span><span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;use_pylike&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">),</span>
+                               <span class="n">make_plots</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">tsmap</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tscube</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">join_strings</span><span class="p">([</span><span class="n">prefix</span><span class="p">,</span> <span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">,</span> <span class="s1">&#39;_&#39;</span><span class="p">)]),</span>                                
+                                <span class="n">model</span><span class="o">=</span><span class="n">src</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                                <span class="n">map_skydir</span><span class="o">=</span><span class="n">skydir</span><span class="p">,</span>
+                                <span class="n">exclude</span><span class="o">=</span><span class="p">[</span><span class="n">name</span><span class="p">],</span>
+                                <span class="n">make_plots</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                <span class="n">do_sed</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+             
+
+        <span class="c1"># Find peaks with TS &gt; 4</span>
+        <span class="n">peaks</span> <span class="o">=</span> <span class="n">find_peaks</span><span class="p">(</span><span class="n">tsmap</span><span class="p">[</span><span class="s1">&#39;ts&#39;</span><span class="p">],</span> <span class="mf">4.0</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">)</span>
+        <span class="n">peak_best</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">o</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">peaks</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="p">[</span><span class="s1">&#39;amp&#39;</span><span class="p">],</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+            <span class="n">xy</span> <span class="o">=</span> <span class="n">p</span><span class="p">[</span><span class="s1">&#39;ix&#39;</span><span class="p">],</span> <span class="n">p</span><span class="p">[</span><span class="s1">&#39;iy&#39;</span><span class="p">]</span>
+            <span class="n">ts_value</span> <span class="o">=</span> <span class="n">tsmap</span><span class="p">[</span><span class="s1">&#39;ts&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">xy</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">xy</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+            <span class="n">posfit</span> <span class="o">=</span> <span class="n">fit_error_ellipse</span><span class="p">(</span><span class="n">tsmap</span><span class="p">[</span><span class="s1">&#39;ts&#39;</span><span class="p">],</span> <span class="n">xy</span><span class="o">=</span><span class="n">xy</span><span class="p">,</span> <span class="n">dpix</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                                       <span class="n">zmin</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="n">zmin</span><span class="p">,</span> <span class="o">-</span><span class="n">ts_value</span> <span class="o">*</span> <span class="mf">0.5</span><span class="p">))</span>
+            <span class="n">offset</span> <span class="o">=</span> <span class="n">posfit</span><span class="p">[</span><span class="s1">&#39;skydir&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">separation</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">skydir</span><span class="p">)</span><span class="o">.</span><span class="n">deg</span>
+            <span class="k">if</span> <span class="n">posfit</span><span class="p">[</span><span class="s1">&#39;fit_success&#39;</span><span class="p">]</span> <span class="ow">and</span> <span class="n">posfit</span><span class="p">[</span><span class="s1">&#39;fit_inbounds&#39;</span><span class="p">]:</span>
+                <span class="n">peak_best</span> <span class="o">=</span> <span class="n">p</span>
+                <span class="k">break</span>
+
+        <span class="k">if</span> <span class="n">peak_best</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">ts_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">tsmap</span><span class="p">[</span><span class="s1">&#39;ts&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+            <span class="n">posfit</span> <span class="o">=</span> <span class="n">fit_error_ellipse</span><span class="p">(</span><span class="n">tsmap</span><span class="p">[</span><span class="s1">&#39;ts&#39;</span><span class="p">],</span> <span class="n">dpix</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                                       <span class="n">zmin</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="n">zmin</span><span class="p">,</span> <span class="o">-</span><span class="n">ts_value</span> <span class="o">*</span> <span class="mf">0.5</span><span class="p">))</span>
+
+        <span class="n">o</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">posfit</span><span class="p">)</span>
+        <span class="n">pix</span> <span class="o">=</span> <span class="n">posfit</span><span class="p">[</span><span class="s1">&#39;skydir&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_pixel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">wcs</span><span class="p">)</span>
+        <span class="n">o</span><span class="p">[</span><span class="s1">&#39;xpix&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">pix</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">o</span><span class="p">[</span><span class="s1">&#39;ypix&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">pix</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">o</span><span class="p">[</span><span class="s1">&#39;skydir&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">posfit</span><span class="p">[</span><span class="s1">&#39;skydir&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">transform_to</span><span class="p">(</span><span class="s1">&#39;icrs&#39;</span><span class="p">)</span>
+        <span class="n">o</span><span class="p">[</span><span class="s1">&#39;pos_offset&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">posfit</span><span class="p">[</span><span class="s1">&#39;skydir&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">separation</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">skydir</span><span class="p">)</span><span class="o">.</span><span class="n">deg</span>
+        <span class="n">o</span><span class="p">[</span><span class="s1">&#39;loglike&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">posfit</span><span class="p">[</span><span class="s1">&#39;zoffset&#39;</span><span class="p">]</span>
+        <span class="n">o</span><span class="p">[</span><span class="s1">&#39;tsmap&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tsmap</span><span class="p">[</span><span class="s1">&#39;ts&#39;</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">o</span>
+
+    <span class="k">def</span> <span class="nf">_fit_position_scan</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">zmin</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;zmin&#39;</span><span class="p">,</span> <span class="o">-</span><span class="mf">9.0</span><span class="p">)</span>
+        <span class="n">tsmap</span><span class="p">,</span> <span class="n">loglike</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scan_position</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">ts_value</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">tsmap</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">posfit</span> <span class="o">=</span> <span class="n">fit_error_ellipse</span><span class="p">(</span><span class="n">tsmap</span><span class="p">,</span> <span class="n">dpix</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+                                   <span class="n">zmin</span><span class="o">=</span><span class="nb">max</span><span class="p">(</span><span class="n">zmin</span><span class="p">,</span> <span class="o">-</span><span class="n">ts_value</span> <span class="o">*</span> <span class="mf">0.5</span><span class="p">))</span>
+        <span class="n">pix</span> <span class="o">=</span> <span class="n">posfit</span><span class="p">[</span><span class="s1">&#39;skydir&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">to_pixel</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">wcs</span><span class="p">)</span>
+
+        <span class="n">o</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">o</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">posfit</span><span class="p">)</span>
+        <span class="n">o</span><span class="p">[</span><span class="s1">&#39;xpix&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">pix</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">o</span><span class="p">[</span><span class="s1">&#39;ypix&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">pix</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">o</span><span class="p">[</span><span class="s1">&#39;skydir&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">posfit</span><span class="p">[</span><span class="s1">&#39;skydir&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">transform_to</span><span class="p">(</span><span class="s1">&#39;icrs&#39;</span><span class="p">)</span>
+        <span class="n">o</span><span class="p">[</span><span class="s1">&#39;pos_offset&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">posfit</span><span class="p">[</span><span class="s1">&#39;skydir&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">separation</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">skydir</span><span class="p">)</span><span class="o">.</span><span class="n">deg</span>
+        <span class="n">o</span><span class="p">[</span><span class="s1">&#39;loglike&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">posfit</span><span class="p">[</span><span class="s1">&#39;zoffset&#39;</span><span class="p">]</span> <span class="o">+</span> <span class="n">loglike</span>
+        <span class="n">o</span><span class="p">[</span><span class="s1">&#39;tsmap&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">tsmap</span>
+
+        <span class="k">return</span> <span class="n">o</span>
+
+    <span class="k">def</span> <span class="nf">_scan_position</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+
+        <span class="n">saved_state</span> <span class="o">=</span> <span class="n">LikelihoodState</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">like</span><span class="p">)</span>
+
+        <span class="n">skydir</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;skydir&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="o">.</span><span class="n">skydir</span><span class="p">)</span>
+        <span class="n">scan_cdelt</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;scan_cdelt&#39;</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">)</span>
+        <span class="n">nstep</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;nstep&#39;</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+        <span class="n">use_cache</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;use_cache&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="n">use_pylike</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;use_pylike&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">optimizer</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;optimizer&#39;</span><span class="p">,</span> <span class="p">{})</span>
+
+        <span class="c1"># Fit without source</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">zero_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="n">fit_output_nosrc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span>
+                                     <span class="o">**</span><span class="n">optimizer</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">unzero_source</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+        <span class="n">saved_state</span><span class="o">.</span><span class="n">restore</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">free_norm</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+        <span class="n">lnlmap</span> <span class="o">=</span> <span class="n">WcsNDMap</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">skydir</span><span class="o">=</span><span class="n">skydir</span><span class="p">,</span> <span class="n">binsz</span><span class="o">=</span><span class="n">scan_cdelt</span><span class="p">,</span> <span class="n">npix</span><span class="o">=</span><span class="p">(</span><span class="n">nstep</span><span class="p">,</span> <span class="n">nstep</span><span class="p">),</span>
+                                 <span class="n">coordsys</span><span class="o">=</span><span class="n">wcs_utils</span><span class="o">.</span><span class="n">get_coordsys</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">wcs</span><span class="p">))</span>
+
+        <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">copy_source</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">use_cache</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">use_pylike</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_srcmap_cache</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">src</span><span class="p">)</span>
+
+        <span class="n">coord</span> <span class="o">=</span> <span class="n">MapCoord</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">lnlmap</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">get_coord</span><span class="p">(</span><span class="n">flat</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                                <span class="n">coordsys</span><span class="o">=</span><span class="n">lnlmap</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">coordsys</span><span class="p">)</span>
+        <span class="n">scan_skydir</span> <span class="o">=</span> <span class="n">coord</span><span class="o">.</span><span class="n">skycoord</span><span class="o">.</span><span class="n">icrs</span>
+        <span class="k">for</span> <span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">ra</span><span class="p">,</span> <span class="n">dec</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">coord</span><span class="o">.</span><span class="n">lon</span><span class="p">,</span> <span class="n">coord</span><span class="o">.</span><span class="n">lat</span><span class="p">,</span>
+                                     <span class="n">scan_skydir</span><span class="o">.</span><span class="n">ra</span><span class="o">.</span><span class="n">deg</span><span class="p">,</span> <span class="n">scan_skydir</span><span class="o">.</span><span class="n">dec</span><span class="o">.</span><span class="n">deg</span><span class="p">):</span>
+
+            <span class="n">spatial_pars</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;ra&#39;</span><span class="p">:</span> <span class="n">ra</span><span class="p">,</span> <span class="s1">&#39;dec&#39;</span><span class="p">:</span> <span class="n">dec</span><span class="p">}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_source_morphology</span><span class="p">(</span><span class="n">name</span><span class="p">,</span>
+                                       <span class="n">spatial_pars</span><span class="o">=</span><span class="n">spatial_pars</span><span class="p">,</span>
+                                       <span class="n">use_pylike</span><span class="o">=</span><span class="n">use_pylike</span><span class="p">)</span>
+            <span class="n">fit_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_fit</span><span class="p">(</span><span class="n">loglevel</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">,</span>
+                                   <span class="o">**</span><span class="n">optimizer</span><span class="p">)</span>
+            <span class="n">lnlmap</span><span class="o">.</span><span class="n">set_by_coord</span><span class="p">((</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">),</span> <span class="n">fit_output</span><span class="p">[</span><span class="s1">&#39;loglike&#39;</span><span class="p">])</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_source_morphology</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">spatial_pars</span><span class="o">=</span><span class="n">src</span><span class="o">.</span><span class="n">spatial_pars</span><span class="p">,</span>
+                                   <span class="n">use_pylike</span><span class="o">=</span><span class="n">use_pylike</span><span class="p">)</span>
+        <span class="n">saved_state</span><span class="o">.</span><span class="n">restore</span><span class="p">()</span>
+
+        <span class="n">lnlmap</span><span class="o">.</span><span class="n">data</span> <span class="o">-=</span> <span class="n">fit_output_nosrc</span><span class="p">[</span><span class="s1">&#39;loglike&#39;</span><span class="p">]</span>
+        <span class="n">tsmap</span> <span class="o">=</span> <span class="n">WcsNDMap</span><span class="p">(</span><span class="n">lnlmap</span><span class="o">.</span><span class="n">geom</span><span class="p">,</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">lnlmap</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_clear_srcmap_cache</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">tsmap</span><span class="p">,</span> <span class="n">fit_output_nosrc</span><span class="p">[</span><span class="s1">&#39;loglike&#39;</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">_fit_position_opt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">use_cache</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+
+        <span class="n">state</span> <span class="o">=</span> <span class="n">SourceMapState</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">like</span><span class="p">,</span> <span class="p">[</span><span class="n">name</span><span class="p">])</span>
+
+        <span class="n">src</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi</span><span class="o">.</span><span class="n">copy_source</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">use_cache</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_create_srcmap_cache</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">src</span><span class="p">)</span>
+
+        <span class="n">loglike</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">skydir</span> <span class="o">=</span> <span class="n">src</span><span class="o">.</span><span class="n">skydir</span>
+        <span class="n">skywcs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">wcs</span>
+        <span class="n">src_pix</span> <span class="o">=</span> <span class="n">skydir</span><span class="o">.</span><span class="n">to_pixel</span><span class="p">(</span><span class="n">skywcs</span><span class="p">)</span>
+
+        <span class="n">c</span> <span class="o">=</span> <span class="n">skydir</span><span class="o">.</span><span class="n">transform_to</span><span class="p">(</span><span class="s1">&#39;icrs&#39;</span><span class="p">)</span>
+        <span class="n">src</span><span class="o">.</span><span class="n">set_radec</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">ra</span><span class="o">.</span><span class="n">deg</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">dec</span><span class="o">.</span><span class="n">deg</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_srcmap</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">src</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="n">src_pix</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">like</span><span class="p">())</span>
+
+        <span class="kn">import</span> <span class="nn">time</span>
+
+        <span class="k">def</span> <span class="nf">fit_fn</span><span class="p">(</span><span class="n">params</span><span class="p">):</span>
+
+            <span class="n">t0</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+            <span class="n">c</span> <span class="o">=</span> <span class="n">SkyCoord</span><span class="o">.</span><span class="n">from_pixel</span><span class="p">(</span><span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">geom</span><span class="o">.</span><span class="n">wcs</span><span class="p">)</span>
+            <span class="n">c</span> <span class="o">=</span> <span class="n">c</span><span class="o">.</span><span class="n">transform_to</span><span class="p">(</span><span class="s1">&#39;icrs&#39;</span><span class="p">)</span>
+            <span class="n">src</span><span class="o">.</span><span class="n">set_radec</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">ra</span><span class="o">.</span><span class="n">deg</span><span class="p">,</span> <span class="n">c</span><span class="o">.</span><span class="n">dec</span><span class="o">.</span><span class="n">deg</span><span class="p">)</span>
+
+            <span class="n">t1</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_srcmap</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">src</span><span class="p">)</span>
+
+            <span class="n">t2</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+            <span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">like</span><span class="p">()</span>
+
+            <span class="n">t3</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+            <span class="nb">print</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">val</span><span class="p">)</span>
+            <span class="c1"># print(t1-t0,t2-t1,t3-t2)</span>
+
+            <span class="k">return</span> <span class="n">val</span>
+
+        <span class="c1">#lnl0 = fit_fn(src_pix[0],src_pix[1])</span>
+        <span class="c1">#lnl1 = fit_fn(src_pix[0]+0.1,src_pix[1])</span>
+        <span class="c1"># print(lnl0,lnl1)</span>
+
+        <span class="kn">import</span> <span class="nn">scipy</span>
+
+        <span class="c1">#src_pix[1] += 3.0</span>
+        <span class="n">p0</span> <span class="o">=</span> <span class="p">[</span><span class="n">src_pix</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">src_pix</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+
+        <span class="c1">#p0 = np.array([14.665692574327048, 16.004594098101926])</span>
+        <span class="c1">#delta = np.array([0.3,-0.4])</span>
+        <span class="c1">#p0 = [14.665692574327048, 16.004594098101926]</span>
+
+        <span class="n">o</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span><span class="n">fit_fn</span><span class="p">,</span> <span class="n">p0</span><span class="p">,</span>
+                                    <span class="n">bounds</span><span class="o">=</span><span class="p">[(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">39.0</span><span class="p">),</span>
+                                            <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">39.0</span><span class="p">)],</span>
+                                    <span class="c1"># method=&#39;L-BFGS-B&#39;,</span>
+                                    <span class="n">method</span><span class="o">=</span><span class="s1">&#39;SLSQP&#39;</span><span class="p">,</span>
+                                    <span class="n">tol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;fit 2&#39;</span><span class="p">)</span>
+
+        <span class="n">o</span> <span class="o">=</span> <span class="n">scipy</span><span class="o">.</span><span class="n">optimize</span><span class="o">.</span><span class="n">minimize</span><span class="p">(</span><span class="n">fit_fn</span><span class="p">,</span> <span class="n">o</span><span class="o">.</span><span class="n">x</span><span class="p">,</span>
+                                    <span class="n">bounds</span><span class="o">=</span><span class="p">[(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">39.0</span><span class="p">),</span>
+                                            <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">39.0</span><span class="p">)],</span>
+                                    <span class="c1"># method=&#39;L-BFGS-B&#39;,</span>
+                                    <span class="n">method</span><span class="o">=</span><span class="s1">&#39;SLSQP&#39;</span><span class="p">,</span>
+                                    <span class="n">tol</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">o</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="n">fit_fn</span><span class="p">(</span><span class="n">p0</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">fit_fn</span><span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">x</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">fit_fn</span><span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">])))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">fit_fn</span><span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.02</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.02</span><span class="p">])))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">fit_fn</span><span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.02</span><span class="p">])))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">fit_fn</span><span class="p">(</span><span class="n">o</span><span class="o">.</span><span class="n">x</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="o">-</span><span class="mf">0.02</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.02</span><span class="p">])))</span>
+
+        <span class="n">state</span><span class="o">.</span><span class="n">restore</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">o</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

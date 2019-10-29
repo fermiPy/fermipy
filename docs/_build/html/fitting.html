@@ -1,0 +1,478 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>ROI Optimization and Fitting &mdash; Fermipy 0.18.0+12.ga1c9.dirty documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="_static/js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+        <script type="text/javascript" src="_static/jquery.js"></script>
+        <script type="text/javascript" src="_static/underscore.js"></script>
+        <script type="text/javascript" src="_static/doctools.js"></script>
+        <script type="text/javascript" src="_static/language_data.js"></script>
+        <script async="async" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    
+    <script type="text/javascript" src="_static/js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="_static/theme_overrides.css" type="text/css" />
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Customizing the Model" href="model.html" />
+    <link rel="prev" title="Output File" href="output.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="index.html" class="icon icon-home"> Fermipy
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                0.18.0+12.ga1c9.dirty
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="config.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output.html">Output File</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">ROI Optimization and Fitting</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id1">Fitting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#reference-api">Reference/API</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#roi-optimization">ROI Optimization</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id2">Reference/API</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="model.html">Customizing the Model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer.html">Developer Notes</a></li>
+<li class="toctree-l1"><a class="reference internal" href="advanced/index.html">Advanced Analysis Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="validation/index.html">Validation Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fermipy.html">fermipy package</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fermipy_jobs.html">fermipy.jobs subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="fermipy_diffuse.html">fermipy.diffuse subpackage</a></li>
+<li class="toctree-l1"><a class="reference internal" href="changelog.html">Changelog</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Fermipy</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="index.html">Docs</a> &raquo;</li>
+        
+      <li>ROI Optimization and Fitting</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="_sources/fitting.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="roi-optimization-and-fitting">
+<span id="fitting"></span><h1>ROI Optimization and Fitting<a class="headerlink" href="#roi-optimization-and-fitting" title="Permalink to this headline">¶</a></h1>
+<p>Source fitting with fermipy is generally performed with the
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.optimize" title="fermipy.gtanalysis.GTAnalysis.optimize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">optimize</span></code></a> and
+<a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.fit" title="fermipy.gtanalysis.GTAnalysis.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code></a> methods.</p>
+<div class="section" id="id1">
+<h2>Fitting<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<p><a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.fit" title="fermipy.gtanalysis.GTAnalysis.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code></a> is a wrapper on the pyLikelihood
+fit method and performs a likelihood fit of all free parameters of the
+model.  This method can be used to manually optimize of the model by
+calling it after freeing one or more source parameters.  The following
+example demonstrates the commands that would be used to fit the
+normalizations of all sources within 3 deg of the ROI center:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">gta</span><span class="o">.</span><span class="n">free_sources</span><span class="p">(</span><span class="n">distance</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span><span class="n">pars</span><span class="o">=</span><span class="s1">&#39;norm&#39;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gta</span><span class="o">.</span><span class="n">print_params</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+<span class="go"> idx parname                  value     error       min       max     scale free</span>
+<span class="go">--------------------------------------------------------------------------------</span>
+<span class="go">3FGL J1104.4+3812</span>
+<span class="go">  18 Prefactor                 1.77         0     1e-05       100     1e-11    *</span>
+<span class="go">3FGL J1109.6+3734</span>
+<span class="go">  24 Prefactor                 0.33         0     1e-05       100     1e-14    *</span>
+<span class="go">galdiff</span>
+<span class="go">  52 Prefactor                    1         0       0.1        10         1    *</span>
+<span class="go">isodiff</span>
+<span class="go">  55 Normalization                1         0     0.001     1e+03         1    *</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">o</span> <span class="o">=</span> <span class="n">gta</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+<span class="go">2016-04-19 14:07:55 INFO     GTAnalysis.fit(): Starting fit.</span>
+<span class="go">2016-04-19 14:08:56 INFO     GTAnalysis.fit(): Fit returned successfully.</span>
+<span class="go">2016-04-19 14:08:56 INFO     GTAnalysis.fit(): Fit Quality: 3 LogLike:   -77279.869 DeltaLogLike:      501.128</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">gta</span><span class="o">.</span><span class="n">print_params</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+<span class="go">2016-04-19 14:10:02 INFO     GTAnalysis.print_params():</span>
+<span class="go"> idx parname                  value     error       min       max     scale free</span>
+<span class="go">--------------------------------------------------------------------------------</span>
+<span class="go">3FGL J1104.4+3812</span>
+<span class="go">  18 Prefactor                 2.13    0.0161     1e-05       100     1e-11    *</span>
+<span class="go">3FGL J1109.6+3734</span>
+<span class="go">  24 Prefactor                0.342    0.0904     1e-05       100     1e-14    *</span>
+<span class="go">galdiff</span>
+<span class="go">  52 Prefactor                0.897    0.0231       0.1        10         1    *</span>
+<span class="go">isodiff</span>
+<span class="go">  55 Normalization             1.15     0.016     0.001     1e+03         1    *</span>
+</pre></div>
+</div>
+<p>By default <a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.fit" title="fermipy.gtanalysis.GTAnalysis.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code></a> will repeat the fit
+until a fit quality of 3 is obtained.  After the fit returns all
+sources with free parameters will have their properties (flux, TS,
+NPred, etc.) updated in the <code class="xref py py-obj docutils literal notranslate"><span class="pre">ROIModel</span></code> instance.
+The return value of the method is a dictionary containing the
+following diagnostic information about the fit:</p>
+<table border="1" class="colwidths-given docutils" id="id3">
+<caption><span class="caption-text"><em>fit</em> Output Dictionary</span><a class="headerlink" href="#id3" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">fit_quality</span></code></td>
+<td>int</td>
+<td>Fit quality parameter for MINUIT and NEWMINUIT optimizers (3 - Full accurate covariance matrix, 2 - Full matrix, but forced positive-definite (i.e. not accurate), 1 - Diagonal approximation only, not accurate, 0 - Error matrix not calculated at all)</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">errors</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Vector of parameter errors (unscaled).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">loglike</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Post-fit log-likehood value.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">correlation</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Correlation matrix between free parameters of the fit.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">config</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></td>
+<td>Copy of input configuration to this method.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">values</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Vector of best-fit parameter values (unscaled).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">dloglike</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Improvement in log-likehood value.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">fit_status</span></code></td>
+<td>int</td>
+<td>Optimizer return code (0 = ok).</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">covariance</span></code></td>
+<td><a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.17)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">ndarray</span></code></a></td>
+<td>Covariance matrix between free parameters of the fit.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">edm</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Estimated distance to maximum of log-likelihood function.</td>
+</tr>
+</tbody>
+</table>
+<p>The <a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.fit" title="fermipy.gtanalysis.GTAnalysis.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code></a> also accepts keyword
+arguments which can be used to configure its behavior at runtime:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">o</span> <span class="o">=</span> <span class="n">gta</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">min_fit_quality</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span><span class="n">optimizer</span><span class="o">=</span><span class="s1">&#39;NEWMINUIT&#39;</span><span class="p">,</span><span class="n">reoptimize</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="section" id="reference-api">
+<h3>Reference/API<a class="headerlink" href="#reference-api" title="Permalink to this headline">¶</a></h3>
+<dl class="method">
+<dt>
+<code class="descclassname">GTAnalysis.</code><code class="descname">fit</code><span class="sig-paren">(</span><em>update=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fermipy/gtanalysis.html#GTAnalysis.fit"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Run the likelihood optimization.  This will execute a fit of all
+parameters that are currently free in the model and update the
+charateristics of the corresponding model components (TS,
+npred, etc.).  The fit will be repeated N times (set with the
+<code class="xref py py-obj docutils literal notranslate"><span class="pre">retries</span></code> parameter) until a fit quality greater than or equal
+to <code class="xref py py-obj docutils literal notranslate"><span class="pre">min_fit_quality</span></code> and a fit status code of 0 is obtained.
+If the fit does not succeed after N retries then all parameter
+values will be reverted to their state prior to the execution
+of the fit.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>update</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Update the model dictionary for all sources with free
+parameters.</li>
+<li><strong>tol</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – Set the optimizer tolerance.</li>
+<li><strong>verbosity</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Set the optimizer output level.</li>
+<li><strong>optimizer</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.8)"><em>str</em></a>) – Set the likelihood optimizer (e.g. MINUIT or NEWMINUIT).</li>
+<li><strong>retries</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Set the number of times to rerun the fit when the fit quality
+is &lt; 3.</li>
+<li><strong>min_fit_quality</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Set the minimum fit quality.  If the fit quality is smaller
+than this value then all model parameters will be
+restored to their values prior to the fit.</li>
+<li><strong>reoptimize</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.8)"><em>bool</em></a>) – Refit background sources when updating source properties
+(TS and likelihood profiles).</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>fit</strong> – Dictionary containing diagnostic information from the fit
+(fit quality, parameter covariances, etc.).</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)">dict</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="roi-optimization">
+<h2>ROI Optimization<a class="headerlink" href="#roi-optimization" title="Permalink to this headline">¶</a></h2>
+<p>The <a class="reference internal" href="fermipy.html#fermipy.gtanalysis.GTAnalysis.optimize" title="fermipy.gtanalysis.GTAnalysis.optimize"><code class="xref py py-obj docutils literal notranslate"><span class="pre">optimize</span></code></a> method performs an
+automatic optimization of the ROI by fitting all sources with an
+iterative strategy.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">o</span> <span class="o">=</span> <span class="n">gta</span><span class="o">.</span><span class="n">optimize</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>It is generally good practice to run this method once at the start of
+your analysis to ensure that all parameters are close to their global
+likelihood maxima.</p>
+<table border="1" class="colwidths-given docutils" id="id4">
+<caption><span class="caption-text"><em>optimization</em> Output Dictionary</span><a class="headerlink" href="#id4" title="Permalink to this table">¶</a></caption>
+<colgroup>
+<col width="10%" />
+<col width="10%" />
+<col width="80%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Key</th>
+<th class="head">Type</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">loglike1</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Post-optimization log-likelihood value.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">loglike0</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Pre-optimization log-likelihood value.</td>
+</tr>
+<tr class="row-even"><td><code class="docutils literal notranslate"><span class="pre">config</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">dict</span></code></a></td>
+<td>Copy of input configuration to this method.</td>
+</tr>
+<tr class="row-odd"><td><code class="docutils literal notranslate"><span class="pre">dloglike</span></code></td>
+<td><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">float</span></code></a></td>
+<td>Improvement in log-likehood value.</td>
+</tr>
+</tbody>
+</table>
+<div class="section" id="id2">
+<h3>Reference/API<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<dl class="method">
+<dt>
+<code class="descclassname">GTAnalysis.</code><code class="descname">optimize</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/fermipy/gtanalysis.html#GTAnalysis.optimize"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Iteratively optimize the ROI model.  The optimization is
+performed in three sequential steps:</p>
+<ul class="simple">
+<li>Free the normalization of the N largest components (as
+determined from NPred) that contain a fraction <code class="docutils literal notranslate"><span class="pre">npred_frac</span></code>
+of the total predicted counts in the model and perform a
+simultaneous fit of the normalization parameters of these
+components.</li>
+<li>Individually fit the normalizations of all sources that were
+not included in the first step in order of their npred
+values.  Skip any sources that have NPred &lt;
+<code class="docutils literal notranslate"><span class="pre">npred_threshold</span></code>.</li>
+<li>Individually fit the shape and normalization parameters of
+all sources with TS &gt; <code class="docutils literal notranslate"><span class="pre">shape_ts_threshold</span></code> where TS is
+determined from the first two steps of the ROI optimization.</li>
+</ul>
+<p>To ensure that the model is fully optimized this method can be
+run multiple times.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>npred_frac</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – Threshold on the fractional number of counts in the N
+largest components in the ROI.  This parameter determines
+the set of sources that are fit in the first optimization
+step.</li>
+<li><strong>npred_threshold</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – Threshold on the minimum number of counts of individual
+sources.  This parameter determines the sources that are
+fit in the second optimization step.</li>
+<li><strong>shape_ts_threshold</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.8)"><em>float</em></a>) – Threshold on source TS used for determining the sources
+that will be fit in the third optimization step.</li>
+<li><strong>max_free_sources</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.8)"><em>int</em></a>) – Maximum number of sources that will be fit simultaneously
+in the first optimization step.</li>
+<li><strong>skip</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.8)"><em>list</em></a>) – List of str source names to skip while optimizing.</li>
+<li><strong>optimizer</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.8)"><em>dict</em></a>) – Dictionary that overrides the default optimizer settings.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="model.html" class="btn btn-neutral float-right" title="Customizing the Model" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="output.html" class="btn btn-neutral float-left" title="Output File" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2016, Fermipy Developers
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
