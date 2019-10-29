@@ -92,7 +92,7 @@ are keyed to a section name (*data*, *binning*, etc.).
                           
 The configuration file has the same structure as the configuration
 dictionary such that one can read/write configurations using the
-load/dump methods of the yaml module:
+load/dump methods of the yaml module :
 
 .. code-block:: python
 
