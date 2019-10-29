@@ -68,3 +68,5 @@ fermipy/_version.py
 .ipynb_checkpoints
 *.tar.gz
 
+# add an exception (using !) to the preceding rule to track a specific file
+!gll_iem_v07.fits
