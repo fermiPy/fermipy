@@ -80,13 +80,14 @@ are keyed to a section name (*data*, *binning*, etc.).
      
    gtlike:
      edisp : True
-     irfs : 'P8R2_SOURCE_V6'
+     edisp_bins : -1
+     irfs : 'P8R3_SOURCE_V2'
      edisp_disable : ['isodiff','galdiff']
 
    model:
      src_roiwidth : 15.0
-     galdiff  : '$FERMI_DIFFUSE_DIR/gll_iem_v06.fits'
-     isodiff  : 'iso_P8R2_SOURCE_V6_v06.txt'
+     galdiff  : '$FERMI_DIFFUSE_DIR/gll_iem_v07.fits'
+     isodiff  : 'iso_P8R3_SOURCE_V2_v1.txt'
      catalogs : ['3FGL']
                           
 The configuration file has the same structure as the configuration
@@ -238,6 +239,10 @@ gtlike
 
 Options in the *gtlike* section control the setup of the likelihood
 analysis include the IRF name (``irfs``).
+The ``edisp_bin`` option has been recently added to implement the latest handling of the
+energy dispersion (see `FSSC
+<https://fermi.gsfc.nasa.gov/ssc/data/analysis/documentation/Pass8_edisp_usage.html>`_
+for further details).
 
 .. csv-table:: *gtlike* Options
    :header:    Option, Default, Description
