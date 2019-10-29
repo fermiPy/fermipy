@@ -69,4 +69,4 @@ fermipy/_version.py
 *.tar.gz
 
 # add an exception (using !) to the preceding rule to track a specific file
-fermipy/data/gll_iem_v07.fits
+fermipy/data/*
