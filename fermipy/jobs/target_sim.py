@@ -206,7 +206,7 @@ class RandomDirGen(Link):
         nstep_x = int(np.ceil(2. * pixmax_x / pixstep_x)) + 1
         nstep_y = int(np.ceil(2. * pixmax_y / pixstep_y)) + 1
 
-        center = np.array(wcsgeom._center_pix)
+        center = np.array(wcsgeom.center_pix)
 
         grid = np.meshgrid(np.linspace(-1 * pixmax_x, pixmax_x, nstep_x),
                            np.linspace(-1 * pixmax_y, pixmax_y, nstep_y))
@@ -306,7 +306,7 @@ class SimulateROI(Link):
         gta.fit(covar=True)
         gta.write_roi('sim_refit_%06i' % current_seed)
 
-        for test_source in test_sources:
+        for pkey, test_source in test_sources.items():
             test_source_name = test_source['name']
             sedfile = "sed_%s_%06i.fits" % (test_source_name, seed)
             correl_dict, test_src_name = add_source_get_correlated(gta, test_source_name,
@@ -368,11 +368,11 @@ class SimulateROI(Link):
 
         gta.write_roi('sim_baseline_%06i' % args.seed)
 
-        test_sources = []
+        test_sources = {}
         for profile in args.profiles:
             profile_path = os.path.join(workdir, 'profile_%s.yaml' % profile)
             test_source = load_yaml(profile_path)
-            test_sources.append(test_source)
+            test_sources[profile] = test_source
             first = args.seed
             last = first + args.nsims
             for seed in range(first, last):

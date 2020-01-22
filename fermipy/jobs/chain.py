@@ -125,6 +125,7 @@ class Chain(Link):
             logfile = kwargs.setdefault('logfile', logfile_default)
             link._register_job(JobDetails.topkey, job_args,
                                logfile, status=JobStatus.unknown)
+            link.update_args(job_args)
         return link
 
     def _set_links_job_archive(self):
