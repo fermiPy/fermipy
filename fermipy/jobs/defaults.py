@@ -23,6 +23,8 @@ common = {
     'dry_run': (False, 'Print commands but do not run them.', bool),
     'make_plots': (False, 'Make plots', bool),
     'non_null_src': (False, 'Zero out test source', bool),
+    'do_find_src': (False, 'Add source finding step to simulated realizations', bool),
+
 }
 
 sims = {
