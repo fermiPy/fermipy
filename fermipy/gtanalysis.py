@@ -4250,6 +4250,19 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             # compute srcprob
             c._srcprob_app(xmlfile = xmlfile, overwrite = overwrite)
 
+    def compute_psf(self, overwrite=False):
+        """Run the gtpsf app"""
+
+        for i,c in enumerate(self.components):
+            # compute psf
+            c._psf_app(overwrite=overwrite)
+
+    def compute_drm(self, overwrite=False):
+        """Run the gtdrm app"""
+
+        for i,c in enumerate(self.components):
+            # compute detector response matrix
+            c._drm_app(overwrite=overwrite)
 
 class GTBinnedAnalysis(fermipy.config.Configurable):
     defaults = dict(selection=defaults.selection,
@@ -5784,3 +5797,78 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.logger.info('Skipping gtsrcprob')
         else:
             run_gtapp('gtsrcprob', self.logger, kw, loglevel=loglevel)
+
+    def _psf_app(self, overwrite=False, **kwargs):
+        """
+        Run gtpsf for an analysis component as an application
+        """
+
+        loglevel = kwargs.get('loglevel', self.loglevel)
+
+        self.logger.log(loglevel, 'Computing psf for component %s.',
+                        self.name)
+
+        # set the outfile
+        # it's defined here and not in self.files dict
+        # so that it is copied with the stage_output module
+        # even if savefits is False
+        outfile = os.path.join(self.workdir, 
+                    'psf{0[file_suffix]:s}.fits'.format(self.config))
+
+        # maximum theta angle for psf
+        thetamax = kwargs.get('thetamax', self.config['model']['src_roiwidth'])
+
+        # number of bins in theta
+        ntheta = kwargs.get('thetamax', 2 * int(thetamax / self.config['binning']['binsz']))
+
+        kw = dict(expcube=self.files['ltcube'],
+                  outfile=outfile,
+                  irfs = self.config['gtlike']['irfs'],
+                  evtype = self.config['selection']['evtype'],
+                  ra = self.config['selection']['ra'],
+                  dec = self.config['selection']['dec'],
+                  emin =  self.config['selection']['emin'],
+                  emax =  self.config['selection']['emax'],
+                  nenergies = self.enumbins * 2,
+                  thetamax = thetamax,
+                  ntheta = ntheta,
+                  )
+        self.logger.debug(kw)
+
+        # run gtapp for the srcprob
+        if os.path.isfile(outfile) and not overwrite:
+            self.logger.info('Skipping gtpsf')
+        else:
+            run_gtapp('gtpsf', self.logger, kw, loglevel=loglevel)
+
+    def _drm_app(self, overwrite=False, **kwargs):
+        """
+        Run gtdrm for an analysis component as an application
+        """
+
+        loglevel = kwargs.get('loglevel', self.loglevel)
+
+        self.logger.log(loglevel, 'Computing drm for component %s.',
+                        self.name)
+
+        # set the outfile
+        # it's defined here and not in self.files dict
+        # so that it is copied with the stage_output module
+        # even if savefits is False
+        outfile = os.path.join(self.workdir, 
+                    'drm{0[file_suffix]:s}.fits'.format(self.config))
+
+        kw = dict(expcube=self.files['ltcube'],
+                  outfile=outfile,
+                  cmap=self.files['ccube'],
+                  bexpmap=self.files['bexpmap'],
+                  irfs = self.config['gtlike']['irfs'],
+                  evtype = self.config['selection']['evtype'],
+                  )
+        self.logger.debug(kw)
+
+        # run gtapp for the srcprob
+        if os.path.isfile(outfile) and not overwrite:
+            self.logger.info('Skipping gtdrm')
+        else:
+            run_gtapp('gtdrm', self.logger, kw, loglevel=loglevel)
