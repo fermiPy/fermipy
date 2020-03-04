@@ -14,7 +14,6 @@ import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
 from fermipy.config import ConfigSchema
 from fermipy.timing import Timer
-import pdb
 
 
 def poisson_lnl(nc, mu):
