@@ -14,6 +14,7 @@ import fermipy.fits_utils as fits_utils
 import fermipy.plotting as plotting
 from fermipy.config import ConfigSchema
 from fermipy.timing import Timer
+import pdb
 
 
 def poisson_lnl(nc, mu):
@@ -77,8 +78,8 @@ def convolve_map(m, k, cpix, threshold=0.001, imin=0, imax=None, wmap=None):
         ks = k[islice, ...][i, ...]
         ms = m[islice, ...][i, ...]
 
-        mx = ks[ix, :] > ks[ix, iy] * threshold
-        my = ks[:, iy] > ks[ix, iy] * threshold
+        mx = ks[iy, :] > ks[iy, ix] * threshold
+        my = ks[:, ix] > ks[iy, ix] * threshold
 
         nx = int(max(3, np.round(np.sum(mx) / 2.)))
         ny = int(max(3, np.round(np.sum(my) / 2.)))
@@ -87,6 +88,7 @@ def convolve_map(m, k, cpix, threshold=0.001, imin=0, imax=None, wmap=None):
         # array
         if ix + nx + 1 >= ms.shape[0] or ix - nx < 0:
             nx -= 1
+        if iy + ny + 1 >= ms.shape[0] or iy - ny < 0:
             ny -= 1
 
         sx = slice(ix - nx, ix + nx + 1)
@@ -195,7 +197,7 @@ def get_source_kernel(gta, name, kernel=None):
     for c in gta.components:
         z = c.model_counts_map(name).data.astype('float')
         if kernel is not None:
-            shape = (z.shape[0],) + kernel.shape
+            shape = (z.shape[0][::-1],) + kernel.shape
             z = np.apply_over_axes(np.sum, z, axes=[1, 2]) * np.ones(
                 shape) * kernel[np.newaxis, :, :]
             zs += np.sum(z)
@@ -327,13 +329,16 @@ class ResidMapGenerator(object):
         else:
             loge_bounds = [self.log_energies[0], self.log_energies[-1]]
 
+        # Read map geometry
+        npix = self.components[0].npix
+
         # Put the test source at the pixel closest to the ROI center
-        xpix, ypix = (np.round((self.npix - 1.0) / 2.),
-                      np.round((self.npix - 1.0) / 2.))
+        xpix, ypix = (np.round((npix[0] - 1.0) / 2.),
+                      np.round((npix[1] - 1.0) / 2.))
         cpix = np.array([xpix, ypix])
 
-        geom = self.geom.to_image()
-        skywcs = self.geom.wcs
+        geom = self.components[0].geom.to_image()
+        skywcs = self.components[0].geom.wcs
         skydir = wcs_utils.pix_to_skydir(cpix[0], cpix[1], skywcs)
 
         if src_dict is None:
@@ -358,16 +363,15 @@ class ResidMapGenerator(object):
         src = self.roi.get_source_by_name('residmap_testsource')
 
         modelname = utils.create_model_name(src)
-        npix = self.components[0].npix
 
-        mmst = np.zeros((npix, npix))
-        cmst = np.zeros((npix, npix))
-        emst = np.zeros((npix, npix))
+        mmst = np.zeros(npix[::-1])
+        cmst = np.zeros(npix[::-1])
+        emst = np.zeros(npix[::-1])
 
         sm = get_source_kernel(self, 'residmap_testsource', kernel)
-        ts = np.zeros((npix, npix))
-        sigma = np.zeros((npix, npix))
-        excess = np.zeros((npix, npix))
+        ts = np.zeros(npix[::-1])
+        sigma = np.zeros(npix[::-1])
+        excess = np.zeros(npix[::-1])
 
         self.delete_source('residmap_testsource')
 

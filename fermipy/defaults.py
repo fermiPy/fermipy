@@ -188,8 +188,8 @@ binning = {
     'coordsys': ('CEL', 'Coordinate system of the spatial projection (CEL or GAL).', str),
     'npix':
         (None,
-         'Number of pixels.  If none then this will be set from ``roiwidth`` '
-         'and ``binsz``.', int),
+         'Number of pixels in the x and y direction.  If none then this will be set from ``roiwidth`` '
+         'and ``binsz``.', tuple),
     'roiwidth': (10.0,
                  'Width of the ROI in degrees.  The number of pixels in each spatial dimension will be set from ``roiwidth`` / ``binsz`` (rounded up).',
                  float),

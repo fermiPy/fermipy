@@ -4384,14 +4384,14 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if self.config['binning']['npix'] is None:
             roiwidth = (self.config['binning']['roiwidth']
                         if self.config['binning']['roiwidth'] is not None else 360.)
-            self._npix = int(np.round(roiwidth /
-                                      self.config['binning']['binsz']))
+            npix = int(np.round(roiwidth /self.config['binning']['binsz']))
+            self._npix = (npix,npix)
         else:
             self._npix = self.config['binning']['npix']
 
         if self.config['selection']['radius'] is None:
             self._config['selection']['radius'] = float(
-                np.sqrt(2.) * 0.5 * self.npix *
+                np.sqrt(2.) * 0.5 * max(self.npix) *
                 self.config['binning']['binsz'] + 0.5)
             self.logger.debug(
                 'Automatically setting selection radius to %s deg',
@@ -4484,7 +4484,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
     @property
     def roiwidth(self):
-        return self._npix * self.config['binning']['binsz']
+        return max(self._npix) * self.config['binning']['binsz']
 
     @property
     def projtype(self):
@@ -4817,7 +4817,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if p_method == 0:  # WCS
             z = cmap.data()
-            z = np.array(z).reshape(self.enumbins, self.npix, self.npix)
+            z = np.array(z).reshape(self.enumbins, self.npix[1], self.npix[0])
             return WcsNDMap(copy.deepcopy(self.geom), z)
         elif p_method == 1:  # HPX
             z = cmap.data()
@@ -4866,10 +4866,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if p_method == 0:  # WCS
             if wmap is None:
-                z = np.ones((self.enumbins, self.npix, self.npix))
+                z = np.ones((self.enumbins, self.npix[1], self.npix[0]))
             else:
                 z = wmap.model()
-                z = np.array(z).reshape(self.enumbins, self.npix, self.npix)
+                z = np.array(z).reshape(self.enumbins, self.npix[1], self.npix[0])
             return WcsNDMap(copy.deepcopy(self._geom), z)
         elif p_method == 1:  # HPX
             nhpix = np.max(self.geom.npix)
@@ -4916,7 +4916,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         """
         if self.projtype == "WCS":
-            v = pyLike.FloatVector(self.npix ** 2 * self.enumbins)
+            v = pyLike.FloatVector(self.npix[0] * self.npix[1] * self.enumbins)
         elif self.projtype == "HPX":
             v = pyLike.FloatVector(np.max(self.geom.npix) * self.enumbins)
         else:
@@ -4983,7 +4983,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 v = pyLike.FloatVector(vsum)
 
         if self.projtype == "WCS":
-            z = np.array(v).reshape(self.enumbins, self.npix, self.npix)
+            z = np.array(v).reshape(self.enumbins, self.npix[1], self.npix[0])
             return WcsNDMap(copy.deepcopy(self._geom), z)
         elif self.projtype == "HPX":
             z = np.array(v).reshape(self.enumbins, np.max(self._geom.npix))
@@ -5133,7 +5133,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         # Run gtbin
         if self.projtype == "WCS":
             kw = dict(algorithm='ccube',
-                      nxpix=self.npix, nypix=self.npix,
+                      nxpix=self.npix[0], nypix=self.npix[1],
                       binsz=self.config['binning']['binsz'],
                       evfile=self.files['ft1'],
                       outfile=self.files['ccube'],
@@ -5256,7 +5256,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                       emax=self.config['selection']['emax'],
                       enumbins=self._enumbins,
                       outfile=self.files['bexpmap_roi'], proj='CAR',
-                      nxpix=self.npix, nypix=self.npix,
+                      nxpix=self.npix[0], nypix=self.npix[1],
                       binsz=self.config['binning']['binsz'],
                       xref=self._xref, yref=self._yref,
                       evtype=self.config['selection']['evtype'],
@@ -5577,7 +5577,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         exp = self._bexp.interp_by_coord(
             (skydir, self._bexp.geom.axes[0].center))
         rebin = min(int(np.ceil(self.binsz / 0.01)), 8)
-        shape_out = (self.enumbins + 1, self.npix, self.npix)
+        shape_out = (self.enumbins + 1, self.npix[0], self.npix[1])
         cache = SourceMapCache.create(self._psf, exp, spatial_model,
                                       spatial_width, shape_out,
                                       self.config['binning']['binsz'],
@@ -5600,7 +5600,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         else:
             k = srcmap_utils.make_srcmap(self._psf, exp, spatial_model,
                                          spatial_width,
-                                         npix=self.npix, xpix=xpix, ypix=ypix,
+                                         npix=max(self.npix), xpix=xpix, ypix=ypix,
                                          cdelt=self.config['binning']['binsz'],
                                          psf_scale_fn=psf_scale_fn,
                                          sparse=True)
@@ -5716,7 +5716,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   irfs=self.config['gtlike']['irfs'],
                   evtype=self.config['selection']['evtype'],
                   srcmdl=xmlfile,
-                  nxpix=self.npix, nypix=self.npix,
+                  nxpix=self.npix[0], nypix=self.npix[1],
                   binsz=self.config['binning']['binsz'],
                   xref=float(self.roi.skydir.ra.deg),
                   yref=float(self.roi.skydir.dec.deg),

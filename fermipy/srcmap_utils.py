@@ -239,6 +239,9 @@ def make_srcmap(psf, exp, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
     sigma : float
         Spatial size parameter for extended models.
 
+    npix : int
+        Number of of map bins
+
     xpix : float
         Source position in pixel coordinates in X dimension.
 
