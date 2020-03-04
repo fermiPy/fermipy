@@ -19,21 +19,6 @@ class NameFactory(NameFactory_Base):
     # Stacking spectral file
     specfile_format = 'stack_spectra_{target_type}.fits'
 
-    # target keys, these are how we specify various files associated with
-    # particular targets
-
-    # Roster list file format
-    rosterfile_format = '{target_type}/{rosterlist}'
-
-    # Simulated rosterlist  file format
-    sim_rosterfile_format = '{target_type}_sim/sim_{sim_name}/{rosterlist}'
-
-    # Information about a particular target astro factor
-    astro_valuefile_format = '{target_type}/{target_name}/astro_val_{target_version}.yaml'
-
-    # Information about a particular target astro factor
-    sim_astro_valuefile_format = '{target_type}_sim/sim_{sim_name}/{target_name}/astro_val_{target_version}.yaml'
-
     # Stack variable likelilood file for a particular target (and astro-factor prior)
     stack_likefile_format = '{target_type}/{target_name}/stacklike_{profile}_{astro_prior}.fits'
 
@@ -73,27 +58,6 @@ class NameFactory(NameFactory_Base):
         """
         return self._format_from_dict(NameFactory.specfile_format, **kwargs)
 
-    def rosterfile(self, **kwargs):
-        """ return the name for the Roster list file
-        """
-        return self._format_from_dict(NameFactory.rosterfile_format, **kwargs)
-
-    def sim_rosterfile(self, **kwargs):
-        """ return the name for the Roster list file for simulation
-        """
-        return self._format_from_dict(
-            NameFactory.sim_rosterfile_format, **kwargs)
-
-    def astro_valuefile(self, **kwargs):
-        """ return the name of the yaml file with information about a partiuclar target astro factor
-        """
-        return self._format_from_dict(NameFactory.astro_valuefile_format, **kwargs)
-
-    def sim_astro_valuefile(self, **kwargs):
-        """ return the name of the yaml file with information about a partiuclar target astro factor
-        """
-        return self._format_from_dict(
-            NameFactory.sim_astro_valuefile_format, **kwargs)
 
     def stack_likefile(self, **kwargs):
         """ return the name for the stack variable likelilood file for a particular target

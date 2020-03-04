@@ -181,10 +181,13 @@ def collect_summary_stats(data):
         These include mean, std, median, and 4 quantiles (0.025, 0.16, 0.86, 0.975).
 
     """
-    mean = np.mean(data, axis=0)
-    std = np.std(data, axis=0)
-    median = np.median(data, axis=0)
-    q02, q16, q84, q97 = np.percentile(data, [2.5, 16, 84, 97.5], axis=0)
+    mean = np.mean(data, axis=1)
+    std = np.std(data, axis=1)
+    median = np.median(data, axis=1)
+    q02, q16, q84, q97 = np.percentile(data, [2.5, 16, 84, 97.5], axis=1)
+
+    print ("shapes", data.shape, mean.shape)
+
 
     o = dict(mean=mean,
              std=std,

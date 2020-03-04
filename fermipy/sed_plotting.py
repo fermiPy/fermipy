@@ -136,8 +136,8 @@ def plotCastro_base(castroData, ylims,
         offsets = global_offset - castroData.nll_offsets
         ztmp += offsets
 
-    cmap = plt.get_cmap('jet_r')
-
+    #cmap = plt.get_cmap('jet_r')
+    cmap = plt.get_cmap('BuGn')
 
     xedge = castroData.x_edges()
     ax.set_xlim((xedge[0], xedge[-1]))
@@ -148,19 +148,26 @@ def plotCastro_base(castroData, ylims,
     #cax = ax
     #cbar = plt.colorbar(im)
     #cbar.set_label(r"$\Delta \log \mathcal{L}$")
-
     cax, cbar = make_colorbar(fig, ax, im, (zmin, zmax))
+
+    upper_lims = castroData.getLimits(0.05)
+    xcenter = np.sqrt(xedge[0:-1]*xedge[1:])
+    ax.errorbar(xcenter, upper_lims, yerr=0.2*upper_lims, uplims=True, fmt="ko") 
+
 
     #ax.set_ylim()
     #plt.gca().set_yscale('log')
     #plt.gca().set_xscale('log')
     #plt.gca().set_xlim(sed['e_min'][0], sed['e_max'][-1])
-    #
+    
     #cax, cbar = make_colorbar(fig, ax, im, (zmin, zmax))
-    # cbar = fig.colorbar(im, ticks=np.arange(zmin,zmax),
+    #cbar = fig.colorbar(im, ticks=np.arange(zmin,zmax),
     #                    fraction=0.10,panchor=(1.05,0.5))
     #cbar.set_label(r'$\Delta \log\mathcal{L}$')
     #cax = None
+
+    
+
     return fig, ax, im, ztmp, cax, cbar
 
 
@@ -181,6 +188,48 @@ def plotCastro(castroData, ylims, nstep=25, zlims=None):
     ylabel = NORM_LABEL[castroData.norm_type]
     return plotCastro_base(castroData, ylims,
                            xlabel, ylabel, nstep, zlims)
+
+
+def plotBands(castroData, ylims, bandsHdu, band_type='e2dnde_ul'):
+    """ Make a brazial plot (castro plot) of the expected limits
+
+    castroData : A CastroData object
+    ylims      : y-axis limits
+    bandsHdu   : FITS HDU with the summary data
+    band_type  : Which bands to plot limits for
+    returns fig,ax which are matplotlib figure and axes objects
+    """
+
+    import matplotlib.pyplot as plt
+
+    xmin = castroData.refSpec.ebins[0]
+    xmax = castroData.refSpec.ebins[-1]
+    ymin = ylims[0]
+    ymax = ylims[1]
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.set_xlim((xmin, xmax))
+    ax.set_ylim((ymin, ymax))
+
+    ax.set_xlabel("Energy [GeV]")
+    ax.set_ylabel(NORM_LABEL[castroData.norm_type])
+
+    e_refs = castroData.refSpec.eref
+    band_median = bandsHdu.data['%s_median' % band_type][0]
+    band_1sig_lo = bandsHdu.data['%s_q16' % band_type][0]
+    band_1sig_hi = bandsHdu.data['%s_q84' % band_type][0]
+    band_2sig_lo = bandsHdu.data['%s_q02' % band_type][0]
+    band_2sig_hi = bandsHdu.data['%s_q97' % band_type][0]
+
+    ax.fill_between(e_refs, band_2sig_lo, band_2sig_hi, color='green')
+    ax.fill_between(e_refs, band_1sig_lo, band_1sig_hi, color='yellow')
+    ax.plot(e_refs, band_median, 'k--')
+
+    return fig, ax
 
 
 def plotSED_OnAxis(ax, castroData, TS_thresh=4.0, errSigma=1.0,

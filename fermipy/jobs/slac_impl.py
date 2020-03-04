@@ -253,7 +253,7 @@ def get_slac_default_args(job_time=1500):
 
     """
     slac_default_args = dict(lsf_args={'W': job_time,
-                                       'R': '\"select[rhel60&&!fell]\"'},
+                                       'R': '\"select[dole]\"'},
                              max_jobs=500,
                              time_per_cycle=15,
                              jobs_per_cycle=20,
