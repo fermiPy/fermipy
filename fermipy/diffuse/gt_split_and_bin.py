@@ -206,7 +206,8 @@ class SplitAndBin_SG(ScatterGather):
             except OSError:
                 pass
             logfile = make_nfs_path(os.path.join(output_dir, 'scatter_%s.log' % key))
-            job_configs[key] = comp_dict.copy()
+            #job_configs[key] = args.copy()
+            job_configs[key] = args.copy()
             job_configs[key].update(dict(ft1file=infile,
                                          comp=args['comp'],
                                          hpx_order_max=args['hpx_order_max'],
@@ -247,6 +248,7 @@ class SplitAndBinChain(Chain):
                            dry_run=diffuse_defaults.diffuse['dry_run'])
 
     __doc__ += Link.construct_docstring(default_options)
+
 
     def _map_arguments(self, args):
         """Map from the top-level arguments to the arguments provided to
