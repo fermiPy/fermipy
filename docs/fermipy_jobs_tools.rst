@@ -196,9 +196,10 @@ Using Links and sub-classes in python
 The main aspect of the `Link` python interface are:
 
 * Building the `Link` and setting the parameters.  By way of example we will 
-build a `Link` of type `AnalyzeROI` and configure it do a standard analysis of
-the ROI using the file 'config.yaml' write the resulting 
-ROI snapshot to 'baseline' and make the standard validation plots.
+  build a `Link` of type `AnalyzeROI` and configure it do a standard analysis of
+  the ROI using the file 'config.yaml' write the resulting 
+  ROI snapshot to 'baseline' and make the standard validation plots.
+
 
    .. code-block:: python
 

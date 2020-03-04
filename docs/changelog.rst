@@ -8,7 +8,7 @@ releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
 
 0.18.0 (10/18/2019)
-------------------
+-------------------
 * Added tools to use new version of energy dispersion from fermitools.
 * Changed travis testing and conda scripts to work with conda release of fermitools.
 
