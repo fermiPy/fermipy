@@ -48,7 +48,6 @@ from LikelihoodState import LikelihoodState
 from fermipy.gtutils import BinnedAnalysis, SummedLikelihood
 import BinnedAnalysis as ba
 import pyLikelihood as pyLike
-import pdb
 
 norm_parameters = {
     'ConstantValue': ['Value'],
@@ -5623,7 +5622,6 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         # Force the source map to be cached
         # FIXME: No longer necessary to force cacheing in ST after 11-05-02
         self.like.logLike.sourceMap(str(name)).model()
-        pdb.set_trace()
         self.like.logLike.setSourceMapImage(str(name), np.ravel(k))
         self.like.logLike.sourceMap(str(name)).model()
 

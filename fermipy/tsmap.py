@@ -877,21 +877,21 @@ class TSMapGenerator(object):
             map_offset = wcs_utils.skydir_to_pix(kwargs['map_skydir'],
                                                  map_geom.wcs)
 
-            map_delta = 0.5 * kwargs['map_size'] / self.components[0].binsz
-            xmin = max(int(np.ceil(map_offset[1] - map_delta)), 0)
-            xmax = min(int(np.floor(map_offset[1] + map_delta)) + 1, self.npix[0])
-            ymin = max(int(np.ceil(map_offset[0] - map_delta)), 0)
-            ymax = min(int(np.floor(map_offset[0] + map_delta)) + 1, self.npix[1])
+            map_delta = 0.5 * kwargs['map_size'] / max(np.abs(self.geom.wcs.wcs.cdelt))
+            xmin = max(int(np.ceil(map_offset[0] - map_delta)), 0)
+            xmax = min(int(np.floor(map_offset[0] + map_delta)) + 1, self.npix[0])
+            ymin = max(int(np.ceil(map_offset[1] - map_delta)), 0)
+            ymax = min(int(np.floor(map_offset[1] + map_delta)) + 1, self.npix[1])
 
             xslice = slice(xmin, xmax)
             yslice = slice(ymin, ymax)
             xyrange = [range(xmin, xmax), range(ymin, ymax)]
 
             wcs = map_geom.wcs.deepcopy()
-            npix = (ymax - ymin, xmax - xmin)
-            crpix = (map_geom._crpix[0] - ymin, map_geom._crpix[1] - xmin)
-            wcs.wcs.crpix[0] -= ymin
-            wcs.wcs.crpix[1] -= xmin
+            npix = (xmax - xmin,ymax - ymin)
+            crpix = ( map_geom._crpix[0] - xmin, map_geom._crpix[1] - ymin)
+            wcs.wcs.crpix[1] -= ymin
+            wcs.wcs.crpix[0] -= xmin
 
             # FIXME: We should implement this with a proper cutout method
             map_geom = WcsGeom(wcs, npix, crpix=crpix)

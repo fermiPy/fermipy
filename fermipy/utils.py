@@ -1676,17 +1676,21 @@ def make_radial_kernel(psf, fn, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=Non
         68% containment radius in degrees.
     """
 
+    # if npix is a scalar make it a tuple
+    if np.isscalar(npix):
+        npix = [npix, npix]
+
     if klims is None:
         egy = psf.energies
     else:
         egy = psf.energies[klims[0]:klims[1] + 1]
-    ang_dist = make_pixel_distance(npix, xpix, ypix) * cdelt
+    ang_dist = make_pixel_distance(npix[::-1], xpix, ypix) * cdelt
     max_ang_dist = np.max(ang_dist) + cdelt
     #dtheta = np.linspace(0.0, (np.max(ang_dist) * 1.05)**0.5, 200)**2.0
     # z = create_kernel_function_lookup(psf, fn, sigma, egy,
     #                                  dtheta, psf_scale_fn)
 
-    shape = (len(egy), npix, npix)
+    shape = (len(egy), npix[1], npix[0])
     k = np.zeros(shape)
 
     r99 = psf.containment_angle(energies=egy, fraction=0.997)
@@ -1708,7 +1712,7 @@ def make_radial_kernel(psf, fn, sigma, npix, cdelt, xpix, ypix, psf_scale_fn=Non
             dtheta = np.linspace(0.0, max_ang_dist**0.5, 200)**2.0
 
         z = eval_radial_kernel(psf, fn, sigma, i, dtheta, psf_scale_fn)
-        xdist = make_pixel_distance(npix * rebin,
+        xdist = make_pixel_distance(np.array(npix[::-1]) * rebin,
                                     xpix * rebin + (rebin - 1.0) / 2.,
                                     ypix * rebin + (rebin - 1.0) / 2.)
         xdist *= cdelt / float(rebin)
