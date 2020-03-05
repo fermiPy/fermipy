@@ -48,6 +48,7 @@ from LikelihoodState import LikelihoodState
 from fermipy.gtutils import BinnedAnalysis, SummedLikelihood
 import BinnedAnalysis as ba
 import pyLikelihood as pyLike
+import pdb
 
 norm_parameters = {
     'ConstantValue': ['Value'],
@@ -359,10 +360,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         ebin_edges = np.zeros(0)
         roiwidths = np.zeros(0)
         binsz = np.zeros(0)
+        xwidth = np.zeros(0)
+        ywidth = np.zeros(0)
         for c in self.components:
             ebin_edges = np.concatenate((ebin_edges, c.log_energies))
             roiwidths = np.insert(roiwidths, 0, c.roiwidth)
             binsz = np.insert(binsz, 0, c.binsz)
+            xwidth = np.insert(xwidth,0,c.npix[0] * c.binsz)
+            ywidth = np.insert(ywidth,0,c.npix[1] * c.binsz)
 
         self._ebin_edges = np.sort(np.unique(ebin_edges.round(5)))
         self._enumbins = len(self._ebin_edges) - 1
@@ -400,7 +405,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         self._roiwidth = max(roiwidths)
         self._binsz = min(binsz)
-        self._npix = int(np.round(self._roiwidth / self._binsz))
+        self._npix = (int(max(xwidth) / self._binsz),
+                      int(max(ywidth) / self._binsz))
 
         axes = [MapAxis.from_edges(self.energies, interp='log',
                                    name='energy', unit='MeV')]
@@ -1121,7 +1127,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             crd['loglike'] = -c.like()
 
         if proj_type == 0:
-            shape = (self.enumbins, self.npix, self.npix)
+            shape = (self.enumbins, self.npix[1], self.npix[0])
         elif proj_type == 1:
             shape = (self.enumbins, np.max(self.geom.npix))
 
@@ -5600,7 +5606,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         else:
             k = srcmap_utils.make_srcmap(self._psf, exp, spatial_model,
                                          spatial_width,
-                                         npix=max(self.npix), xpix=xpix, ypix=ypix,
+                                         npix=self.npix, xpix=xpix, ypix=ypix,
                                          cdelt=self.config['binning']['binsz'],
                                          psf_scale_fn=psf_scale_fn,
                                          sparse=True)
@@ -5617,6 +5623,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         # Force the source map to be cached
         # FIXME: No longer necessary to force cacheing in ST after 11-05-02
         self.like.logLike.sourceMap(str(name)).model()
+        pdb.set_trace()
         self.like.logLike.setSourceMapImage(str(name), np.ravel(k))
         self.like.logLike.sourceMap(str(name)).model()
 

@@ -786,15 +786,12 @@ class TSMapGenerator(object):
         else:
             loge_bounds = [self.log_energies[0], self.log_energies[-1]]
 
-        # Extract map geometry
-        npixs = self.components[0].npix
-
         # Put the test source at the pixel closest to the ROI center
-        xpix, ypix = (np.round((npixs[0] - 1.0) / 2.),
-                      np.round((npixs[1] - 1.0) / 2.))
+        xpix, ypix = (np.round((self.npix[0] - 1.0) / 2.),
+                      np.round((self.npix[1] - 1.0) / 2.))
         cpix = np.array([xpix, ypix])
 
-        map_geom = self.components[0].geom.to_image()
+        map_geom = self.geom.to_image()
         frame = coordsys_to_frame(map_geom.coordsys)
         skydir = SkyCoord(*map_geom.pix_to_coord((cpix[0], cpix[1])),
                           frame=frame, unit='deg')
@@ -865,11 +862,11 @@ class TSMapGenerator(object):
                 dpix = int(max_kernel_radius / self.components[i].binsz)
 
             xslice = slice(max(int(xpix - dpix), 0),
-                           min(int(xpix + dpix + 1), max(npixs)))
+                           min(int(xpix + dpix + 1), max(self.npix)))
             model[i] = model[i][:, xslice, xslice]
 
-        ts_values = np.zeros(npixs[::-1])
-        amp_values = np.zeros(npixs[::-1])
+        ts_values = np.zeros(self.npix[::-1])
+        amp_values = np.zeros(self.npix[::-1])
 
         wrap = functools.partial(_ts_value_newton, counts=counts,
                                  bkg=bkg, model=model,
@@ -882,9 +879,9 @@ class TSMapGenerator(object):
 
             map_delta = 0.5 * kwargs['map_size'] / self.components[0].binsz
             xmin = max(int(np.ceil(map_offset[1] - map_delta)), 0)
-            xmax = min(int(np.floor(map_offset[1] + map_delta)) + 1, npixs[0])
+            xmax = min(int(np.floor(map_offset[1] + map_delta)) + 1, self.npix[0])
             ymin = max(int(np.ceil(map_offset[0] - map_delta)), 0)
-            ymax = min(int(np.floor(map_offset[0] + map_delta)) + 1, npixs[1])
+            ymax = min(int(np.floor(map_offset[0] + map_delta)) + 1, self.npix[1])
 
             xslice = slice(xmin, xmax)
             yslice = slice(ymin, ymax)
@@ -899,9 +896,9 @@ class TSMapGenerator(object):
             # FIXME: We should implement this with a proper cutout method
             map_geom = WcsGeom(wcs, npix, crpix=crpix)
         else:
-            xyrange = [range(npixs[0]), range(npixs[1])]
-            xslice = slice(0, npixs[0])
-            yslice = slice(0, npixs[1])
+            xyrange = [range(self.npix[0]), range(self.npix[1])]
+            xslice = slice(0, self.npix[0])
+            yslice = slice(0, self.npix[1])
 
         positions = []
         for i, j in itertools.product(xyrange[0], xyrange[1]):

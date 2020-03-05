@@ -328,16 +328,13 @@ class ResidMapGenerator(object):
         else:
             loge_bounds = [self.log_energies[0], self.log_energies[-1]]
 
-        # Read map geometry
-        npix = self.components[0].npix
-
         # Put the test source at the pixel closest to the ROI center
-        xpix, ypix = (np.round((npix[0] - 1.0) / 2.),
-                      np.round((npix[1] - 1.0) / 2.))
+        xpix, ypix = (np.round((self.npix[0] - 1.0) / 2.),
+                      np.round((self.npix[1] - 1.0) / 2.))
         cpix = np.array([xpix, ypix])
 
-        geom = self.components[0].geom.to_image()
-        skywcs = self.components[0].geom.wcs
+        geom = self.geom.to_image()
+        skywcs = self.geom.wcs
         skydir = wcs_utils.pix_to_skydir(cpix[0], cpix[1], skywcs)
 
         if src_dict is None:
@@ -352,7 +349,7 @@ class ResidMapGenerator(object):
 
         if src_dict['SpatialModel'] == 'Gaussian':
             kernel = utils.make_gaussian_kernel(src_dict['SpatialWidth'],
-                                                cdelt=self.components[0].binsz,
+                                                cdelt=self.binsz,
                                                 npix=101)
             kernel /= np.sum(kernel)
             cpix = [50, 50]
@@ -363,14 +360,14 @@ class ResidMapGenerator(object):
 
         modelname = utils.create_model_name(src)
 
-        mmst = np.zeros(npix[::-1])
-        cmst = np.zeros(npix[::-1])
-        emst = np.zeros(npix[::-1])
+        mmst = np.zeros(self.npix[::-1])
+        cmst = np.zeros(self.npix[::-1])
+        emst = np.zeros(self.npix[::-1])
 
         sm = get_source_kernel(self, 'residmap_testsource', kernel)
-        ts = np.zeros(npix[::-1])
-        sigma = np.zeros(npix[::-1])
-        excess = np.zeros(npix[::-1])
+        ts = np.zeros(self.npix[::-1])
+        sigma = np.zeros(self.npix[::-1])
+        excess = np.zeros(self.npix[::-1])
 
         self.delete_source('residmap_testsource')
 
