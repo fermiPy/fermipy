@@ -1038,11 +1038,11 @@ class TSCubeGenerator(object):
         # We take the coordinate system and the bin size from the underlying map
         skywcs = self._geom.wcs
         galactic = wcs_utils.is_galactic(skywcs)
-        pixsize = np.abs(skywcs.wcs.cdelt[0])
+        pixsize = max(np.abs(skywcs.wcs.cdelt))
 
-        # If the map_size is specified we need to find the right number of pixels
+        # If the map_size is not specified we need to find the right number of pixels
         if map_size is None:
-            npix = int(self._geom.npix[0][0])
+            npix = max(self._geom.npix)[0]
             map_size = pixsize*npix
         else:
             npix = int(np.round(map_size/pixsize))
@@ -1063,6 +1063,8 @@ class TSCubeGenerator(object):
 
         src_dict = copy.deepcopy(kwargs.setdefault('model', {}))
         src_dict = {} if src_dict is None else src_dict
+
+        ### BELOw
 
         src_dict['ra'] = map_skydir.ra.deg
         src_dict['dec'] = map_skydir.dec.deg
