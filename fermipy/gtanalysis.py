@@ -4257,12 +4257,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             # compute psf
             c._psf_app(overwrite=overwrite)
 
-    def compute_drm(self, overwrite=False):
+    def compute_drm(self, edisp_bins=1, overwrite=False):
         """Run the gtdrm app"""
 
         for i,c in enumerate(self.components):
             # compute detector response matrix
-            c._drm_app(overwrite=overwrite)
+            # edisp_bins is number of bins that are appended and prepended 
+            # to chosen analysis binning
+            c._drm_app(edisp_bins=edisp_bins, overwrite=overwrite)
 
 class GTBinnedAnalysis(fermipy.config.Configurable):
     defaults = dict(selection=defaults.selection,
@@ -5841,7 +5843,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         else:
             run_gtapp('gtpsf', self.logger, kw, loglevel=loglevel)
 
-    def _drm_app(self, overwrite=False, **kwargs):
+    def _drm_app(self, overwrite=False, edisp_bins=1, **kwargs):
         """
         Run gtdrm for an analysis component as an application
         """
@@ -5858,12 +5860,15 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         outfile = os.path.join(self.workdir, 
                     'drm{0[file_suffix]:s}.fits'.format(self.config))
 
+        # edisp_bins is number of bins that are attached to low and high energy 
+        # side of reconstructed energy array used in the counts cube
         kw = dict(expcube=self.files['ltcube'],
                   outfile=outfile,
                   cmap=self.files['ccube'],
                   bexpmap=self.files['bexpmap'],
-                  irfs = self.config['gtlike']['irfs'],
-                  evtype = self.config['selection']['evtype'],
+                  irfs=self.config['gtlike']['irfs'],
+                  evtype=self.config['selection']['evtype'],
+                  edisp_bins=edisp_bins
                   )
         self.logger.debug(kw)
 
