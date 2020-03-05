@@ -12,16 +12,11 @@ generic = {
 generic.update(base_defaults.generic)
 
 common = {
-    'roster': (None, 'Name of a stacking target roster.', str),
-    'rosters': ([], 'Name of a stacking target roster.', list),
-    'rosterlist': (None, 'Path to the roster list.', str),
-    'alias_dict': (None, 'File to rename target version keys.', str),
     'specconfig': (None, 'Path to yaml file defining stacking spectra of interest.', str),
     'specfile': (None, 'Path to spectrum file.', str),
     'astro_value_file': (None, 'Path to yaml file with target stacking normalizaiton', str),
     'astro_prior': (None, 'Types of Prior on stacking normalization', str),
     'astro_priors': ([], 'Types of Prior on stacking normalization', list),
-    'spatial_models': ([], 'Types of spatial models to use', list),
     'specs': ([], 'Spectra to consider', list),
     'spec': ('powerlaw', 'Spectral model', str),
     'index': (2.0, 'Spectral index', float),
