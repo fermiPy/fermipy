@@ -28,6 +28,7 @@ from fermipy.spectrum import PowerLaw
 from fermipy.config import ConfigSchema
 from fermipy.timing import Timer
 from LikelihoodState import LikelihoodState
+import pdb
 
 MAX_NITER = 100
 
@@ -791,7 +792,7 @@ class TSMapGenerator(object):
                       np.round((self.npix[1] - 1.0) / 2.))
         cpix = np.array([xpix, ypix])
 
-        map_geom = self.geom.to_image()
+        map_geom = self._geom.to_image()
         frame = coordsys_to_frame(map_geom.coordsys)
         skydir = SkyCoord(*map_geom.pix_to_coord((cpix[0], cpix[1])),
                           frame=frame, unit='deg')
@@ -862,8 +863,10 @@ class TSMapGenerator(object):
                 dpix = int(max_kernel_radius / self.components[i].binsz)
 
             xslice = slice(max(int(xpix - dpix), 0),
-                           min(int(xpix + dpix + 1), max(self.npix)))
-            model[i] = model[i][:, xslice, xslice]
+                           min(int(xpix + dpix + 1), self.npix[0]))
+            yslice = slice(max(int(ypix - dpix), 0),
+                           min(int(ypix + dpix + 1), self.npix[1]))
+            model[i] = model[i][:, yslice, xslice]
 
         ts_values = np.zeros(self.npix[::-1])
         amp_values = np.zeros(self.npix[::-1])
@@ -877,7 +880,7 @@ class TSMapGenerator(object):
             map_offset = wcs_utils.skydir_to_pix(kwargs['map_skydir'],
                                                  map_geom.wcs)
 
-            map_delta = 0.5 * kwargs['map_size'] / max(np.abs(self.geom.wcs.wcs.cdelt))
+            map_delta = 0.5 * kwargs['map_size'] / np.abs(self.geom.wcs.wcs.cdelt[0])
             xmin = max(int(np.ceil(map_offset[0] - map_delta)), 0)
             xmax = min(int(np.floor(map_offset[0] + map_delta)) + 1, self.npix[0])
             ymin = max(int(np.ceil(map_offset[1] - map_delta)), 0)
@@ -901,8 +904,8 @@ class TSMapGenerator(object):
             yslice = slice(0, self.npix[1])
 
         positions = []
-        for i, j in itertools.product(xyrange[0], xyrange[1]):
-            p = [[k // 2, i, j] for k in enumbins]
+        for j, i in itertools.product(xyrange[1], xyrange[0]):
+            p = [[k // 2, j, i] for k in enumbins]
             positions += [p]
 
         self.logger.log(loglevel, 'Fitting test source.')
@@ -915,8 +918,8 @@ class TSMapGenerator(object):
             results = map(wrap, positions)
 
         for i, r in enumerate(results):
-            ix = positions[i][0][1]
-            iy = positions[i][0][2]
+            ix = positions[i][0][2]
+            iy = positions[i][0][1]
             ts_values[iy, ix] = r[0]
             amp_values[iy, ix] = r[1]
 
@@ -1063,8 +1066,6 @@ class TSCubeGenerator(object):
 
         src_dict = copy.deepcopy(kwargs.setdefault('model', {}))
         src_dict = {} if src_dict is None else src_dict
-
-        ### BELOw
 
         src_dict['ra'] = map_skydir.ra.deg
         src_dict['dec'] = map_skydir.dec.deg
