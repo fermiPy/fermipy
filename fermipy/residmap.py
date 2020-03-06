@@ -68,8 +68,8 @@ def convolve_map(m, k, cpix, threshold=0.001, imin=0, imax=None, wmap=None):
     islice = slice(imin, imax)
 
     o = np.zeros(m[islice, ...].shape)
-    ix = int(cpix[0])
-    iy = int(cpix[1])
+    ix = int(cpix[1])
+    iy = int(cpix[0])
 
     # Loop over energy
     for i in range(m[islice, ...].shape[0]):
@@ -77,8 +77,8 @@ def convolve_map(m, k, cpix, threshold=0.001, imin=0, imax=None, wmap=None):
         ks = k[islice, ...][i, ...]
         ms = m[islice, ...][i, ...]
 
-        mx = ks[iy, :] > ks[iy, ix] * threshold
-        my = ks[:, ix] > ks[iy, ix] * threshold
+        mx = ks[ix, :] > ks[ix, iy] * threshold
+        my = ks[:, iy] > ks[ix, iy] * threshold
 
         nx = int(max(3, np.round(np.sum(mx) / 2.)))
         ny = int(max(3, np.round(np.sum(my) / 2.)))
