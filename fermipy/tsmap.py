@@ -880,7 +880,7 @@ class TSMapGenerator(object):
             map_offset = wcs_utils.skydir_to_pix(kwargs['map_skydir'],
                                                  map_geom.wcs)
 
-            map_delta = 0.5 * kwargs['map_size'] / np.abs(self.geom.wcs.wcs.cdelt[0])
+            map_delta = 0.5 * kwargs['map_size'] / self._binsz
             xmin = max(int(np.ceil(map_offset[0] - map_delta)), 0)
             xmax = min(int(np.floor(map_offset[0] + map_delta)) + 1, self.npix[0])
             ymin = max(int(np.ceil(map_offset[1] - map_delta)), 0)
