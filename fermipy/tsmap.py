@@ -28,7 +28,6 @@ from fermipy.spectrum import PowerLaw
 from fermipy.config import ConfigSchema
 from fermipy.timing import Timer
 from LikelihoodState import LikelihoodState
-import pdb
 
 MAX_NITER = 100
 

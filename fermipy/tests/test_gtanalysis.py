@@ -14,9 +14,8 @@ try:
 except ImportError:
     pass
 
-# FIXME : my ST installation according to fermipy is unkown, put bakc before pull request
 # Skip tests in this file if Fermi ST aren't available
-# pytestmark = requires_git_version('01-00-07')
+pytestmark = requires_git_version('01-00-07')
 
 
 @pytest.fixture(scope='module')
@@ -163,10 +162,10 @@ def test_gtanalysis_tsmap(create_draco_analysis):
 
 # FIXME : throws illegal instruction, put back before pull request
 #@requires_git_version('00-00-01')
-# def test_gtanalysis_tscube(create_draco_analysis):
-#     gta = create_draco_analysis
-#     gta.load_roi('fit1')
-#     gta.tscube(model={}, make_plots=True)
+def test_gtanalysis_tscube(create_draco_analysis):
+    gta = create_draco_analysis
+    gta.load_roi('fit1')
+    gta.tscube(model={}, make_plots=True)
 
 
 def test_gtanalysis_residmap(create_draco_analysis):
