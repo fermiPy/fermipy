@@ -160,7 +160,6 @@ def test_gtanalysis_tsmap(create_draco_analysis):
     gta.tsmap(model={}, make_plots=True)
 
 
-# FIXME : throws illegal instruction, put back before pull request
 #@requires_git_version('00-00-01')
 def test_gtanalysis_tscube(create_draco_analysis):
     gta = create_draco_analysis
