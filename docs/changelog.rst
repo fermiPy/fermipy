@@ -6,9 +6,15 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
+0.18.1 (03/10/2020)
+-------------------
+* Changes to improve automated builds for testing
+* Added documentation for fermipy.jobs and femripy.diffuse modules
+* Some changes to support different size pixels in different components
+* Added gtpsf and gtdrm support to gtanalysis
 
 0.18.0 (10/18/2019)
-------------------
+-------------------
 * Added tools to use new version of energy dispersion from fermitools.
 * Changed travis testing and conda scripts to work with conda release of fermitools.
 
