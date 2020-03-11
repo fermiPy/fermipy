@@ -1,10 +1,19 @@
-conda:
-  file: docs/environment.yml
-
-python:
-  version: 2.7
-  setup_py_install: true
+version: 2
 
 formats:
   - epub
   - pdf
+
+python:
+  version: 3.7
+  install:
+    - requirements: docs/requirements.txt
+    - method: pip
+      path: .
+      extra_requirements: 
+        - docs
+  system_packages: true
+
+sphinx:
+  configuration: docs/conf.py
+
