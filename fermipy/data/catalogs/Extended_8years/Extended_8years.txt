@@ -47,8 +47,13 @@ After FL8Y, for 4FGL (September 2018):
   J1626.9-2431=rho Oph, J1642.1-5428=SNR G332.5-5.6, J1723.5-0501,
   J1741.6-3917, J2129.9+5833, J2208.4+6443, J2304.0+5406
 
+Not implemented yet:
+
 - Magnetar paper (J. Li et al 2017, ApJ 835, 30): Kes 73, Kes 79
   Kes 79 much bigger than SNR G33.6+0.1
+
+- Kes 73 (P. Yeung et al 2017, ApJ 837, 69) close to HESS J1841-055
+  much bigger than SNR G27.4+0.0 (both here and in Li et al)
 
 - HESS J1808-204 or SNR G9.7-0.0 (P. Yeung et al 2016, ApJ 827, 41)
   could be composite of the two
@@ -58,3 +63,17 @@ After FL8Y, for 4FGL (September 2018):
 - HESS J1534-571 (M. Araya 2017, ApJ 843, 12)
 
 - G326.3-1.8 / MSH 15-56 (J. Devin)
+
+
+Dedicated papers in progress:
+
+- IC 443 (J. Hewitt)
+
+- new HESS shells (F. de Palma)
+
+- CenA lobes (J. Magill)
+
+
+To be reviewed (very old):
+
+- Cygnus Loop

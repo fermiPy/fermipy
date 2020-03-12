@@ -787,8 +787,8 @@ class TSMapGenerator(object):
             loge_bounds = [self.log_energies[0], self.log_energies[-1]]
 
         # Put the test source at the pixel closest to the ROI center
-        xpix, ypix = (np.round((self.npix - 1.0) / 2.),
-                      np.round((self.npix - 1.0) / 2.))
+        xpix, ypix = (np.round((self.npix[0] - 1.0) / 2.),
+                      np.round((self.npix[1] - 1.0) / 2.))
         cpix = np.array([xpix, ypix])
 
         map_geom = self._geom.to_image()
@@ -862,11 +862,13 @@ class TSMapGenerator(object):
                 dpix = int(max_kernel_radius / self.components[i].binsz)
 
             xslice = slice(max(int(xpix - dpix), 0),
-                           min(int(xpix + dpix + 1), self.npix))
-            model[i] = model[i][:, xslice, xslice]
+                           min(int(xpix + dpix + 1), self.npix[0]))
+            yslice = slice(max(int(ypix - dpix), 0),
+                           min(int(ypix + dpix + 1), self.npix[1]))
+            model[i] = model[i][:, yslice, xslice]
 
-        ts_values = np.zeros((self.npix, self.npix))
-        amp_values = np.zeros((self.npix, self.npix))
+        ts_values = np.zeros(self.npix[::-1])
+        amp_values = np.zeros(self.npix[::-1])
 
         wrap = functools.partial(_ts_value_newton, counts=counts,
                                  bkg=bkg, model=model,
@@ -877,32 +879,32 @@ class TSMapGenerator(object):
             map_offset = wcs_utils.skydir_to_pix(kwargs['map_skydir'],
                                                  map_geom.wcs)
 
-            map_delta = 0.5 * kwargs['map_size'] / self.components[0].binsz
-            xmin = max(int(np.ceil(map_offset[1] - map_delta)), 0)
-            xmax = min(int(np.floor(map_offset[1] + map_delta)) + 1, self.npix)
-            ymin = max(int(np.ceil(map_offset[0] - map_delta)), 0)
-            ymax = min(int(np.floor(map_offset[0] + map_delta)) + 1, self.npix)
+            map_delta = 0.5 * kwargs['map_size'] / self._binsz
+            xmin = max(int(np.ceil(map_offset[0] - map_delta)), 0)
+            xmax = min(int(np.floor(map_offset[0] + map_delta)) + 1, self.npix[0])
+            ymin = max(int(np.ceil(map_offset[1] - map_delta)), 0)
+            ymax = min(int(np.floor(map_offset[1] + map_delta)) + 1, self.npix[1])
 
             xslice = slice(xmin, xmax)
             yslice = slice(ymin, ymax)
             xyrange = [range(xmin, xmax), range(ymin, ymax)]
 
             wcs = map_geom.wcs.deepcopy()
-            npix = (ymax - ymin, xmax - xmin)
-            crpix = (map_geom._crpix[0] - ymin, map_geom._crpix[1] - xmin)
-            wcs.wcs.crpix[0] -= ymin
-            wcs.wcs.crpix[1] -= xmin
+            npix = (ymax - ymin,xmax - xmin)
+            crpix = ( map_geom._crpix[1] - xmin, map_geom._crpix[0] - ymin)
+            wcs.wcs.crpix[1] -= ymin
+            wcs.wcs.crpix[0] -= xmin
 
             # FIXME: We should implement this with a proper cutout method
             map_geom = WcsGeom(wcs, npix, crpix=crpix)
         else:
-            xyrange = [range(self.npix), range(self.npix)]
-            xslice = slice(0, self.npix)
-            yslice = slice(0, self.npix)
+            xyrange = [range(self.npix[0]), range(self.npix[1])]
+            xslice = slice(0, self.npix[0])
+            yslice = slice(0, self.npix[1])
 
         positions = []
-        for i, j in itertools.product(xyrange[0], xyrange[1]):
-            p = [[k // 2, i, j] for k in enumbins]
+        for j, i in itertools.product(xyrange[1], xyrange[0]):
+            p = [[k // 2, j, i] for k in enumbins]
             positions += [p]
 
         self.logger.log(loglevel, 'Fitting test source.')
@@ -915,13 +917,13 @@ class TSMapGenerator(object):
             results = map(wrap, positions)
 
         for i, r in enumerate(results):
-            ix = positions[i][0][1]
-            iy = positions[i][0][2]
-            ts_values[ix, iy] = r[0]
-            amp_values[ix, iy] = r[1]
+            ix = positions[i][0][2]
+            iy = positions[i][0][1]
+            ts_values[iy, ix] = r[0]
+            amp_values[iy, ix] = r[1]
 
-        ts_values = ts_values[xslice, yslice]
-        amp_values = amp_values[xslice, yslice]
+        ts_values = ts_values[yslice, xslice]
+        amp_values = amp_values[yslice, xslice]
 
         ts_map = WcsNDMap(map_geom, ts_values)
         sqrt_ts_map = WcsNDMap(map_geom, ts_values**0.5)
@@ -1038,11 +1040,11 @@ class TSCubeGenerator(object):
         # We take the coordinate system and the bin size from the underlying map
         skywcs = self._geom.wcs
         galactic = wcs_utils.is_galactic(skywcs)
-        pixsize = np.abs(skywcs.wcs.cdelt[0])
+        pixsize = max(np.abs(skywcs.wcs.cdelt))
 
-        # If the map_size is specified we need to find the right number of pixels
+        # If the map_size is not specified we need to find the right number of pixels
         if map_size is None:
-            npix = int(self._geom.npix[0][0])
+            npix = max(self._geom.npix)[0]
             map_size = pixsize*npix
         else:
             npix = int(np.round(map_size/pixsize))

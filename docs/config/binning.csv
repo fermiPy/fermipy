@@ -5,7 +5,7 @@
 ``hpx_ebin``	True	Include energy binning
 ``hpx_order``	10	Order of the map (int between 0 and 12, included)
 ``hpx_ordering_scheme``	RING	HEALPix Ordering Scheme
-``npix``	None	Number of pixels.  If none then this will be set from ``roiwidth`` and ``binsz``.
+``npix``	None	Number of pixels along the x and y dimension (tuple) for WCS mode.  If none then this will be set from ``roiwidth`` and ``binsz``.
 ``proj``	AIT	Spatial projection for WCS mode.
 ``projtype``	WCS	Projection mode (WCS or HPX).
-``roiwidth``	10.0	Width of the ROI in degrees.  The number of pixels in each spatial dimension will be set from ``roiwidth`` / ``binsz`` (rounded up).
+``roiwidth``	10.0	Width of the ROI in degrees.  The number of pixels in each spatial dimension will be set from ``roiwidth`` / ``binsz`` (rounded up) if not specified using ``npix``.
