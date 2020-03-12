@@ -5,7 +5,7 @@ formats:
   - pdf
 
 python:
-  version: 3.7
+  version: 3
   install:
     - requirements: docs/requirements.txt
     - method: pip
@@ -13,9 +13,6 @@ python:
       extra_requirements: 
         - docs
   system_packages: true
-
-conda:
-  environment: docs/environment.yml
 
 sphinx:
   configuration: docs/conf.py
