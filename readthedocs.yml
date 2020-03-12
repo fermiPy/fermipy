@@ -14,6 +14,9 @@ python:
         - docs
   system_packages: true
 
+conda:
+  environment: docs/environment.yaml
+
 sphinx:
   configuration: docs/conf.py
 
