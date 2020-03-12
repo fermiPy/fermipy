@@ -4,3 +4,4 @@ matplotlib
 astropy
 pyyaml
 healpy
+gammapy
