@@ -422,7 +422,7 @@ class JobDetails(object):
                            jobkey=self.jobkey,
                            appname=self.appname,
                            logfile=self.logfile,
-                           job_config=str(self.job_config),
+                           job_config=self.job_config,
                            timestamp=self.timestamp,
                            infile_refs=infile_refs,
                            outfile_refs=outfile_refs,
