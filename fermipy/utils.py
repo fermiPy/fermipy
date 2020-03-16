@@ -16,7 +16,10 @@ from scipy.optimize import brentq
 from scipy.ndimage.measurements import label
 import scipy.special as special
 from numpy.core import defchararray
-from astropy.extern import six
+try:
+    from astropy.extern import six
+except ImportError:
+    pass
 
 
 def init_matplotlib_backend(backend=None):
