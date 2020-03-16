@@ -109,7 +109,6 @@ setup(
          'scipy',
          'pyyaml',
          'gammapy',
-         'six',
          'healpy'],
     extras_require={
         ':python_version=="2.7"': [
