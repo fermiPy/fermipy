@@ -48,8 +48,10 @@ def unicode_representer(dumper, uni):
     return node
 
 
-yaml.add_representer(six.text_type, unicode_representer)
-
+try:
+    yaml.add_representer(six.text_type, unicode_representer)
+except NameError:
+    pass
 
 def load_yaml(infile, **kwargs):
     return yaml.load(open(infile), **kwargs)
