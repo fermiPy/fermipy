@@ -126,8 +126,33 @@ setup(
             'scipy >= 0.14',
             'astropy_healpix < 0.5',
             'pyyaml',
-            'healpy']
+            'healpy'],
+        ':python_version=="3.6"': [
+            'numpy >= 1.17',
+            'astropy >= 2.0.7, < 4.0',
+            'matplotlib >= 1.5.0',
+            'scipy >= 0.14',
+            'astropy_healpix < 0.5',
+            'pyyaml',
+            'healpy'],
+        ':python_version=="3.7"': [
+            'numpy >= 1.17',
+            'astropy >= 2.0.7, < 4.0',
+            'matplotlib >= 1.5.0',
+            'scipy >= 0.14',
+            'astropy_healpix < 0.5',
+            'pyyaml',
+            'healpy'],
         }
+#        ':python_version=="2.7"': [
+#            'numpy >= 1.6.1',
+#            'astropy >= 2.0.7',
+#            'matplotlib >= 1.5.0',
+#            'scipy >= 0.14',
+#            'pyyaml',
+#            'healpy',
+#            'gammapy >= 0.8']
+#        }
 #        ':python_version=="2.7"': [
 #            'numpy >= 1.6.1',
 #            'astropy >= 2.0.7',
