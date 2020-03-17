@@ -19,7 +19,7 @@ from numpy.core import defchararray
 try:
     from astropy.extern import six
 except ImportError:
-    pass
+    import six
 
 
 def init_matplotlib_backend(backend=None):
@@ -48,10 +48,7 @@ def unicode_representer(dumper, uni):
     return node
 
 
-try:
-    yaml.add_representer(six.text_type, unicode_representer)
-except NameError:
-    pass
+yaml.add_representer(six.text_type, unicode_representer)
 
 def load_yaml(infile, **kwargs):
     return yaml.load(open(infile), **kwargs)
