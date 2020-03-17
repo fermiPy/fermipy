@@ -8,7 +8,7 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 try:
     from astropy.extern import six
-except ImportError
+except ImportError:
     import six
 from gammapy.maps.geom import coordsys_to_frame
 
