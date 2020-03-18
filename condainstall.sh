@@ -43,7 +43,7 @@ fi
 conda update -q conda -y
 conda create --name fermipy-test-build -c conda-forge -y python=$PYTHON_VERSION
 conda install -n fermipy-test-build -y pytest 
-conda install -n fermipy-test-build --only_deps -y fermipy
+conda install -n fermipy-test-build --only-deps -y fermipy
 conda activate fermipy-test-build
 
 if [[ -n $CONDA2 ]]; then
