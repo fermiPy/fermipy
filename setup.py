@@ -113,7 +113,7 @@ setup(
         "healpy",
         "astropy_healpix < 0.5; python_version>='3.0'",
         "gammapy == 0.10; python_version=='2.7'",
-        "gammapy; python_version>='3.0'"],
+        "gammapy; python_version>='3.0'",
     ]
 #        ':python_version=="2.7"': [
 #            'numpy >= 1.6.1',
