@@ -14,13 +14,9 @@ if [[ -z $CONDA_DOWNLOAD ]]; then
     fi
 fi
 
-if [[ -z $CONDA_DEPS ]]; then
-    CONDA_DEPS='scipy matplotlib pyyaml ipython numpy astropy gammapy healpy'
-fi
-
-if [[ -z $CONDA2 ]]; then
-    CONDA2='conda install -y healpy subprocess32 fermipy jupyter'
-fi
+#if [[ -z $CONDA2 ]]; then
+#    CONDA2='conda install -y healpy subprocess32'
+#fi
 
 if [[ -z $CONDA_PATH ]]; then
     CONDA_PATH=$HOME/miniconda
@@ -35,21 +31,20 @@ if [ ! -d "$CONDA_PATH/bin" ]; then
     if [[ $rc != 0 ]]; then
         exit $rc
     fi
+    export PATH="$CONDA_PATH/bin:$PATH"
 else
     echo "Using existing conda installation under $CONDA_PATH"
 fi
-
-export PATH="$CONDA_PATH/bin:$PATH"
 
 if [[ -n $ST_INSTALL ]]; then
     $ST_INSTALL
 fi
 
 conda update -q conda -y
-conda config --add channels conda-forge
-conda config --add channels conda-forge/label/cf201901
-conda info -a
-conda install -y python=$PYTHON_VERSION pip pytest $CONDA_DEPS
+conda create --name fermipy-test-build -c conda-forge python=$PYTHON_VERSION
+conda install -n fermipy-test-build pytesat 
+conda install -n fermipy-test-build --only_deps fermipy
+conda activate fermipy-test-build
 
 if [[ -n $CONDA2 ]]; then
     $CONDA2
