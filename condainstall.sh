@@ -15,7 +15,7 @@ if [[ -z $CONDA_DOWNLOAD ]]; then
 fi
 
 if [[ -z $CONDA2 ]]; then
-    CONDA2='conda install -y healpy subprocess32'
+    CONDA2='conda install -y healpy subprocess32 gammapy pytest'
 fi
 
 if [[ -z $CONDA_PATH ]]; then
@@ -42,7 +42,6 @@ fi
 
 conda update -q conda -y
 conda create --name fermipy-test-build -c conda-forge -y python=$PYTHON_VERSION
-conda install -n fermipy-test-build -y pytest 
 conda install -n fermipy-test-build --only-deps -y fermipy
 conda activate fermipy-test-build
 
