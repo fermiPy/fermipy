@@ -14,9 +14,9 @@ if [[ -z $CONDA_DOWNLOAD ]]; then
     fi
 fi
 
-#if [[ -z $CONDA2 ]]; then
-#    CONDA2='conda install -y healpy subprocess32'
-#fi
+if [[ -z $CONDA2 ]]; then
+    CONDA2='conda install -y healpy subprocess32'
+fi
 
 if [[ -z $CONDA_PATH ]]; then
     CONDA_PATH=$HOME/miniconda
@@ -41,9 +41,9 @@ if [[ -n $ST_INSTALL ]]; then
 fi
 
 conda update -q conda -y
-conda create --name fermipy-test-build -c conda-forge python=$PYTHON_VERSION
-conda install -n fermipy-test-build pytesat 
-conda install -n fermipy-test-build --only_deps fermipy
+conda create --name fermipy-test-build -c conda-forge -y python=$PYTHON_VERSION
+conda install -n fermipy-test-build -y pytesat 
+conda install -n fermipy-test-build --only_deps -y fermipy
 conda activate fermipy-test-build
 
 if [[ -n $CONDA2 ]]; then
