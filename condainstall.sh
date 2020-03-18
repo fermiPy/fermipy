@@ -16,7 +16,8 @@ fi
 
 if [[ -z $CONDA_DEPS ]]; then
     CONDA_DEPS='scipy matplotlib pyyaml numpy astropyy gammapy healpy'
-
+fi
+    
 if [[ -z $CONDA2 ]]; then
     CONDA2='conda install -y healpy subprocess32 gammapy pytest'
 fi
