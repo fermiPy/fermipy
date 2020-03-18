@@ -113,11 +113,11 @@ setup(
     extras_require={
         ':python_version=="2.7"': [
             'numpy',
-            'astropy',
+            'astropy >= 2.0.7, < 4.0',
             'matplotlib',
             'scipy',
             'pyyaml',
-            'gammapy',
+            'gammapy == 0.10',
             'healpy'],
         ':python_version=="3.5"': [
             'numpy >= 1.17',
