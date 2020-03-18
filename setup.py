@@ -114,8 +114,8 @@ setup(
         #"matplotlib; python_version=='2.7'",
         "matplotlib",
         "healpy",
-        "astropy_healpix",
-        #"astropy_healpix < 0.5; python_version>='3.0'",
+        #"astropy_healpix",
+        "astropy_healpix < 0.5; python_version>='3.0'",
         #"gammapy == 0.10; python_version=='2.7'",
         "gammapy == 0.8"
     ],
