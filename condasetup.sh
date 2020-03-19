@@ -15,14 +15,5 @@ if [[ $SLAC_ST_BUILD == true ]]; then
 elif [[ -e $FERMI_DIR/fermi-init.sh ]]; then    
     source $FERMI_DIR/fermi-init.sh
     export PYTHONPATH=$FERMI_DIR/lib/python:$FERMI_DIR/lib
-else    
-    export CONDA_PREFIX=$CONDA_PATH
-    source $CONDA_PREFIX/etc/conda/activate.d/activate_fermitools.sh
-fi
-
-export PATH=$CONDA_PATH/bin:$PATH
-
-if [[ -n $CONDA_ENV_PATH ]]; then
-   export PATH=$CONDA_ENV_PATH/bin:$PATH
 fi
 

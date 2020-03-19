@@ -16,7 +16,10 @@ from scipy.optimize import brentq
 from scipy.ndimage.measurements import label
 import scipy.special as special
 from numpy.core import defchararray
-from astropy.extern import six
+try:
+    from astropy.extern import six
+except ImportError:
+    import six
 
 
 def init_matplotlib_backend(backend=None):
@@ -46,7 +49,6 @@ def unicode_representer(dumper, uni):
 
 
 yaml.add_representer(six.text_type, unicode_representer)
-
 
 def load_yaml(infile, **kwargs):
     return yaml.load(open(infile), **kwargs)

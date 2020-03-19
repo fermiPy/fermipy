@@ -8,6 +8,13 @@ from fermipy.jobs.file_archive import FileFlags
 from fermipy.jobs.chain import Link
 
 
+def assert_str_eq(str1, str2):
+    try:
+        test_str = str2.decode()
+    except AttributeError:
+        test_str = str2
+    assert test_str == str1
+
 def test_job_details():
     """ Test that we can build a `JobDetails` object """
 
@@ -27,10 +34,10 @@ def test_job_details():
     job_dict2 = JobDetails.make_dict(table)
     job2 = job_dict2[job.dbkey]
 
-    assert job.jobname == job2.jobname
-    assert job.dbkey == job2.dbkey
-    assert job.logfile == job2.logfile
-    assert job.status == job2.status
+    assert_str_eq(job.jobname, job2.jobname)
+    assert_str_eq(job.dbkey, job2.dbkey)
+    assert_str_eq(job.logfile, job2.logfile)
+    assert_str_eq(job.status, job2.status)
 
 
 def test_job_archive():
@@ -80,10 +87,10 @@ def test_job_archive():
                     outfile2='output2_2.fits')
 
     link.update_args(config_1)
-    job = job_archive.register_job_from_link(link, 'dummy1', logfile='dummy1.log')
+    job = job_archive.register_job_from_link(link, str('dummy1'), logfile=str('dummy1.log'))
 
     link.update_args(config_2)
-    job2 = job_archive.register_job_from_link(link, 'dummy2', logfile='dummy2.log')
+    job2 = job_archive.register_job_from_link(link, str('dummy2'), logfile=str('dummy2.log'))
 
     assert job
     assert job2

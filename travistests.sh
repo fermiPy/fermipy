@@ -9,7 +9,7 @@ if [[ $TRAVIS_OS_NAME == 'linux' ]]; then
     export QT_API=pyqt;
 else
     export DISPLAY=:99.0;
-    /usr/bin/Xvfb :99 -screen 0 1280x1024x24 &
+    #/usr/bin/Xvfb :99 -screen 0 1280x1024x24 &
 fi
 
 python -m pytest -vv --cov=fermipy --cov-config=fermipy/tests/coveragerc --durations=30
