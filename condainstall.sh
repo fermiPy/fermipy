@@ -54,8 +54,6 @@ if [[ -n $CONDA2 ]]; then
     $CONDA2
 fi
 
-python -m pip install cython
-
 if [[ -n $PIP_DEPS ]]; then
     python -m pip install $PIP_DEPS
 fi
