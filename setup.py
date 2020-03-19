@@ -117,6 +117,7 @@ setup(
         #"astropy_healpix",
         #"astropy_healpix < 0.5; python_version>='3.0'",
         #"gammapy == 0.10; python_version=='2.7'",
+        "cython",
         "gammapy"
     ],
 #        ':python_version=="2.7"': [
