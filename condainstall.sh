@@ -67,12 +67,15 @@ if [[ -n $CONDA2_DEPS ]]; then
     conda install -n $FERMIPY_CONDA_ENV -y -c conda-forge $CONDA2_DEPS
 fi
 
+# Install stuff from pip (for travis coverage testing)
 if [[ -n $PIP_DEPS ]]; then
     python -m pip install $PIP_DEPS
 fi
 
 source condasetup.sh
 
+# We don't set this up by default.  Let the user specify how to do it.
+# This is just here from the travis testing
 if [[ -n $INSTALL_CMD ]]; then
     $INSTALL_CMD
 fi
