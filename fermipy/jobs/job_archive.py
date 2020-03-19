@@ -418,11 +418,11 @@ class JobDetails(object):
         intfile_refs[1] = f_ptr
 
         table.add_row(dict(dbkey=self.dbkey,
-                           jobname=self.jobname,
-                           jobkey=self.jobkey,
-                           appname=self.appname,
-                           logfile=self.logfile,
-                           job_config=self.job_config,
+                           jobname=str(self.jobname),
+                           jobkey=str(self.jobkey),
+                           appname=str(self.appname),
+                           logfile=str(self.logfile),
+                           job_config=str(self.job_config),
                            timestamp=self.timestamp,
                            infile_refs=infile_refs,
                            outfile_refs=outfile_refs,

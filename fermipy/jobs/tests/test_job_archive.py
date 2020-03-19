@@ -87,10 +87,10 @@ def test_job_archive():
                     outfile2='output2_2.fits')
 
     link.update_args(config_1)
-    job = job_archive.register_job_from_link(link, 'dummy1', logfile='dummy1.log')
+    job = job_archive.register_job_from_link(link, str('dummy1'), logfile=str('dummy1.log'))
 
     link.update_args(config_2)
-    job2 = job_archive.register_job_from_link(link, 'dummy2', logfile='dummy2.log')
+    job2 = job_archive.register_job_from_link(link, str('dummy2'), logfile=str('dummy2.log'))
 
     assert job
     assert job2
