@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
+# Default python version
 if [[ -z $PYTHON_VERSION ]]; then
     PYTHON_VERSION=2.7
 fi
 
+# Default conda download
 if [[ -z $CONDA_DOWNLOAD ]]; then
     if [[ `uname` == "Darwin" ]]; then
 	echo "Detected Mac OS X..."
@@ -14,17 +16,22 @@ if [[ -z $CONDA_DOWNLOAD ]]; then
     fi
 fi
 
+# Default conda deps
 if [[ -z $CONDA_DEPS ]]; then
     CONDA_DEPS='scipy matplotlib pyyaml numpy astropyy gammapy healpy'
 fi
-    
-if [[ -z $CONDA2 ]]; then
-    CONDA2='conda install -y --name fermipy-test-build healpy subprocess32 pytest'
-fi
 
+# Default conda path
 if [[ -z $CONDA_PATH ]]; then
     CONDA_PATH=$HOME/miniconda
 fi
+
+
+# Default conda env
+if [[ -z $FERMIPY_CONDA_ENV ]]; then
+    FERMIPY_CONDA_ENV=fermipy
+fi
+
 
 if [ ! -d "$CONDA_PATH/bin" ]; then
     echo Creating a new conda installation under $CONDA_PATH
@@ -35,26 +42,29 @@ if [ ! -d "$CONDA_PATH/bin" ]; then
     if [[ $rc != 0 ]]; then
         exit $rc
     fi
-    export PATH="$CONDA_PATH/bin:$PATH"
 else
     echo "Using existing conda installation under $CONDA_PATH"
 fi
 
+# Make sure we have conda setup
+. $CONDA_PATH/etc/profile.d/conda.sh
+
 # First we update conda and make an env
 conda update -q conda -y
-conda create --name fermipy-test-build -c conda-forge -y python=$PYTHON_VERSION
-conda activate fermipy-test-build
+conda create --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -y python=$PYTHON_VERSION
+conda activate $FERMIPY_CONDA_ENV
 
 # Install the science tools, if requested
 if [[ -n $ST_INSTALL ]]; then
     $ST_INSTALL
 fi
 
-conda install -n fermipy-test-build -y $CONDA_DEPS
-#conda install -n fermipy-test-build --only-deps -y fermipy
+# Ok, now we install fermipy dependencies
+conda install -n $FERMIPY_CONDA_ENV -y -c conda-forge $CONDA_DEPS
 
-if [[ -n $CONDA2 ]]; then
-    $CONDA2
+# Install extra conda deps if needed
+if [[ -n $CONDA2_DEPS ]]; then
+    conda install -n $FERMIPY_CONDA_ENV -y -c conda-forge $CONDA2_DEPS
 fi
 
 if [[ -n $PIP_DEPS ]]; then
