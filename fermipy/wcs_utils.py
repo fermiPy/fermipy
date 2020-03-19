@@ -10,7 +10,6 @@ try:
     from astropy.extern import six
 except ImportError:
     import six
-from gammapy.maps.geom import coordsys_to_frame
 
 
 class WCSProj(object):
