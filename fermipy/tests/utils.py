@@ -38,8 +38,14 @@ def version_str_to_int_git(version_str):
 def requires_st_version(version_str):
     """Decorator to declare minimum ST version needed for tests.
     """
+    reason = 'Requires ST Version >=: {}'.format(version_str)
 
     version = version_str_to_int(version_str)
+
+    st_version = get_st_version()
+    if st_version == 'unknown':
+        return pytest.mark.skipif(False, reason=reason)
+    
     try:
         st_version = version_str_to_int(get_st_version())
     except:
@@ -50,7 +56,6 @@ def requires_st_version(version_str):
     else:
         skip_it = True
 
-    reason = 'Requires ST Version >=: {}'.format(version_str)
     return pytest.mark.skipif(skip_it, reason=reason)
 
 

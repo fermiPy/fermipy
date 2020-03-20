@@ -15,7 +15,7 @@ except ImportError:
     pass
 
 # Skip tests in this file if Fermi ST aren't available
-pytestmark = requires_git_version('01-00-07')
+pytestmark = requires_st_version('01-00-07')
 
 
 @pytest.fixture(scope='module')
@@ -26,6 +26,7 @@ def create_draco_analysis(request, tmpdir_factory):
     dirname = path.join()
     os.system('curl -o %s -OL %s' % (outfile, url))
     os.system('cd %s;tar xzf %s' % (dirname, outfile))
+    
     request.addfinalizer(lambda: path.remove(rec=1))
 
     cfgfile = path.join('fermipy_test_draco', 'config.yaml')
@@ -61,7 +62,7 @@ def create_pg1553_analysis(request, tmpdir_factory):
         outfile = path.join('fermipy_test_pg1553', f)
         os.system('curl -o %s -OL %s' % (outfile, url))
 
-    #request.addfinalizer(lambda: path.remove(rec=1))
+    request.addfinalizer(lambda: path.remove(rec=1))
 
     cfgfile = path.join('fermipy_test_pg1553', 'config.yaml')
     if not os.path.isfile(str(cfgfile)):
@@ -160,7 +161,7 @@ def test_gtanalysis_tsmap(create_draco_analysis):
     gta.tsmap(model={}, make_plots=True)
 
 
-#@requires_git_version('00-00-01')
+@requires_git_version('99-00-01')
 def test_gtanalysis_tscube(create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
@@ -316,7 +317,7 @@ def test_gtanalysis_localization(create_draco_analysis):
 def test_gtanalysis_lightcurve(create_pg1553_analysis):
     gta = create_pg1553_analysis
     gta.load_roi('fit1')
-    o = gta.lightcurve('3FGL J1555.7+1111', nbins=2,
+    o = gta.lightcurve('4FGL J1555.7+1111', nbins=2,
                        free_radius=3.0)
 
     rtol = 0.01
