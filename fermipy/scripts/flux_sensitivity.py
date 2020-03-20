@@ -181,8 +181,7 @@ def run_flux_sensitivity(**kwargs):
 
     if isodiff_filepath is None:
         isodiff = utils.resolve_file_path('iso_%s_v06.txt' % event_class,
-                                          search_dirs=[os.path.join('$FERMIPY_ROOT', 'data'),
-                                                       '$FERMI_DIFFUSE_DIR'])
+                                          search_dirs=['$FERMI_DIFFUSE_DIR'])
         isodiff = os.path.expandvars(isodiff)
     else:
         isodiff = isodiff_filepath

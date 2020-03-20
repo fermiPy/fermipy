@@ -1441,8 +1441,8 @@ class ROIModel(fermipy.config.Configurable):
         if config.get('diffuse_dir', []):
             search_dirs += config.get('diffuse_dir', [])
         search_dirs += [self.config['fileio']['outdir'],
-                        os.path.join('$FERMIPY_ROOT', 'data'),
-                        '$FERMI_DIFFUSE_DIR']
+                            '$FERMI_DIFFUSE_DIR',
+                            '$FERMIPY_DATA_DIR']
 
         srcs = []
         if config is not None:

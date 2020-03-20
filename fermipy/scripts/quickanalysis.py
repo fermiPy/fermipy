@@ -71,9 +71,9 @@ def create_config(args):
         ),
         model=dict(
             src_roiwidth=15.0,
-            galdiff='$FERMI_DIFFUSE_DIR/v5r0/gll_iem_v06.fits',
-            isodiff='iso_P8R2_SOURCE_V6_v06.txt',
-            catalogs=['3FGL'],
+            galdiff='$FERMI_DIFFUSE_DIR/gll_iem_v07.fits',
+            isodiff='$FERMI_DIFFUSE_DIR/iso_P8R3_SOURCE_V2_v1.txt',
+            catalogs=['4FGL'],
         ),
     )
 
@@ -134,7 +134,7 @@ provided on the command-line.
     args = vars(parser.parse_args())
 
     if not 'FERMI_DIFFUSE_DIR' in os.environ:
-        os.environ['FERMI_DIFFUSE_DIR'] = '$GLAST_EXT/diffuseModels'
+        os.environ['FERMI_DIFFUSE_DIR'] = os.path.expandvars('$FERMI_DIR/refdata/fermi/galdiffuse')
 
     if not args['config_file']:
         args['config_file'] = os.path.join(args['outdir'], 'config.yaml')

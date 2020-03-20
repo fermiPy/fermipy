@@ -54,8 +54,7 @@ def get_function_spec(name):
         Parameter defaults dictionary.
     """
     if not hasattr(get_function_spec, 'fndict'):
-        modelfile = os.path.join('$FERMIPY_ROOT',
-                                 'data', 'models.yaml')
+        modelfile = os.path.join('$FERMIPY_DATA_DIR', 'models.yaml')
         modelfile = os.path.expandvars(modelfile)
         get_function_spec.fndict = yaml.load(open(modelfile))
 
