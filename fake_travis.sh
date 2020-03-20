@@ -8,7 +8,7 @@ export CONDA_DEPS='gammapy numpy astropy scipy matplotlib pyyaml'
 export CONDA2_DEPS='subprocess32 pytest'
 export DOCKER_INSTALL=''
 
-NAME='docs'
+NAME='main'
 export FERMIPY_CONDA_ENV="fermipy-test-$NAME"
 
 
