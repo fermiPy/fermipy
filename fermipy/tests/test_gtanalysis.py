@@ -202,6 +202,9 @@ def test_gtanalysis_find_sources(create_draco_analysis):
     newsrcs1 = gta.get_sources(skydir=src1.skydir, distance=0.3,
                                exclude=diff_sources)
 
+    print(newsrcs0)
+    print(newsrcs1)
+    
     assert(len(newsrcs0) == 1)
     assert(len(newsrcs1) == 1)
 
