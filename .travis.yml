@@ -35,15 +35,6 @@ matrix:
                ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS fermitools"
                DOCKER_INSTALL=''
  
-        # The main build:
-        # Python 2, lastest tag of fermitools, all dependencies
-        - os: osx
-          env: NAME=osx
-               PYTHON_VERSION=2.7
-               CONDA_DOWNLOAD=Miniconda2-latest-MacOSX-x86_64.sh
-               ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS fermitools"
-               DOCKER_INSTALL=''
-
         # The old build:
         # Python 2, fixed tag of fermitools, all dependencies
         - os: linux
