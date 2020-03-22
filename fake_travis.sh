@@ -21,15 +21,7 @@ case $NAME in
     old)
 	export PYTHON_VERSION="2.7"
 	export CONDA_PATH="/Users/echarles/anaconda2"
-	export ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS -c fermi fermitools=1.0.2"
-	;;
-    ancient)
-	export PYTHON_VERSION="2.7"
-	export CONDA_PATH="/Users/echarles/anaconda2"
-	export ST_PATH='/u/ek/echarles/dmcat/software/build_test'
-	export ST_INSTALL="bash stinstall.sh $ST_PATH"
-	export FERMI_DIR='/u/ek/echarles/dmcat/software/build_test/ScienceTools/x86_64-unknown-linux-gnu-libc2.17'
-	export CONDA_DEPS='gammapy numpy astropy scipy matplotlib pytest pyyaml'
+	export ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS -c fermi fermitools=1.2.23"
 	;;
     docs)
 	export PYTHON_VERSION="3.6"

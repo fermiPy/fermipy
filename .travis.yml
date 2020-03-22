@@ -35,23 +35,22 @@ matrix:
                ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS fermitools"
                DOCKER_INSTALL=''
  
+        # The main build:
+        # Python 2, lastest tag of fermitools, all dependencies
+        - os: osx
+          env: NAME=main
+               PYTHON_VERSION=2.7
+               CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
+               ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS fermitools"
+               DOCKER_INSTALL=''
+
         # The old build:
-        # Python 2, Fermi ST, all dependencies
+        # Python 2, fixed tag of fermitools, all dependencies
         - os: linux
           env: NAME=old
                PYTHON_VERSION=2.7
                CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
-               ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS fermitools=1.0.2"
-               DOCKER_INSTALL=''
-
-        # The ancient build, using a tarball
-        # Python 2, Fermi ST, all dependencies
-        - os: linux
-          env: NAME=ancient
-               PYTHON_VERSION=2.7
-               CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
-               ST_INSTALL="bash stinstall.sh $HOME"
-               FERMI_DIR="$HOME/ScienceTools/x86_64-unknown-linux-gnu-libc2.17"
+               ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS fermitools=1.2.23"
                DOCKER_INSTALL=''
 
         # The Sphinx docs build
