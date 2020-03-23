@@ -218,7 +218,7 @@ def test_gtanalysis_find_sources(create_draco_analysis):
     sep0 = src0.skydir.separation(newsrc0.skydir).deg
     sep1 = src1.skydir.separation(newsrc1.skydir).deg
 
-    print(sep0, sep1, src0['flux'], newsrc0['flux'], src1['flux'], newsrc1['flux'])
+    print(sep0, src0.skydir.separation(newsrcs0[1].skydir).deg, sep1, src1.skydir.separation(newsrcs1[1].skydir).deg, src0['flux'], newsrc0['flux'], src1['flux'], newsrc1['flux'])
 
     assert(sep0 < newsrc0['pos_r99'])
     assert(sep1 < newsrc1['pos_r99'])
