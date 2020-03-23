@@ -197,9 +197,9 @@ def test_gtanalysis_find_sources(create_draco_analysis):
     gta.find_sources()
 
     diff_sources = [s.name for s in gta.roi.sources if s.diffuse]
-    newsrcs0 = gta.get_sources(skydir=src0.skydir, distance=0.5,
+    newsrcs0 = gta.get_sources(skydir=src0.skydir, distance=0.25,
                                exclude=diff_sources)
-    newsrcs1 = gta.get_sources(skydir=src1.skydir, distance=0.5,
+    newsrcs1 = gta.get_sources(skydir=src1.skydir, distance=0.25,
                                exclude=diff_sources)
 
     print(newsrcs0, newsrcs1, newsrcs0[0].skydir.separation(newsrcs0[1].skydir).deg, newsrcs1[0].skydir.separation(newsrcs1[1].skydir).deg)
