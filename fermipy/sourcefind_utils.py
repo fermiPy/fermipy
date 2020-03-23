@@ -185,7 +185,7 @@ def find_peaks(input_map, threshold, min_separation=0.5):
     deltaxy *= max(input_map.geom.wcs.wcs.cdelt)
     region = deltaxy < min_separation
 
-    print("min_sep = ", cdelt, min_separation, deltaxy)
+    print("min_sep = ", cdelt, min_separation, region)
 
     local_max = maximum_filter(data, footprint=region) == data
     local_max[data < threshold] = False
