@@ -21,7 +21,7 @@ except ImportError:
 pytestmark = requires_dependency('Fermi ST')
 
 galdiff_path = os.path.join(os.path.expandvars('$FERMI_DIFFUSE_DIR'),
-                            'gll_iem_v06.fits')
+                            'gll_iem_v07.fits')
 
 
 @requires_file(galdiff_path)
@@ -32,33 +32,30 @@ def test_calc_diff_flux_sensitivity():
     ebins = 10**np.linspace(2.0, 5.0, 8 * 3 + 1)
 
     gdiff = Map.create_from_fits(galdiff_path)
-    iso = np.loadtxt(os.path.expandvars('$FERMIPY_ROOT/data/iso_P8R2_SOURCE_V6_v06.txt'),
+    iso = np.loadtxt(os.path.expandvars('$FERMI_DIFFUSE_DIR/iso_P8R3_SOURCE_V2_v1.txt'),
                      unpack=True)
     scalc = SensitivityCalc(gdiff, iso, ltc, ebins,
-                            'P8R2_SOURCE_V6', [['FRONT', 'BACK']])
+                            'P8R3_SOURCE_V2', [['FRONT', 'BACK']])
 
     fn = spectrum.PowerLaw([1E-13, -2.0], scale=1E3)
     o = scalc.diff_flux_threshold(c, fn, 25.0, 3.0)
+    
     assert_allclose(o['eflux'],
-                    np.array([9.46940878e-07,   8.18350327e-07,   7.08228859e-07,
-                              6.25785181e-07,   5.45241744e-07,   4.80434705e-07,
-                              4.16747935e-07,   3.68406513e-07,   3.16719850e-07,
-                              2.79755007e-07,   2.50862769e-07,   2.31349646e-07,
-                              2.16286209e-07,   2.08381335e-07,   2.02673929e-07,
-                              2.05372045e-07,   2.14355673e-07,   2.29584275e-07,
-                              2.53220397e-07,   2.80878974e-07,   3.19989251e-07,
-                              3.74686765e-07,   4.49321103e-07,   5.48865583e-07]),
+                    np.array([9.93077714e-07, 8.59371115e-07, 7.44896026e-07, 6.61397166e-07,
+                                  5.67842613e-07, 4.93802411e-07, 4.22501374e-07, 3.69299411e-07,
+                                  3.16648674e-07, 2.81050363e-07, 2.52941925e-07, 2.35549281e-07,
+                                  2.27269823e-07, 2.33109741e-07, 2.28212061e-07, 2.22473996e-07,
+                                  2.26623213e-07, 2.46539227e-07, 2.61423960e-07, 3.04766386e-07,
+                                  3.35688695e-07, 4.09265051e-07, 4.79776973e-07, 5.93001330e-07]),
                     rtol=3E-3)
 
     assert_allclose(o['flux'],
-                    np.array([8.22850449e-09,   5.33257909e-09,   3.46076145e-09,
-                              2.29310172e-09,   1.49825986e-09,   9.89993669e-10,
-                              6.43978699e-10,   4.26899204e-10,   2.75215778e-10,
-                              1.82295486e-10,   1.22584132e-10,   8.47748218e-11,
-                              5.94328933e-11,   4.29394879e-11,   3.13181379e-11,
-                              2.37979404e-11,   1.86265760e-11,   1.49602959e-11,
-                              1.23736187e-11,   1.02924147e-11,   8.79292634e-12,
-                              7.72087281e-12,   6.94312304e-12,   6.36010146e-12]),
+                    np.array([8.62941353e-09, 5.59988099e-09, 3.63993562e-09, 2.42359683e-09,
+                                  1.56036437e-09, 1.01753944e-09, 6.52869186e-10, 4.27933870e-10,
+                                  2.75153929e-10, 1.83139573e-10, 1.23600112e-10, 8.63137188e-11,
+                                  6.24510606e-11, 4.80350743e-11, 3.52644113e-11, 2.57796669e-11,
+                                  1.96925718e-11, 1.60651237e-11, 1.27744860e-11, 1.11677353e-11,
+                                  9.22432852e-12, 8.43340011e-12, 7.41374161e-12, 6.87153420e-12]),
                     rtol=3E-3)
 
 
@@ -70,7 +67,7 @@ def test_calc_int_flux_sensitivity():
     ebins = 10**np.linspace(2.0, 5.0, 8 * 3 + 1)
 
     gdiff = Map.create_from_fits(galdiff_path)
-    iso = np.loadtxt(os.path.expandvars('$FERMIPY_ROOT/data/iso_P8R2_SOURCE_V6_v06.txt'),
+    iso = np.loadtxt(os.path.expandvars('$FERMI_DIFFUSE_DIR/iso_P8R3_SOURCE_V2_v1.txt'),
                      unpack=True)
     scalc = SensitivityCalc(gdiff, iso, ltc, ebins,
                             'P8R2_SOURCE_V6', [['FRONT', 'BACK']])
@@ -78,21 +75,19 @@ def test_calc_int_flux_sensitivity():
     fn = spectrum.PowerLaw([1E-13, -2.0], scale=1E3)
     o = scalc.int_flux_threshold(c, fn, 25.0, 3.0)
 
-    assert_allclose(o['eflux'], 1.0719847971553671e-06, rtol=3E-3)
-    assert_allclose(o['flux'], 1.550305083355546e-09, rtol=3E-3)
-    assert_allclose(o['npred'], 511.16725330021416, rtol=3E-3)
-    assert_allclose(o['dnde'], 1.5518569402958423e-14, rtol=3E-3)
-    assert_allclose(o['e2dnde'], 1.5518569402958427e-07, rtol=3E-3)
+    assert_allclose(o['eflux'], 1.15296479181e-06, rtol=3E-3)
+    assert_allclose(o['flux'], 1.66741840222e-09, rtol=3E-3)
+    assert_allclose(o['npred'], 549.71066228, rtol=3E-3)
+    assert_allclose(o['dnde'], 1.66908748971e-14, rtol=3E-3)
+    assert_allclose(o['e2dnde'], 1.66908748971e-07, rtol=3E-3)
 
     assert_allclose(o['bins']['flux'],
-                    np.array([3.88128407e-10,   2.91055245e-10,   2.18260643e-10,
-                              1.63672392e-10,   1.22736979e-10,   9.20397499e-11,
-                              6.90200755e-11,   5.17577549e-11,   3.88128407e-11,
-                              2.91055245e-11,   2.18260643e-11,   1.63672392e-11,
-                              1.22736979e-11,   9.20397499e-12,   6.90200755e-12,
-                              5.17577549e-12,   3.88128407e-12,   2.91055245e-12,
-                              2.18260643e-12,   1.63672392e-12,   1.22736979e-12,
-                              9.20397499e-13,   6.90200755e-13,   5.17577549e-13]),
+                    np.array([4.17448446e-10, 3.13042173e-10, 2.34748512e-10, 1.76036550e-10,
+                                  1.32008790e-10, 9.89926269e-11, 7.42339977e-11, 5.56676450e-11,
+                                  4.17448446e-11, 3.13042173e-11, 2.34748512e-11, 1.76036550e-11,
+                                  1.32008790e-11, 9.89926269e-12, 7.42339977e-12, 5.56676450e-12,
+                                  4.17448446e-12, 3.13042173e-12, 2.34748512e-12, 1.76036550e-12,
+                                  1.32008790e-12, 9.89926269e-13, 7.42339977e-13, 5.56676450e-13]),
                     rtol=1E-3)
 
 
@@ -103,7 +98,7 @@ def test_flux_sensitivity_script(tmpdir):
     outpath = str(p)
     outpath = 'test.fits'
     isodiff = os.path.expandvars(
-        '$FERMIPY_ROOT/data/iso_P8R2_SOURCE_V6_v06.txt')
+        '$FERMI_DIFFUSE_DIR/iso_P8R3_SOURCE_V2_v1.txt')
     flux_sensitivity.run_flux_sensitivity(ltcube=None, galdiff=galdiff_path,
                                           isodiff=isodiff,
                                           glon=10.0, glat=10.0,
@@ -111,13 +106,12 @@ def test_flux_sensitivity_script(tmpdir):
                                           obs_time_yr=10.0, ts_thresh=25.0, min_counts=3.0)
 
     tab = Table.read(outpath, 'DIFF_FLUX')
+
     assert_allclose(tab['flux'],
-                    np.array([8.22850449e-09,   5.33257909e-09,   3.46076145e-09,
-                              2.29310172e-09,   1.49825986e-09,   9.89993669e-10,
-                              6.43978699e-10,   4.26899204e-10,   2.75215778e-10,
-                              1.82295486e-10,   1.22584132e-10,   8.47748218e-11,
-                              5.94328933e-11,   4.29394879e-11,   3.13181379e-11,
-                              2.37979404e-11,   1.86265760e-11,   1.49602959e-11,
-                              1.23736187e-11,   1.02924147e-11,   8.79292634e-12,
-                              7.72087281e-12,   6.94312304e-12,   6.36010146e-12]),
+                    np.array([8.62850665e-09, 5.59920518e-09, 3.63950511e-09, 2.42326614e-09,
+                                  1.56015165e-09, 1.01737776e-09, 6.52779820e-10, 4.27876477e-10,
+                                  2.75077234e-10, 1.83076832e-10, 1.23542694e-10, 8.62621145e-11,
+                                  6.24062445e-11, 4.79971674e-11, 3.52281635e-11, 2.57478300e-11,
+                                  1.96615495e-11, 1.60323578e-11, 1.27440221e-11, 1.11360816e-11,
+                                  9.19157532e-12, 8.39957289e-12, 7.37949945e-12, 6.83355191e-12]),
                     rtol=3E-3)

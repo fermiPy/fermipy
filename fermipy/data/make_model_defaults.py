@@ -24,8 +24,7 @@ for k, v in par_names.items():
 o['CompositeSource'] = {'defaults' : {}, 'norm_par' : None,
                         'par_names': [] }
 
-modelfile = os.path.join('$FERMIPY_ROOT',
-                         'data', 'models.yaml')
+modelfile = os.path.join('$FERMIPY_DATA_DIR', 'models.yaml')
 
 
 yaml.dump(tolist(o),

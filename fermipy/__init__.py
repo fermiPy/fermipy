@@ -54,6 +54,8 @@ PACKAGE_ROOT = os.path.abspath(os.path.dirname(__file__))
 PACKAGE_DATA = os.path.join(PACKAGE_ROOT, 'data')
 os.environ['FERMIPY_ROOT'] = PACKAGE_ROOT
 os.environ['FERMIPY_DATA_DIR'] = PACKAGE_DATA
+if 'FERMI_DIR' in os.environ and 'FERMI_DIFFUSE_DIR' not in os.environ:
+    os.environ['FERMI_DIFFUSE_DIR'] = os.path.expandvars('$FERMI_DIR/refdata/fermi/galdiffuse')
 
 
 def _get_test_runner():
