@@ -26,7 +26,7 @@ fi
 
 # Default conda deps
 if [[ -z $CONDA_DEPS ]]; then
-    CONDA_DEPS='scipy matplotlib pyyaml numpy astropy gammapy healpy'
+    CONDA_DEPS='scipy matplotlib pyyaml numpy astropy gammapy healpy astropy-healpix'
 fi
 
 # Default conda path

@@ -18,7 +18,7 @@ env:
       - PIP_DEPS='coverage pytest-cov'
       - INSTALL_CMD='python setup.py install'
       - CONDA_CHANNELS=conda-forge
-      - CONDA_DEPS='gammapy numpy astropy scipy matplotlib pyyaml'
+      - CONDA_DEPS='gammapy numpy astropy scipy matplotlib pyyaml astropy-healpix'
       - CONDA2_DEPS='subprocess32 pytest'
       - FERMI_CONDA_CHANNELS='-c conda-forge/label/cf201901 -c fermi'
       - FERMIPY_CONDA_ENV='fermipy'

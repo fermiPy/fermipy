@@ -103,30 +103,12 @@ setup(
         'fermipy-plot-sed-summary-bands-sg = fermipy.jobs.target_plotting:PlotSEDSummaryBands_SG.main',
     ]},
     install_requires=[
-        #"numpy >= 1.17; python_version>='3.0'",
-        #"numpy; python_version=='2.7'",
         "numpy",
         "pyyaml",
         "scipy",
         "astropy",
-        #"astropy >= 2.0.7, < 4.0",
-        #"matplotlib >= 1.5.0; python_version>='3.0'",
-        #"matplotlib; python_version=='2.7'",
         "matplotlib",
         "healpy",
-        #"astropy_healpix",
-        #"astropy_healpix < 0.5; python_version>='3.0'",
-        #"gammapy == 0.10; python_version=='2.7'",
-        #"cython",
-        #"gammapy"
+        "gammapy"
     ],
-#        ':python_version=="2.7"': [
-#            'numpy >= 1.6.1',
-#            'astropy >= 2.0.7',
-#            'matplotlib >= 1.5.0',
-#            'scipy >= 0.14',
-#            'pyyaml',
-#            'healpy',
-#            'gammapy >= 0.8']
-#        }
 )
