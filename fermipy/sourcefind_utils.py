@@ -185,12 +185,8 @@ def find_peaks(input_map, threshold, min_separation=0.5):
     deltaxy *= max(input_map.geom.wcs.wcs.cdelt)
     region = deltaxy < min_separation
 
-    test_data = data + 0.0001*data.mean()*np.random.normal(size=data.size).reshape(data.shape)
-    
-    mf = maximum_filter(test_data, footprint=region)
-    
-    local_max = maximum_filter(test_data, footprint=region) == test_data
-    local_max[test_data < threshold] = False
+    local_max = maximum_filter(data, footprint=region) == data
+    local_max[data < threshold] = False
 
     labeled, num_objects = scipy.ndimage.label(local_max)
     slices = scipy.ndimage.find_objects(labeled)
@@ -204,7 +200,6 @@ def find_peaks(input_map, threshold, min_separation=0.5):
                       'skydir': skydir,
                       'amp': data[s[0].start, s[1].start]})
 
-    print(peaks)
     return sorted(peaks, key=lambda t: t['amp'], reverse=True)
 
 
