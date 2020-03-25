@@ -4,11 +4,11 @@ export PIP_DEPS='coverage pytest-cov coveralls'
 export INSTALL_CMD='python setup.py install'
 export CONDA_CHANNELS="conda-forge"
 export FERMI_CONDA_CHANNELS="-c conda-forge/label/cf201901 -c fermi"
-export CONDA_DEPS='gammapy numpy astropy scipy matplotlib pyyaml'
+export CONDA_DEPS='gammapy numpy astropy scipy matplotlib pyyaml astropy-healpix'
 export CONDA2_DEPS='subprocess32 pytest'
 export DOCKER_INSTALL=''
 
-NAME='main'
+NAME='docs'
 export FERMIPY_CONDA_ENV="fermipy-test-$NAME"
 
 

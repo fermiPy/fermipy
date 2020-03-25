@@ -16,7 +16,10 @@ from astropy.io import fits
 from astropy.table import Table
 from astropy.coordinates import SkyCoord
 import astropy.wcs as pywcs
-from gammapy.maps.geom import coordsys_to_frame
+try:
+    from gammapy.maps.geom import coordsys_to_frame
+except ImportError:
+    pass
 from gammapy.maps import WcsNDMap, WcsGeom
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils

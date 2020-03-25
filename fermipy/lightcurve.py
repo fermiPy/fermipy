@@ -208,7 +208,7 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
         # for the fixed-shape lightcurve
         gta.free_source(name, pars='norm')
         fixed_fit_results = gta.fit()
-	if not fixed_fit_results['fit_success']:
+        if not fixed_fit_results['fit_success']:
             continue
         fixed_srcmodel = gta.get_src_model(name)
         break

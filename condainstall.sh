@@ -9,16 +9,24 @@ fi
 if [[ -z $CONDA_DOWNLOAD ]]; then
     if [[ `uname` == "Darwin" ]]; then
 	echo "Detected Mac OS X..."
-	CONDA_DOWNLOAD=Miniconda3-latest-MacOSX-x86_64.sh
+        if [[ $PYTHON_VERSION == "2.7" ]]; then
+	    CONDA_DOWNLOAD=Miniconda2-latest-MacOSX-x86_64.sh
+        else 
+            CONDA_DOWNLOAD=Miniconda3-latest-MacOSX-x86_64.sh
+        fi
     else
 	echo "Detected Linux..."
-	CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
+	if [[ $PYTHON_VERSION == "2.7" ]]; then
+	    CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
+	else
+	    CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
+	fi
     fi
 fi
 
 # Default conda deps
 if [[ -z $CONDA_DEPS ]]; then
-    CONDA_DEPS='scipy matplotlib pyyaml numpy astropyy gammapy healpy'
+    CONDA_DEPS='scipy matplotlib pyyaml numpy astropy gammapy healpy astropy-healpix'
 fi
 
 # Default conda path
@@ -32,6 +40,25 @@ if [[ -z $FERMIPY_CONDA_ENV ]]; then
     FERMIPY_CONDA_ENV=fermipy
 fi
 
+# Default fermitools conda channels
+if [[ -z $FERMI_CONDA_CHANNELS ]]; then
+   FERMI_CONDA_CHANNELS="-c conda-forge/label/cf201901 -c fermi"
+fi
+
+# Default conda channels
+if [[ -z $CONDA_CHANNELS ]]; then
+   CONDA_CHANNELS="conda-forge"
+fi
+
+# Default fermitools install
+if [[ -z $ST_INSTALL ]]; then
+   ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS fermitools"
+fi
+
+# Default install command
+if [[ -z $INSTALL_CMD ]]; then
+   INSTALL_CMD="conda install -y --name $FERMIPY_CONDA_ENV -c $CONDA_CHANNELS fermipy"
+fi 
 
 if [ ! -d "$CONDA_PATH/bin" ]; then
     echo Creating a new conda installation under $CONDA_PATH
@@ -46,13 +73,31 @@ else
     echo "Using existing conda installation under $CONDA_PATH"
 fi
 
+echo "CONDA_PATH=$CONDA_PATH"
+echo "CONDA_DOWNLOAD=$CONDA_DOWNLOAD"
+echo "FERMIPY_CONDA_ENV=$FERMIPY_CONDA_ENV"
+echo "FERMI_CONDA_CHANNELS=$FERMI_CONDA_CHANNELS"
+echo "CONDA_DEPS=$CONDA_DEPS"
+echo "CONDA2_DEPS=$CONDA2_DEPS"
+echo "PIP_DEPS=$PIP_DEPS"
+echo "INSTALL_CMD=$INSTALL_CMD"
+echo "ST_INSTALL=$ST_INSTALL"
+
+
 # Make sure we have conda setup
 . $CONDA_PATH/etc/profile.d/conda.sh
 
-# First we update conda and make an env
-conda update -q conda -y
-conda create --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -y python=$PYTHON_VERSION
+
+# First we update conda and make an env if needed
+if [ ! -d $CONDA_PATH/envs/$FERMIPY_CONDA_ENV ]; then
+    echo "Creating environment $FERMIPY_CONDA_ENV for fermipy"
+    conda update -q conda -y
+    conda create --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -y python=$PYTHON_VERSION
+else
+    echo "Using existing environment $FERMIPY_CONDA_ENV"
+fi
 conda activate $FERMIPY_CONDA_ENV
+
 
 # Install the science tools, if requested
 if [[ -n $ST_INSTALL ]]; then
