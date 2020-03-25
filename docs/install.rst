@@ -12,20 +12,17 @@ Installation
    <http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.  
 
 These instructions assume that you already have a local installation
-of the Fermi Science Tools (STs).  For more information about
-installing and setting up the STs see :ref:`stinstall`.  If you are
-running at SLAC you can follow the `Running at SLAC`_ instructions.
+of the fermitools.  For more information about
+installing and setting up the fermitools see :ref:`stinstall`.  
 For we currently recommend following the :ref:`condainstall`
 instructions.  However the :ref:`pipinstall` instructions should
-also work.   The :ref:`dockerinstall` instructions can be used to install the STs on
-OSX and Linux machines that are new enough to support Docker.  To
+also work.   The :ref:`dockerinstall` instructions can be used to
+install the fermitools on OSX and Linux machines that are new enough to support Docker.  To
 install the development version of Fermipy follow the
 :ref:`devinstall` instructions.
 
 
-
-     
-.. _condainstall_script
+.. _condainstall_script:
 
 The condainstall.sh script
 ---------------------------
@@ -67,7 +64,7 @@ some of these values you can leave them as is:
 .. _stinstall:
 
 Installing the fermitools
-------------------------
+-------------------------
 
 .. note:: 
 
