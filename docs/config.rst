@@ -88,7 +88,7 @@ are keyed to a section name (*data*, *binning*, etc.).
      src_roiwidth : 15.0
      galdiff  : '$FERMI_DIFFUSE_DIR/gll_iem_v07.fits'
      isodiff  : 'iso_P8R3_SOURCE_V2_v1.txt'
-     catalogs : ['3FGL']
+     catalogs : ['4FGL']
                           
 The configuration file has the same structure as the configuration
 dictionary such that one can read/write configurations using the
