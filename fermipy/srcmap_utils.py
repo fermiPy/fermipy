@@ -222,7 +222,7 @@ def make_srcmap_old(psf, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
     return k
 
 
-def make_srcmap(psf, exp, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
+def make_srcmap(psf, exp, spatial_model, sigma, npix=(500,500), xpix=0.0, ypix=0.0,
                 cdelt=0.01, psf_scale_fn=None, klims=None, sparse=False):
     """Compute the source map for a given spatial model.
 
@@ -238,6 +238,9 @@ def make_srcmap(psf, exp, spatial_model, sigma, npix=500, xpix=0.0, ypix=0.0,
 
     sigma : float
         Spatial size parameter for extended models.
+
+    npix : tuple
+        Number of of map bins in the x and y direction
 
     xpix : float
         Source position in pixel coordinates in X dimension.

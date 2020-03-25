@@ -68,8 +68,8 @@ def convolve_map(m, k, cpix, threshold=0.001, imin=0, imax=None, wmap=None):
     islice = slice(imin, imax)
 
     o = np.zeros(m[islice, ...].shape)
-    ix = int(cpix[0])
-    iy = int(cpix[1])
+    ix = int(cpix[1])
+    iy = int(cpix[0])
 
     # Loop over energy
     for i in range(m[islice, ...].shape[0]):
@@ -87,6 +87,7 @@ def convolve_map(m, k, cpix, threshold=0.001, imin=0, imax=None, wmap=None):
         # array
         if ix + nx + 1 >= ms.shape[0] or ix - nx < 0:
             nx -= 1
+        if iy + ny + 1 >= ms.shape[0] or iy - ny < 0:
             ny -= 1
 
         sx = slice(ix - nx, ix + nx + 1)
@@ -195,7 +196,7 @@ def get_source_kernel(gta, name, kernel=None):
     for c in gta.components:
         z = c.model_counts_map(name).data.astype('float')
         if kernel is not None:
-            shape = (z.shape[0],) + kernel.shape
+            shape = (z.shape[0][::-1],) + kernel.shape
             z = np.apply_over_axes(np.sum, z, axes=[1, 2]) * np.ones(
                 shape) * kernel[np.newaxis, :, :]
             zs += np.sum(z)
@@ -328,8 +329,8 @@ class ResidMapGenerator(object):
             loge_bounds = [self.log_energies[0], self.log_energies[-1]]
 
         # Put the test source at the pixel closest to the ROI center
-        xpix, ypix = (np.round((self.npix - 1.0) / 2.),
-                      np.round((self.npix - 1.0) / 2.))
+        xpix, ypix = (np.round((self.npix[0] - 1.0) / 2.),
+                      np.round((self.npix[1] - 1.0) / 2.))
         cpix = np.array([xpix, ypix])
 
         geom = self.geom.to_image()
@@ -348,7 +349,7 @@ class ResidMapGenerator(object):
 
         if src_dict['SpatialModel'] == 'Gaussian':
             kernel = utils.make_gaussian_kernel(src_dict['SpatialWidth'],
-                                                cdelt=self.components[0].binsz,
+                                                cdelt=self.binsz,
                                                 npix=101)
             kernel /= np.sum(kernel)
             cpix = [50, 50]
@@ -358,16 +359,15 @@ class ResidMapGenerator(object):
         src = self.roi.get_source_by_name('residmap_testsource')
 
         modelname = utils.create_model_name(src)
-        npix = self.components[0].npix
 
-        mmst = np.zeros((npix, npix))
-        cmst = np.zeros((npix, npix))
-        emst = np.zeros((npix, npix))
+        mmst = np.zeros(self.npix[::-1])
+        cmst = np.zeros(self.npix[::-1])
+        emst = np.zeros(self.npix[::-1])
 
         sm = get_source_kernel(self, 'residmap_testsource', kernel)
-        ts = np.zeros((npix, npix))
-        sigma = np.zeros((npix, npix))
-        excess = np.zeros((npix, npix))
+        ts = np.zeros(self.npix[::-1])
+        sigma = np.zeros(self.npix[::-1])
+        excess = np.zeros(self.npix[::-1])
 
         self.delete_source('residmap_testsource')
 

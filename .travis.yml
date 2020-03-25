@@ -16,11 +16,13 @@ env:
       - FERMI_DIR=$HOME/ScienceTools/x86_64-unknown-linux-gnu-libc2.17
       - SLAC_ST_BUILD=false
       - PIP_DEPS='coverage pytest-cov'
-      - CONDA2='conda install -y -c conda-forge healpy'
       - INSTALL_CMD='python setup.py install'
       - CONDA_CHANNELS=conda-forge
-      - CONDA_DEPS='gammapy numpy astropy scipy matplotlib pytest pyyaml'
-
+      - CONDA_DEPS='gammapy numpy astropy scipy matplotlib pyyaml'
+      - CONDA2_DEPS='subprocess32 pytest'
+      - FERMI_CONDA_CHANNELS='-c conda-forge/label/cf201901 -c fermi'
+      - FERMIPY_CONDA_ENV='fermipy'
+      
 matrix:
     include:
 
@@ -30,26 +32,16 @@ matrix:
           env: NAME=main
                PYTHON_VERSION=2.7
                CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
-               ST_INSTALL='conda install -y -c conda-forge/label/cf201901 -c fermi fermitools'
+               ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS fermitools"
                DOCKER_INSTALL=''
  
         # The old build:
-        # Python 2, Fermi ST, all dependencies
+        # Python 2, fixed tag of fermitools, all dependencies
         - os: linux
           env: NAME=old
                PYTHON_VERSION=2.7
                CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
-               ST_INSTALL='conda install -y -c conda-forge/label/cf201901 -c fermi fermitools=1.0.2'
-               DOCKER_INSTALL=''
-
-        # The ancient build, using a tarball
-        # Python 2, Fermi ST, all dependencies
-        - os: linux
-          env: NAME=ancient
-               PYTHON_VERSION=2.7
-               CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
-               ST_INSTALL="bash stinstall.sh $HOME"
-               FERMI_DIR="$HOME/ScienceTools/x86_64-unknown-linux-gnu-libc2.17"
+               ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS fermitools=1.2.23"
                DOCKER_INSTALL=''
 
         # The Sphinx docs build
@@ -60,7 +52,7 @@ matrix:
                PYTHON_VERSION=3.6
                ST_INSTALL=''
                DOCKER_INSTALL=''
-               PIP_DEPS='coverage pytest-cov coveralls sphinx sphinx_rtd_theme'
+               PIP_DEPS='coverage pytest-cov coveralls'
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
                CONDA_DEPS='gammapy numpy astropy scipy matplotlib pytest pyyaml sphinx sphinx_rtd_theme'
 

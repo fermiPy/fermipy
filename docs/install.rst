@@ -5,21 +5,19 @@ Installation
 
 .. note:: 
 
-   Fermipy is only compatible with Science Tools v10r0p5 or later.  If
-   you are using an earlier version, you will need to download and
+   From version 0.19.0 fermipy is only compatible with
+   fermitools version 1.2.23 or later.  If you are using an earlier
+   version, you will need to download and
    install the latest version from the `FSSC
-   <http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.  Note
-   that it is recommended to use the *non-ROOT* binary distributions
-   of the Science Tools.
+   <http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.  
 
 These instructions assume that you already have a local installation
 of the Fermi Science Tools (STs).  For more information about
 installing and setting up the STs see :ref:`stinstall`.  If you are
 running at SLAC you can follow the `Running at SLAC`_ instructions.
-For Unix/Linux users we currently recommend following the
-:ref:`condainstall` instructions.  For OSX users we recommend
-following the :ref:`pipinstall` instructions.  The
-:ref:`dockerinstall` instructions can be used to install the STs on
+For we currently recommend following the :ref:`condainstall`
+instructions.  However the :ref:`pipinstall` instructions should
+also work.   The :ref:`dockerinstall` instructions can be used to install the STs on
 OSX and Linux machines that are new enough to support Docker.  To
 install the development version of Fermipy follow the
 :ref:`devinstall` instructions.
@@ -29,25 +27,23 @@ install the development version of Fermipy follow the
 Installing the Fermi Science Tools
 ----------------------------------
 
-The Fermi STs are a prerequisite for fermipy.  To install the STs we
-recommend using one of the non-ROOT binary distributions available
-from the `FSSC
-<http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.  The
-following example illustrates how to install the binary distribution
-on a Linux machine running Ubuntu Trusty:
+The fermitools are a prerequisite for fermipy.  The
+following example illustrates how the fermitools in an existing
+anaconda installation.
 
 .. code-block:: bash
 
-   $ curl -OL http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/tar/ScienceTools-v10r0p5-fssc-20150518-x86_64-unknown-linux-gnu-libc2.19-10-without-rootA.tar.gz
-   $ tar xzf ScienceTools-v10r0p5-fssc-20150518-x86_64-unknown-linux-gnu-libc2.19-10-without-rootA.tar.gz
-   $ export FERMI_DIR=ScienceTools-v10r0p5-fssc-20150518-x86_64-unknown-linux-gnu-libc2.19-10-without-rootA/x86_64-unknown-linux-gnu-libc2.19-10
-   $ source $FERMI_DIR/fermi-init.sh
+   $ conda create --name fermi -y python=$PYTHON_VERSION
+   $ conda activate fermi
+   $ conda install -y --name fermi -c conda-forge/label/cf201901 -c
+   fermi -c conda-forge fermitools"
 
-More information about installing the STs as well as the complete list
-of the available binary distributions is available on the `FSSC
+More information about installing the fermitools is available on the `FSSC
 software page
-<http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.
-   
+<http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.   More
+information about setting up an anaconda installation is included in
+the :ref:`condainstall` instructions below.
+	
 .. _pipinstall:
 
 Installing with pip
@@ -55,21 +51,21 @@ Installing with pip
 
 These instructions cover installation with the ``pip`` package
 management tool.  This will install fermipy and its dependencies into
-the python distribution that comes with the Fermi Science Tools.
-First verify that you're running the python from the Science Tools
+the python distribution that comes with the fermitools.
+First verify that you're running the python from the fermitools
 
 .. code-block:: bash
 
    $ which python
 
-If this doesn't point to the python in your Science Tools install
+If this doesn't point to the python in your fermitools install
 (i.e. it returns /usr/bin/python or /usr/local/bin/python) then the
-Science Tools are not properly setup.
+fermitools are not properly setup.
 
 Before starting the installation process, you will need to determine
 whether you have setuptools and pip installed in your local python
 environment.  You may need to install these packages if you are
-running with the binary version of the Fermi Science Tools distributed
+running with the binary version of the fermitools distributed
 by the FSSC.  The following command will install both packages in your
 local environment:
 
@@ -119,26 +115,20 @@ Finally, check that fermipy imports:
 Installing with Anaconda Python
 -------------------------------
 
-.. note:: 
-
-   The following instructions have only been verified to work with
-   binary Linux distributions of the Fermi STs.  If you are using OSX
-   or you have installed the STs from source you should follow the
-   :ref:`pipinstall` thread above.
-
 These instructions cover how to use fermipy with a new or existing
 anaconda python installation.  These instructions assume that you have
-already downloaded and installed the Fermi STs from the FSSC and you
-have set the ``FERMI_DIR`` environment variable to point to the location
-of this installation.
+already downloaded and installed the fermitools from the FSSC in
+and conda environment nammed 'fermi' and you have set the
+``FERMI_DIR``
+environment variable to point to the location of this installation.
 
 If you already have an existing anaconda python installation then fermipy
 can be installed from the conda-forge channel as follows:
 
 .. code-block:: bash
 
-   $ conda config --append channels conda-forge
-   $ conda install fermipy
+   $ conda activate fermi
+   $ conda install -n fermi -c conda-forge fermipy
    
 If you do not have an anaconda installation, the ``condainstall.sh``
 script can be used to create a minimal anaconda installation from
@@ -173,7 +163,7 @@ switch to this environment before running the script:
    
 .. code-block:: bash
 
-   $ source activate fermi-env
+   $ conda activate fermi-env
    $ source condasetup.sh
 
 .. _dockerinstall:

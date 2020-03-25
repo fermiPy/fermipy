@@ -359,10 +359,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         ebin_edges = np.zeros(0)
         roiwidths = np.zeros(0)
         binsz = np.zeros(0)
+        xwidth = np.zeros(0)
+        ywidth = np.zeros(0)
         for c in self.components:
             ebin_edges = np.concatenate((ebin_edges, c.log_energies))
             roiwidths = np.insert(roiwidths, 0, c.roiwidth)
             binsz = np.insert(binsz, 0, c.binsz)
+            xwidth = np.insert(xwidth,0,c.npix[0] * c.binsz)
+            ywidth = np.insert(ywidth,0,c.npix[1] * c.binsz)
 
         self._ebin_edges = np.sort(np.unique(ebin_edges.round(5)))
         self._enumbins = len(self._ebin_edges) - 1
@@ -400,7 +404,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         self._roiwidth = max(roiwidths)
         self._binsz = min(binsz)
-        self._npix = int(np.round(self._roiwidth / self._binsz))
+        self._npix = (int(max(xwidth) / self._binsz),
+                      int(max(ywidth) / self._binsz))
 
         axes = [MapAxis.from_edges(self.energies, interp='log',
                                    name='energy', unit='MeV')]
@@ -1121,7 +1126,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             crd['loglike'] = -c.like()
 
         if proj_type == 0:
-            shape = (self.enumbins, self.npix, self.npix)
+            shape = (self.enumbins, self.npix[1], self.npix[0])
         elif proj_type == 1:
             shape = (self.enumbins, np.max(self.geom.npix))
 
@@ -4250,6 +4255,21 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             # compute srcprob
             c._srcprob_app(xmlfile = xmlfile, overwrite = overwrite)
 
+    def compute_psf(self, overwrite=False):
+        """Run the gtpsf app"""
+
+        for i,c in enumerate(self.components):
+            # compute psf
+            c._psf_app(overwrite=overwrite)
+
+    def compute_drm(self, edisp_bins=1, overwrite=False):
+        """Run the gtdrm app"""
+
+        for i,c in enumerate(self.components):
+            # compute detector response matrix
+            # edisp_bins is number of bins that are appended and prepended 
+            # to chosen analysis binning
+            c._drm_app(edisp_bins=edisp_bins, overwrite=overwrite)
 
 class GTBinnedAnalysis(fermipy.config.Configurable):
     defaults = dict(selection=defaults.selection,
@@ -4384,14 +4404,14 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if self.config['binning']['npix'] is None:
             roiwidth = (self.config['binning']['roiwidth']
                         if self.config['binning']['roiwidth'] is not None else 360.)
-            self._npix = int(np.round(roiwidth /
-                                      self.config['binning']['binsz']))
+            npix = int(np.round(roiwidth /self.config['binning']['binsz']))
+            self._npix = (npix,npix)
         else:
             self._npix = self.config['binning']['npix']
 
         if self.config['selection']['radius'] is None:
             self._config['selection']['radius'] = float(
-                np.sqrt(2.) * 0.5 * self.npix *
+                np.sqrt(2.) * 0.5 * max(self.npix) *
                 self.config['binning']['binsz'] + 0.5)
             self.logger.debug(
                 'Automatically setting selection radius to %s deg',
@@ -4484,7 +4504,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
     @property
     def roiwidth(self):
-        return self._npix * self.config['binning']['binsz']
+        return max(self._npix) * self.config['binning']['binsz']
 
     @property
     def projtype(self):
@@ -4817,7 +4837,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if p_method == 0:  # WCS
             z = cmap.data()
-            z = np.array(z).reshape(self.enumbins, self.npix, self.npix)
+            z = np.array(z).reshape(self.enumbins, self.npix[1], self.npix[0])
             return WcsNDMap(copy.deepcopy(self.geom), z)
         elif p_method == 1:  # HPX
             z = cmap.data()
@@ -4866,10 +4886,10 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if p_method == 0:  # WCS
             if wmap is None:
-                z = np.ones((self.enumbins, self.npix, self.npix))
+                z = np.ones((self.enumbins, self.npix[1], self.npix[0]))
             else:
                 z = wmap.model()
-                z = np.array(z).reshape(self.enumbins, self.npix, self.npix)
+                z = np.array(z).reshape(self.enumbins, self.npix[1], self.npix[0])
             return WcsNDMap(copy.deepcopy(self._geom), z)
         elif p_method == 1:  # HPX
             nhpix = np.max(self.geom.npix)
@@ -4916,7 +4936,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         """
         if self.projtype == "WCS":
-            v = pyLike.FloatVector(self.npix ** 2 * self.enumbins)
+            v = pyLike.FloatVector(self.npix[0] * self.npix[1] * self.enumbins)
         elif self.projtype == "HPX":
             v = pyLike.FloatVector(np.max(self.geom.npix) * self.enumbins)
         else:
@@ -4983,7 +5003,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                 v = pyLike.FloatVector(vsum)
 
         if self.projtype == "WCS":
-            z = np.array(v).reshape(self.enumbins, self.npix, self.npix)
+            z = np.array(v).reshape(self.enumbins, self.npix[1], self.npix[0])
             return WcsNDMap(copy.deepcopy(self._geom), z)
         elif self.projtype == "HPX":
             z = np.array(v).reshape(self.enumbins, np.max(self._geom.npix))
@@ -5133,7 +5153,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         # Run gtbin
         if self.projtype == "WCS":
             kw = dict(algorithm='ccube',
-                      nxpix=self.npix, nypix=self.npix,
+                      nxpix=self.npix[0], nypix=self.npix[1],
                       binsz=self.config['binning']['binsz'],
                       evfile=self.files['ft1'],
                       outfile=self.files['ccube'],
@@ -5256,7 +5276,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                       emax=self.config['selection']['emax'],
                       enumbins=self._enumbins,
                       outfile=self.files['bexpmap_roi'], proj='CAR',
-                      nxpix=self.npix, nypix=self.npix,
+                      nxpix=self.npix[0], nypix=self.npix[1],
                       binsz=self.config['binning']['binsz'],
                       xref=self._xref, yref=self._yref,
                       evtype=self.config['selection']['evtype'],
@@ -5577,7 +5597,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         exp = self._bexp.interp_by_coord(
             (skydir, self._bexp.geom.axes[0].center))
         rebin = min(int(np.ceil(self.binsz / 0.01)), 8)
-        shape_out = (self.enumbins + 1, self.npix, self.npix)
+        shape_out = (self.enumbins + 1, self.npix[0], self.npix[1])
         cache = SourceMapCache.create(self._psf, exp, spatial_model,
                                       spatial_width, shape_out,
                                       self.config['binning']['binsz'],
@@ -5716,7 +5736,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                   irfs=self.config['gtlike']['irfs'],
                   evtype=self.config['selection']['evtype'],
                   srcmdl=xmlfile,
-                  nxpix=self.npix, nypix=self.npix,
+                  nxpix=self.npix[0], nypix=self.npix[1],
                   binsz=self.config['binning']['binsz'],
                   xref=float(self.roi.skydir.ra.deg),
                   yref=float(self.roi.skydir.dec.deg),
@@ -5784,3 +5804,81 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             self.logger.info('Skipping gtsrcprob')
         else:
             run_gtapp('gtsrcprob', self.logger, kw, loglevel=loglevel)
+
+    def _psf_app(self, overwrite=False, **kwargs):
+        """
+        Run gtpsf for an analysis component as an application
+        """
+
+        loglevel = kwargs.get('loglevel', self.loglevel)
+
+        self.logger.log(loglevel, 'Computing psf for component %s.',
+                        self.name)
+
+        # set the outfile
+        # it's defined here and not in self.files dict
+        # so that it is copied with the stage_output module
+        # even if savefits is False
+        outfile = os.path.join(self.workdir, 
+                    'psf{0[file_suffix]:s}.fits'.format(self.config))
+
+        # maximum theta angle for psf
+        thetamax = kwargs.get('thetamax', self.config['model']['src_roiwidth'])
+
+        # number of bins in theta
+        ntheta = kwargs.get('thetamax', 2 * int(thetamax / self.config['binning']['binsz']))
+
+        kw = dict(expcube=self.files['ltcube'],
+                  outfile=outfile,
+                  irfs = self.config['gtlike']['irfs'],
+                  evtype = self.config['selection']['evtype'],
+                  ra = self.config['selection']['ra'],
+                  dec = self.config['selection']['dec'],
+                  emin =  self.config['selection']['emin'],
+                  emax =  self.config['selection']['emax'],
+                  nenergies = self.enumbins * 2,
+                  thetamax = thetamax,
+                  ntheta = ntheta,
+                  )
+        self.logger.debug(kw)
+
+        # run gtapp for the srcprob
+        if os.path.isfile(outfile) and not overwrite:
+            self.logger.info('Skipping gtpsf')
+        else:
+            run_gtapp('gtpsf', self.logger, kw, loglevel=loglevel)
+
+    def _drm_app(self, overwrite=False, edisp_bins=1, **kwargs):
+        """
+        Run gtdrm for an analysis component as an application
+        """
+
+        loglevel = kwargs.get('loglevel', self.loglevel)
+
+        self.logger.log(loglevel, 'Computing drm for component %s.',
+                        self.name)
+
+        # set the outfile
+        # it's defined here and not in self.files dict
+        # so that it is copied with the stage_output module
+        # even if savefits is False
+        outfile = os.path.join(self.workdir, 
+                    'drm{0[file_suffix]:s}.fits'.format(self.config))
+
+        # edisp_bins is number of bins that are attached to low and high energy 
+        # side of reconstructed energy array used in the counts cube
+        kw = dict(expcube=self.files['ltcube'],
+                  outfile=outfile,
+                  cmap=self.files['ccube'],
+                  bexpmap=self.files['bexpmap'],
+                  irfs=self.config['gtlike']['irfs'],
+                  evtype=self.config['selection']['evtype'],
+                  edisp_bins=edisp_bins
+                  )
+        self.logger.debug(kw)
+
+        # run gtapp for the srcprob
+        if os.path.isfile(outfile) and not overwrite:
+            self.logger.info('Skipping gtdrm')
+        else:
+            run_gtapp('gtdrm', self.logger, kw, loglevel=loglevel)

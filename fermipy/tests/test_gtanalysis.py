@@ -15,7 +15,7 @@ except ImportError:
     pass
 
 # Skip tests in this file if Fermi ST aren't available
-pytestmark = requires_git_version('01-00-07')
+pytestmark = requires_st_version('01-00-07')
 
 
 @pytest.fixture(scope='module')
@@ -26,6 +26,7 @@ def create_draco_analysis(request, tmpdir_factory):
     dirname = path.join()
     os.system('curl -o %s -OL %s' % (outfile, url))
     os.system('cd %s;tar xzf %s' % (dirname, outfile))
+    
     request.addfinalizer(lambda: path.remove(rec=1))
 
     cfgfile = path.join('fermipy_test_draco', 'config.yaml')
@@ -61,7 +62,7 @@ def create_pg1553_analysis(request, tmpdir_factory):
         outfile = path.join('fermipy_test_pg1553', f)
         os.system('curl -o %s -OL %s' % (outfile, url))
 
-    #request.addfinalizer(lambda: path.remove(rec=1))
+    request.addfinalizer(lambda: path.remove(rec=1))
 
     cfgfile = path.join('fermipy_test_pg1553', 'config.yaml')
     if not os.path.isfile(str(cfgfile)):
@@ -96,31 +97,32 @@ def test_gtanalysis_write_roi(create_draco_analysis):
 def test_gtanalysis_load_roi(create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit0')
-    src = gta.roi['3FGL J1725.3+5853']
+
+    src = gta.roi['4FGL J1725.5+5851']
 
     prefactor = src.spectral_pars['Prefactor']
     index = src.spectral_pars['Index']
     assert_allclose(prefactor['value'] * prefactor['scale'],
-                    1.6266779e-13, rtol=1E-3)
-    assert_allclose(index['value'] * index['scale'], -2.17892, rtol=1E-3)
-    assert_allclose(src['flux'], 4.099648e-10, rtol=1E-3)
+                    3.528e-13, rtol=1E-3)
+    assert_allclose(index['value'] * index['scale'], -2.243, rtol=1E-3)
+    assert_allclose(src['flux'], 5.041e-10, rtol=1E-3)
     assert_allclose(src['flux_err'], np.nan, rtol=1E-3)
-    assert_allclose(src['eflux'], 9.76762e-07, rtol=1E-3)
+    assert_allclose(src['eflux'], 1.172e-06, rtol=1E-3)
     assert_allclose(src['eflux_err'], np.nan, rtol=1E-3)
 
     gta.load_roi('fit1')
-    src = gta.roi['3FGL J1725.3+5853']
+    src = gta.roi['4FGL J1725.5+5851']
     prefactor = src.spectral_pars['Prefactor']
     index = src.spectral_pars['Index']
     assert_allclose(prefactor['value'] *
-                    prefactor['scale'], 2.0878036e-13, rtol=1E-3)
-    assert_allclose(index['value'] * index['scale'], -2.053723, rtol=1E-3)
-    assert_allclose(src['flux'], 5.377593e-10, rtol=1E-3)
-    assert_allclose(src['flux_err'], 6.40203e-11, rtol=1E-3)
-    assert_allclose(src['eflux'], 1.34617749e-06, rtol=1E-3)
-    assert_allclose(src['eflux_err'], 1.584814e-07, rtol=1E-3)
-    assert_allclose(src['ts'], 200.604, rtol=1E-3)
-    assert_allclose(src['npred'], 170.258, rtol=1E-3)
+                    prefactor['scale'], 3.526e-13, rtol=1E-3)
+    assert_allclose(index['value'] * index['scale'], -2.044, rtol=1E-3)
+    assert_allclose(src['flux'], 5.471e-10, rtol=1E-3)
+    assert_allclose(src['flux_err'], 6.42e-11, rtol=1E-3)
+    assert_allclose(src['eflux'], 1.375e-06, rtol=1E-3)
+    assert_allclose(src['eflux_err'], 1.59766e-07, rtol=1E-3)
+    assert_allclose(src['ts'], 210.20, rtol=1E-3)
+    assert_allclose(src['npred'], 173.24, rtol=1E-3)
 
 
 def test_gtanalysis_optimize(create_draco_analysis):
@@ -160,7 +162,7 @@ def test_gtanalysis_tsmap(create_draco_analysis):
     gta.tsmap(model={}, make_plots=True)
 
 
-#@requires_git_version('00-00-01')
+@requires_git_version('99-00-01')
 def test_gtanalysis_tscube(create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
@@ -180,11 +182,11 @@ def test_gtanalysis_find_sources(create_draco_analysis):
     np.random.seed(1)
 
     src0 = {'SpatialModel': 'PointSource',
-            'Index': 2.0, 'offset_glon': 0.0, 'offset_glat': 2.0,
+            'Index': 2.0, 'offset_glon': 0.0, 'offset_glat': 2.5,
             'Prefactor': 1E-12}
 
     src1 = {'SpatialModel': 'PointSource',
-            'Index': 2.0, 'offset_glon': 0.0, 'offset_glat': -2.0,
+            'Index': 2.0, 'offset_glon': 0.0, 'offset_glat': -2.5,
             'Prefactor': 1E-12}
 
     gta.add_source('src0', src0)
@@ -210,8 +212,8 @@ def test_gtanalysis_find_sources(create_draco_analysis):
     sep0 = src0.skydir.separation(newsrc0.skydir).deg
     sep1 = src1.skydir.separation(newsrc1.skydir).deg
 
-    assert(sep0 < newsrc0['pos_r99'])
-    assert(sep1 < newsrc1['pos_r99'])
+    assert(sep0 < 1.5*newsrc0['pos_r99'])
+    assert(sep1 < 1.5*newsrc1['pos_r99'])
 
     flux_diff0 = (np.abs(src0['flux'] - newsrc0['flux']) /
                   newsrc0['flux_err'])
@@ -316,7 +318,7 @@ def test_gtanalysis_localization(create_draco_analysis):
 def test_gtanalysis_lightcurve(create_pg1553_analysis):
     gta = create_pg1553_analysis
     gta.load_roi('fit1')
-    o = gta.lightcurve('3FGL J1555.7+1111', nbins=2,
+    o = gta.lightcurve('4FGL J1555.7+1111', nbins=2,
                        free_radius=3.0)
 
     rtol = 0.01

@@ -5,7 +5,22 @@ fermipy.diffuse subpackage
 
 The fermipy.diffuse sub-package is a collection of standalone
 utilities that allow the user to parallelize the data and template
-preparation for all-sky diffuse analysis.
+preparation for all-sky analysis.
+
+The tools described here perform a number of functions:
+
+* Making binned counts maps and expousre maps over the whole sky.
+
+* Managing model components for all-sky analysis; including both 
+  diffuse emission and point source contributions.   This includes
+  make spatial-spectral templates and expected counts maps 
+  for various components.
+
+* Building intergrated models for a collection of model components.
+
+* Fitting those models.
+
+
 
 
 Overview
@@ -49,6 +64,8 @@ The various loop variables are:
 
     A set of user defined models that merge the various model
     components with specific spectral models.
+
+
 
 
 
@@ -531,6 +548,13 @@ library components and spectral models.
   Note that the spectrum types should be defined in the spectral model
   configuration described above.
   
+
+
+Examples
+--------
+
+
+
 
 
 Module contents

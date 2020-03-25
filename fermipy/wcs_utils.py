@@ -6,8 +6,10 @@ from astropy.wcs import WCS
 from astropy.io import fits
 from astropy import units as u
 from astropy.coordinates import SkyCoord
-from astropy.extern import six
-from gammapy.maps.geom import coordsys_to_frame
+try:
+    from astropy.extern import six
+except ImportError:
+    import six
 
 
 class WCSProj(object):

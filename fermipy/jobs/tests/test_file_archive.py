@@ -5,6 +5,13 @@ import os
 
 from fermipy.jobs.file_archive import FileStatus, FileHandle, FileArchive
 
+def assert_str_eq(str1, str2):
+    try:
+        test_str = str2.decode()
+    except AttributeError:
+        test_str = str2
+    assert test_str == str1
+
 
 def test_file_handle():
     """ Test that we can build a `FileHandle` """
@@ -19,9 +26,9 @@ def test_file_handle():
     file_dict2 = FileHandle.make_dict(table)
     file_handle2 = file_dict2[file_handle.key]
 
-    assert file_handle.path == file_handle2.path
-    assert file_handle.key == file_handle2.key
-    assert file_handle.creator == file_handle2.creator
+    assert_str_eq(file_handle.path, file_handle2.path)
+    assert_str_eq(file_handle.key, file_handle2.key)
+    assert_str_eq(file_handle.creator, file_handle2.creator)
     assert file_handle.timestamp == file_handle2.timestamp
     assert file_handle.status == file_handle2.status
 

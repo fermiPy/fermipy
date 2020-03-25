@@ -1,13 +1,6 @@
-name: fermipy_env_py2
+name: fermipy_env_py3
 
 channels:
   - conda-forge
 
 dependencies:
-  - numpy
-  - scipy
-  - matplotlib
-  - astropy
-  - pyyaml
-  - healpy
-  - gammapy

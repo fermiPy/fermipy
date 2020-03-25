@@ -45,6 +45,22 @@ class NameFactory(object):
     # Simulated SED file for a particular target
     sim_sedfile_format = '{target_type}_sim/sim_{sim_name}/{target_name}/sed_{profile}_{seed}.fits'
 
+    # target keys, these are how we specify various files associated with
+    # particular targets
+
+    # Roster list file format
+    rosterfile_format = '{target_type}/{rosterlist}'
+
+    # Simulated rosterlist  file format
+    sim_rosterfile_format = '{target_type}_sim/sim_{sim_name}/{rosterlist}'
+
+    # Information about a particular target astro factor
+    astro_valuefile_format = '{target_type}/{target_name}/astro_val_{target_version}.yaml'
+
+    # Information about a particular target astro factor
+    sim_astro_valuefile_format = '{target_type}_sim/sim_{sim_name}/{target_name}/astro_val_{target_version}.yaml'
+
+
     # Stamp files from scatter gather jobs
     stamp_format = 'stamps/{linkname}.stamp'
 
@@ -178,3 +194,26 @@ class NameFactory(object):
         if is_not_null(rand_override):
             randconfig = rand_override
         return randconfig
+
+
+    def rosterfile(self, **kwargs):
+        """ return the name for the Roster list file
+        """
+        return self._format_from_dict(NameFactory.rosterfile_format, **kwargs)
+
+    def sim_rosterfile(self, **kwargs):
+        """ return the name for the Roster list file for simulation
+        """
+        return self._format_from_dict(
+            NameFactory.sim_rosterfile_format, **kwargs)
+
+    def astro_valuefile(self, **kwargs):
+        """ return the name of the yaml file with information about a partiuclar target astro factor
+        """
+        return self._format_from_dict(NameFactory.astro_valuefile_format, **kwargs)
+
+    def sim_astro_valuefile(self, **kwargs):
+        """ return the name of the yaml file with information about a partiuclar target astro factor
+        """
+        return self._format_from_dict(
+            NameFactory.sim_astro_valuefile_format, **kwargs)

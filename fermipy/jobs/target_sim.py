@@ -206,7 +206,7 @@ class RandomDirGen(Link):
         nstep_x = int(np.ceil(2. * pixmax_x / pixstep_x)) + 1
         nstep_y = int(np.ceil(2. * pixmax_y / pixstep_y)) + 1
 
-        center = np.array(wcsgeom._center_pix)
+        center = np.array(wcsgeom.center_pix)
 
         grid = np.meshgrid(np.linspace(-1 * pixmax_x, pixmax_x, nstep_x),
                            np.linspace(-1 * pixmax_y, pixmax_y, nstep_y))
@@ -260,6 +260,7 @@ class SimulateROI(Link):
                            roi_baseline=defaults.common['roi_baseline'],
                            profiles=defaults.common['profiles'],
                            non_null_src=defaults.common['non_null_src'],
+                           do_find_src=defaults.common['do_find_src'],
                            sim_profile=defaults.sims['sim_profile'],
                            sim=defaults.sims['sim'],
                            nsims=defaults.sims['nsims'],
@@ -290,7 +291,8 @@ class SimulateROI(Link):
 
     @staticmethod
     def _run_simulation(gta, roi_baseline,
-                        injected_name, test_sources, current_seed, seed, non_null_src):
+                        injected_name, test_sources, current_seed, seed,
+                        non_null_src, do_find_src = False):
         """Simulate a realization of this analysis"""
         gta.load_roi('sim_baseline_%06i.npy' % current_seed)
         gta.set_random_seed(seed)
@@ -299,14 +301,19 @@ class SimulateROI(Link):
             gta.zero_source(injected_name)
 
         gta.optimize()
-        gta.find_sources(sqrt_ts_threshold=5.0, search_skydir=gta.roi.skydir,
-                         search_minmax_radius=[1.0, np.nan])
-        gta.optimize()
+        if do_find_src:
+            gta.find_sources(sqrt_ts_threshold=5.0, search_skydir=gta.roi.skydir,
+                             search_minmax_radius=[1.0, np.nan])
+            gta.optimize()
+
         gta.free_sources(skydir=gta.roi.skydir, distance=1.0, pars='norm')
+        if injected_name:
+            gta.free_source(injected_name, False)
+
         gta.fit(covar=True)
         gta.write_roi('sim_refit_%06i' % current_seed)
 
-        for test_source in test_sources:
+        for pkey, test_source in test_sources.items():
             test_source_name = test_source['name']
             sedfile = "sed_%s_%06i.fits" % (test_source_name, seed)
             correl_dict, test_src_name = add_source_get_correlated(gta, test_source_name,
@@ -322,6 +329,9 @@ class SimulateROI(Link):
             gta.free_sources(False)
             for src_name in correl_dict.keys():
                 gta.free_source(src_name, pars='norm')
+
+            if injected_name:
+                gta.free_source(injected_name, False)
 
             gta.sed(test_source_name, outfile=sedfile)
             # Set things back to how they were
@@ -368,17 +378,18 @@ class SimulateROI(Link):
 
         gta.write_roi('sim_baseline_%06i' % args.seed)
 
-        test_sources = []
+        test_sources = {}
         for profile in args.profiles:
             profile_path = os.path.join(workdir, 'profile_%s.yaml' % profile)
             test_source = load_yaml(profile_path)
-            test_sources.append(test_source)
+            test_sources[profile] = test_source
             first = args.seed
             last = first + args.nsims
             for seed in range(first, last):
                 self._run_simulation(gta, args.roi_baseline,
                                      injected_name, test_sources, first, seed,
-                                     non_null_src=args.non_null_src)
+                                     non_null_src=args.non_null_src,
+                                     do_find_src=args.do_find_src)
 
 
 class RandomDirGen_SG(ScatterGather):
@@ -455,6 +466,7 @@ class SimulateROI_SG(ScatterGather):
                            config=defaults.common['config'],
                            roi_baseline=defaults.common['roi_baseline'],
                            non_null_src=defaults.common['non_null_src'],
+                           do_find_src=defaults.common['do_find_src'],
                            sim=defaults.sims['sim'],
                            sim_profile=defaults.sims['sim_profile'],
                            nsims=defaults.sims['nsims'],
@@ -487,6 +499,7 @@ class SimulateROI_SG(ScatterGather):
         base_config = dict(sim_profile=args['sim_profile'],
                            roi_baseline=args['roi_baseline'],
                            non_null_src=args['non_null_src'],
+                           do_find_src=args['do_find_src'],
                            sim=sim)
 
         for target_name, target_list in targets.items():

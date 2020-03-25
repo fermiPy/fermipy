@@ -10,6 +10,8 @@ import os
 
 from collections import OrderedDict
 
+from fermipy.utils import load_yaml
+
 from fermipy.jobs.utils import is_null, is_not_null
 from fermipy.jobs.link import Link, extract_arguments
 from fermipy.jobs.file_archive import FileStageManager
@@ -125,6 +127,7 @@ class Chain(Link):
             logfile = kwargs.setdefault('logfile', logfile_default)
             link._register_job(JobDetails.topkey, job_args,
                                logfile, status=JobStatus.unknown)
+            link.update_args(job_args)
         return link
 
     def _set_links_job_archive(self):
@@ -341,6 +344,11 @@ class Chain(Link):
         """
         self._run_chain(stream, dry_run, stage_files,
                         resubmit_failed=resubmit_failed)
+
+    def load_config(self, configfile):
+        """Read a config file for the top-level arguemnts """        
+        config_dict = load_yaml(configfile)
+        self.update_args(config_dict)
 
     def update_args(self, override_args):
         """Update the argument used to invoke the application

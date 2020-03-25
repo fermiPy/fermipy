@@ -206,7 +206,7 @@ def test_load_source_from_xml(tmppath):
     </spectrum>
     </source>
     <source name="isodiff" type="DiffuseSource">
-    <spectrum ctype="-1" file="$(FERMIPY_ROOT)/data/iso_P8R2_SOURCE_V6_v06.txt" type="FileFunction">
+    <spectrum ctype="-1" file="$(FERMI_DIFFUSE_DIR)/iso_P8R3_SOURCE_V2_v1.txt" type="FileFunction">
     <parameter free="0" max="1000.0" min="0.001" name="Normalization" scale="1.0" value="1.2"/>
     </spectrum>
     <spatialModel type="ConstantValue">
@@ -219,7 +219,7 @@ def test_load_source_from_xml(tmppath):
     <parameter free="0" max="1000.0" min="1000.0" name="Scale" scale="1" value="1000.0"/>
     <parameter free="0" max="10.0" min="0.1" name="Prefactor" scale="1" value="1.0"/>
     </spectrum>
-    <spatialModel file="$(FERMIPY_WORKDIR)/gll_iem_v06_extracted.fits" type="MapCubeFunction">
+    <spatialModel file="$(FERMI_DIFFUSE_DIR)/gll_iem_v07.fits" type="MapCubeFunction">
     <parameter free="0" max="10" min="0" name="Normalization" scale="1" value="1"/>
     </spatialModel>
     </source>
