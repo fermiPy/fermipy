@@ -25,7 +25,7 @@ case $NAME in
 	;;
     docs)
 	export PYTHON_VERSION="3.6"
-	export CONDA_PATH="/u/ek/echarles/dmcat/software/anaconda3"
+	export CONDA_PATH="/Users/echarles/anaconda3"
         export ST_INSTALL=''
         export CONDA_DEPS='gammapy numpy astropy scipy matplotlib pytest pyyaml sphinx sphinx_rtd_theme'
 	;;
