@@ -6,6 +6,13 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
+0.19.0 (03/25/2020)
+-------------------
+* Switch installation procedure and to using fermitools-data for diffuse emission models
+* Update docs to reflect changers in intallation procedure
+* Added new version of 4FGL catalog
+* Updated automatic testing to work with 4FGL and new diffuse emisison models
+
 0.18.1 (03/10/2020)
 -------------------
 * Changes to improve automated builds for testing
