@@ -144,7 +144,7 @@ Editing the Model at Runtime
 The model can be manually editing at runtime with the
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.add_source` and
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.delete_source` methods.
-Sources can be added either before or after calling
+Sources should be added after calling
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.setup` as shown in the
 following example.
 
@@ -153,7 +153,8 @@ following example.
    from fermipy.gtanalysis import GTAnalysis
            
    gta = GTAnalysis('config.yaml',logging={'verbosity' : 3})
-
+   gta.setup()
+   
    # Remove isodiff from the model
    gta.delete_source('isodiff')
 
@@ -163,17 +164,13 @@ following example.
 		   'Scale' : 1000, 'Prefactor' : 1e-11, 
         	   'SpatialModel' : 'PointSource' })
 
-   gta.setup()
-
    # Add SourceB to the model
    gta.add_source('SourceB',{ 'glon' : 121.0, 'glat' : -2.0, 
                     'SpectrumType' : 'PowerLaw', 'Index' : 2.0, 
 		    'Scale' : 1000, 'Prefactor' : 1e-11, 
         	    'SpatialModel' : 'PointSource' })
 
-Sources added before calling
-:py:meth:`~fermipy.gtanalysis.GTAnalysis.setup` will be appended to
-the XML model definition.  Sources added after calling
+Sources added after calling
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.setup` will be created
 dynamically through the pyLikelihood object creation mechanism.  
 
