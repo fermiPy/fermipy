@@ -160,7 +160,6 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
         print('Analysis failed in time range %i %i' %
               (time[0], time[1]))
         print(sys.exc_info()[0])
-        raise
         return {}
 
     gta._lck_params = lck_params
