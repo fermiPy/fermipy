@@ -3612,6 +3612,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 c._src_expscale = copy.deepcopy(self._roi_data['components']
                                                 [i]['src_expscale'])
 
+        lck_params = roi_data.pop('lck_params', None)
+        if lck_params:
+            self._lck_params = copy.deepcopy(lck_params)
+                
         self._create_likelihood(infile)
         self.set_energy_range(self.loge_bounds[0], self.loge_bounds[1])
 
@@ -3692,7 +3696,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         o['version'] = fermipy.__version__
         o['stversion'] = fermipy.get_st_version()
         o['sources'] = {}
-
+        o['lck_params'] = copy.deepcopy(self._lck_params)
+        
         for s in self.roi.sources:
             o['sources'][s.name] = copy.deepcopy(s.data)
 
