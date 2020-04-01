@@ -676,7 +676,10 @@ def find_function_root(fn, x0, xb, delta=0.0, bounds=None):
     else:
         xtol = 1e-10 * np.abs(xb + x0)
 
-    return brentq(lambda t: fn(t) + delta, x0, xb, xtol=xtol)
+    try:
+        return brentq(lambda t: fn(t) + delta, x0, xb, xtol=xtol)
+    except RuntimeError:
+        raise RuntimeError("Brentq failed ", x0, xb, fn(x0)+delta, fn(xb)+delta, xtol, delta)
 
 
 def get_parameter_limits(xval, loglike, cl_limit=0.95, cl_err=0.68269, tol=1E-2,
@@ -775,11 +778,14 @@ def get_parameter_limits(xval, loglike, cl_limit=0.95, cl_err=0.68269, tol=1E-2,
 
     # Find the peak
     x0 = xval[imax]
-
+    
     # Refine the peak position
     if np.sign(sd(xval[ilo])) != np.sign(sd(xval[ihi])):
         x0 = find_function_root(sd, xval[ilo], xval[ihi])
 
+    if np.isnan(x0):
+        x0 = xval[imax]
+        
     lnlmax = float(spline(x0))
 
     def fn(t): return spline(t) - lnlmax
@@ -790,7 +796,7 @@ def get_parameter_limits(xval, loglike, cl_limit=0.95, cl_err=0.68269, tol=1E-2,
         xhi = xval[-1]        
     # EAC: brute force check that xhi is greater than x0
     # The fabs is here in case x0 is negative
-    if xhi <= x0:
+    if xhi <= x0 or np.isnan(xhi):
         xhi = x0 + np.fabs(x0)
 
     if np.any(fn_val[:imax] < -dlnl_limit):
@@ -799,7 +805,7 @@ def get_parameter_limits(xval, loglike, cl_limit=0.95, cl_err=0.68269, tol=1E-2,
         xlo = xval[0]
     # EAC: brute force check that xlo is less than x0
     # The fabs is here in case x0 is negative        
-    if xlo >= x0:
+    if xlo >= x0 or np.isnan(xlo):
         xlo = x0 - 0.5*np.fabs(x0)
 
     ul = find_function_root(fn, x0, xhi, dlnl_limit, bounds=bounds)
