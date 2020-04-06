@@ -579,6 +579,20 @@ PLSuperExpCutoff2:
       value: 1000.0}
   norm_par: Prefactor
   par_names: [Prefactor, Index1, Scale, Expfactor, Index2]
+PLSuperExpCutoff3:
+  defaults:
+    Expfactor2: {error: .nan, free: false, max: 0.5, min: 1000.0, name: Expfactor2, scale: 0.01,
+      value: 100.0}
+    IndexS: {error: .nan, free: false, max: 5.0, min: 0.0, name: IndexS, scale: -1.0,
+      value: 2.0}
+    Index2: {error: .nan, free: false, max: 2.0, min: 0.0, name: Index2, scale: 1.0,
+      value: 1.0}
+    Prefactor: {error: .nan, free: false, max: 1000.0, min: 1.0e-05, name: Prefactor,
+      scale: 1.0, value: 1.0e-12}
+    Scale: {error: .nan, free: false, max: 1000.0, min: 0.001, name: Scale, scale: 1.0,
+      value: 1000.0}
+  norm_par: Prefactor
+  par_names: [Prefactor, IndexS, Scale, Expfactor2, Index2]
 PiecewisePowerLaw:
   defaults:
     IndexL : {error: .nan, free: false, max: 5.0, min: 0.0, name: IndexL, scale: -1.0, value: 0.0}
