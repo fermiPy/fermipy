@@ -2816,12 +2816,13 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             return o
 
         quality = 0
-        niter = 0
+        niter = 0        
+        
         while niter < retries:
             niter += 1
             quality, status, edm, loglike = self._fit_optimizer(**kwargs)
 
-            if quality >= min_fit_quality and status == 0:
+            if quality >= min_fit_quality:
                 break
 
             self.logger.debug("Retry fit iter: %i quality: %i edm: %8.4f loglike: %12.3f",
@@ -2833,7 +2834,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         o['niter'] = niter
         o['loglike'] = loglike
 
-        if quality < min_fit_quality or o['fit_status']:
+        if quality < min_fit_quality:
             o['fit_success'] = False
 
         if (covar and self.like.covariance is not None and
@@ -2884,12 +2885,27 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             status = optObject.getRetCode()
 
             if isinstance(optObject, pyLike.Minuit):
-                quality = optObject.getQuality()
-
-            if isinstance(optObject, pyLike.Minuit) or \
-                    isinstance(optObject, pyLike.NewMinuit):
                 edm = optObject.getDistance()
+                if status == 0:
+                    quality = optObject.getQuality()
+                else:
+                    quality = 2
+                    
 
+            elif isinstance(optObject, pyLike.NewMinuit):
+                edm = optObject.getDistance()
+                # Mask out bits 128, 16, 8, 4, from the status
+                check = np.bitwise_and(np.bitwise_not(156), status)
+                if check == 0:
+                    quality = 3
+                else:
+                    quality = 0                
+            else:
+                if status == 0:
+                    quality = 3
+                else:
+                    quality = 0
+                
             loglike = optObject.stat().value()
 
         except Exception:
