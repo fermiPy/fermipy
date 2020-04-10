@@ -4,6 +4,52 @@ Developer Notes
 ===============
 
 
+Adding a spectral model
+-----------------------
+
+One of the most common changes to the underlying fermitools code is to add
+a new spectral model.   To be able to use that model in fermipy will
+require a few changes, depending on how exactly you would like you
+use the model.
+
+1. At a minimum, the model, and default values and bounds for the parameters need to
+   be added to ``fermipy/data/models.yaml``
+2. If you want to be able to use functions that free the source-shape
+   parameters, fit the SED, you will want to modify the
+   ``norm_parameters`` and ``shape_parameters`` blocks at the top of
+   the ``fermipy/gtanalysis.py`` file to include the new spectral
+   model.
+3. If you want to be able to include the spectral model in an xml
+   'catalog' of sources that you use to define an ROI, you will have
+   to update the ``spectral_pars_from_catalog`` and ``get_catalog_dict``
+   functions in ``fermipy/roi_model.py`` to include the spectral
+   model.
+4. If the spectral model is included in a new source catalog, and you
+   want to support that catalog, see the section below on supporting new
+   catalogs.
+5. If you want to use the spectral to do more complicated things, like
+   vectorizing call to evalute the spectrum because you are using it
+   in sensitivity studies, then you will have to add it the the
+   ``fermipy/spectrum.py`` file.   That is pretty much expert territory.
+
+
+Supporting a new catalog
+-------------------------
+
+To support a new catalog will require some changes in the
+``fermipy/catalog.py`` file.   In short
+
+1. Define a class to manage the catalog.   This will have to handle
+   converting the parameters in the FITS file to the format that
+   fermipy expects.  It should inherit from the ``Catalog`` class.
+2. Update the ``Catalog.create`` function to have a hook to create a
+   class of the correct type.
+3. For now we are also maintaining the catalog files in the
+   ``fermipy/data/catalogs`` area, so the catalog files should be
+   added to that area.
+
+
+
 Creating a New Release
 ----------------------
 
