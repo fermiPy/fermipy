@@ -224,7 +224,12 @@ class ExtensionFit(object):
         o.loglike_ext = fit_output['loglike']
 
         if kwargs['fit_ebin']:
-            self._fit_extension_ebin(name, o, **kwargs)
+            self._fit_extension_ebin(name, o, 
+                                    spatial_model=spatial_model,
+                                    optimizer=kwargs['optimizer'],
+                                    psf_scale_fn=psf_scale_fn,
+                                    reoptimize=kwargs.get('reoptimize', True)
+                                    )
 
         if kwargs['save_model_map']:
             o.ext_tot_map = self.model_counts_map()
