@@ -196,7 +196,7 @@ def get_source_kernel(gta, name, kernel=None):
     for c in gta.components:
         z = c.model_counts_map(name).data.astype('float')
         if kernel is not None:
-            shape = (z.shape[0][::-1],) + kernel.shape
+            shape = (z.shape[0],) + kernel.shape
             z = np.apply_over_axes(np.sum, z, axes=[1, 2]) * np.ones(
                 shape) * kernel[np.newaxis, :, :]
             zs += np.sum(z)
