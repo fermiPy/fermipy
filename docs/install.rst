@@ -60,7 +60,27 @@ some of these values you can leave them as is:
    $ # fermipy you should change this
    $ export INSTALL_CMD="conda install -y --name  $FERMIPY_CONDA_ENV -c $CONDA_CHANNELS fermipy"
 
-   
+
+.. _dev_install_script:
+
+The dev_install.sh script
+-------------------------
+
+If you want to install fermipy from source, you can use the
+'dev_install.sh' script included in the package.  This script sets the
+values of the environmental variables listed above to values that are
+suitable for installing from source
+
+.. code-block:: bash
+
+   $ git clone 
+   $ cd fermipy
+   $ <edit dev_install.sh to set CONDA_PATH and FERMIPY_CONDA_ENV>
+   $ . dev_install.sh
+   $ py.test # to test
+
+
+
 .. _stinstall:
 
 Installing the fermitools
