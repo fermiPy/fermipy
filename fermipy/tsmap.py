@@ -893,10 +893,10 @@ class TSMapGenerator(object):
             xyrange = [range(xmin, xmax), range(ymin, ymax)]
 
             wcs = map_geom.wcs.deepcopy()
-            npix = (xmax - xmin, ymax - ymin)
-            crpix = ( map_geom._crpix[0] - xmin, map_geom._crpix[1] - ymin)
-            wcs.wcs.crpix[1] -= ymin
-            wcs.wcs.crpix[0] -= xmin
+            npix = (ymax - ymin, xmax - xmin)
+            crpix = ( map_geom._crpix[0] - ymin, map_geom._crpix[1] - xmin)
+            wcs.wcs.crpix[0] -= ymin
+            wcs.wcs.crpix[1] -= xmin
 
             # FIXME: We should implement this with a proper cutout method
             map_geom = WcsGeom(wcs, npix, crpix=crpix)
