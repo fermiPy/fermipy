@@ -185,12 +185,14 @@ class ExtensionFit(object):
         if kwargs['fit_position']:
             ext_fit = self._fit_extension_full(name,
                                                spatial_model=spatial_model,
-                                               optimizer=kwargs['optimizer'])
+                                               optimizer=kwargs['optimizer'], width_max=width_max,
+					       width_min=width_min, width_nstep=width_nstep)
         else:
             ext_fit = self._fit_extension(name,
                                           spatial_model=spatial_model,
                                           optimizer=kwargs['optimizer'],
-                                          psf_scale_fn=psf_scale_fn)
+                                          psf_scale_fn=psf_scale_fn, width_max=width_max,
+					  width_min=width_min, width_nstep=width_nstep)
 
         o.update(ext_fit)
 
@@ -224,12 +226,7 @@ class ExtensionFit(object):
         o.loglike_ext = fit_output['loglike']
 
         if kwargs['fit_ebin']:
-            self._fit_extension_ebin(name, o, 
-                                    spatial_model=spatial_model,
-                                    optimizer=kwargs['optimizer'],
-                                    psf_scale_fn=psf_scale_fn,
-                                    reoptimize=kwargs.get('reoptimize', True)
-                                    )
+            self._fit_extension_ebin(name, o, **kwargs)
 
         if kwargs['save_model_map']:
             o.ext_tot_map = self.model_counts_map()
@@ -539,6 +536,9 @@ class ExtensionFit(object):
 
         spatial_model = kwargs.get('spatial_model', 'RadialGaussian')
         optimizer = kwargs.get('optimizer', {})
+	width_min = kwargs.get('width_min', 10**-2.0)
+	width_max = kwargs.get('width_max', 10**0.5)
+        width_nstep = kwargs.get('width_nstep', 21)
         fit_position = kwargs.get('fit_position', False)
         skydir = kwargs.get('skydir', self.roi[name].skydir)
         psf_scale_fn = kwargs.get('psf_scale_fn', None)
@@ -550,9 +550,9 @@ class ExtensionFit(object):
         # parts centered on the best-fit value -- this ensures better
         # fit stability
         if (src['SpatialModel'] in ['RadialGaussian', 'RadialDisk'] and
-                src['SpatialWidth'] > 0.1):
-            width_lo = np.logspace(-2.0, np.log10(src['SpatialWidth']), 11)
-            width_hi = np.logspace(np.log10(src['SpatialWidth']), 0.5, 11)
+                src['SpatialWidth'] > width_min):
+            width_lo = np.logspace(np.log10(width_min), np.log10(src['SpatialWidth']), width_nstep // 2 + (width_nstep % 2 > 0))
+            width_hi = np.logspace(np.log10(src['SpatialWidth']), np.log10(width_max), width_nstep // 2 + 1)
             loglike_lo = self._scan_extension(name, spatial_model=spatial_model,
                                               width=width_lo[::-1],
                                               optimizer=optimizer,
@@ -568,7 +568,7 @@ class ExtensionFit(object):
             width = np.concatenate((width_lo, width_hi[1:]))
             loglike = np.concatenate((loglike_lo, loglike_hi[1:]))
         else:
-            width = np.logspace(-2.0, 0.5, 21)
+            width = np.logspace(np.log10(width_min), np.log10(width_max), width_nstep)
             width = np.concatenate(([0.0], width))
             loglike = self._scan_extension(name, spatial_model=spatial_model,
                                            width=width, optimizer=optimizer,
@@ -577,7 +577,7 @@ class ExtensionFit(object):
                                            reoptimize=reoptimize)
 
         ul_data = utils.get_parameter_limits(width, loglike,
-                                             bounds=[10**-3.0, 10**0.5])
+                                             bounds=[10**-3.0, width_max])
 
         if not np.isfinite(ul_data['err']):
             ul_data['x0'] = width[np.argmax(loglike)]
@@ -594,7 +594,7 @@ class ExtensionFit(object):
         else:
             hilim = ul_data['x0'] + 2.0 * err
 
-        nstep = max(11, int((hilim - lolim) / err))
+        nstep = max(width_nstep, int((hilim - lolim) / err))
         width2 = np.linspace(lolim, hilim, nstep)
 
         loglike2 = self._scan_extension(name, spatial_model=spatial_model,
@@ -603,7 +603,7 @@ class ExtensionFit(object):
                                         psf_scale_fn=psf_scale_fn,
                                         reoptimize=reoptimize)
         ul_data2 = utils.get_parameter_limits(width2, loglike2,
-                                              bounds=[10**-3.0, 10**0.5])
+                                              bounds=[10**-3.0, width_max])
 
         self.logger.debug('width: %s', width)
         self.logger.debug('loglike: %s', loglike - np.max(loglike))
