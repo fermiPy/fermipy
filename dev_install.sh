@@ -1,9 +1,9 @@
 
 
 # Set this to point at your conda installation
-export CONDA_PATH=$HOME/anaconda2
+export CONDA_PATH=$HOME/miniconda2
 # Set this to the name of the conda environment you want for fermipy development
-export FERMI_CONDA_ENV=fermipy-dev-test
+export FERMIPY_CONDA_ENV=fermipy-dev
 
 # Don't touch these
 export INSTALL_CMD="python setup.py develop"
