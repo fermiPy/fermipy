@@ -77,8 +77,8 @@ class WCSProj(object):
         deltay = np.array((ypix - self._pix_center[1]) * self._pix_size[1],
                           ndmin=1)
 
-        deltax = np.abs(deltax) - 0.5 * self._width[0]
-        deltay = np.abs(deltay) - 0.5 * self._width[1]
+        deltax = np.abs(deltax) - 0.5 * self._width[0].value
+        deltay = np.abs(deltay) - 0.5 * self._width[1].value
 
         m0 = (deltax < 0) & (deltay < 0)
         m1 = (deltax > 0) & (deltay < 0)
@@ -106,8 +106,8 @@ def distance_to_edge(geom, skydir):
     deltay = np.array((ypix - geom.center_pix[1]) * geom._cdelt[1],
                       ndmin=1)
 
-    deltax = np.abs(deltax) - 0.5 * geom.width[0]
-    deltay = np.abs(deltay) - 0.5 * geom.width[1]
+    deltax = np.abs(deltax) - 0.5 * geom.width[0].value
+    deltay = np.abs(deltay) - 0.5 * geom.width[1].value
 
     m0 = (deltax < 0) & (deltay < 0)
     m1 = (deltax > 0) & (deltay < 0)

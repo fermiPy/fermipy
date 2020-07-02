@@ -58,8 +58,10 @@ def get_function_spec(name):
         modelfile = os.path.expandvars(modelfile)
         get_function_spec.fndict = yaml.load(open(modelfile))
 
-    if not name in get_function_spec.fndict.keys():
-        raise Exception('Invalid Function Name: %s' % name)
+    if isinstance(name, bytes):
+        name = name.decode()
+    if not name in get_function_spec.fndict.keys():    
+        raise Exception('Invalid Function Name: %s %s' % (name, get_function_spec.fndict.keys()))
 
     return get_function_spec.fndict[name]
 

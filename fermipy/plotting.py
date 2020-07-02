@@ -316,11 +316,11 @@ class ImagePlotter(object):
             cs.levels = ['%.0f' % val for val in cs.levels]
             plt.clabel(cs, inline=1, fontsize=8)
 
-        coordsys = self._geom.coordsys
-        if coordsys == 'CEL':
+        frame = self._geom.frame
+        if frame == 'icrs':
             ax.set_xlabel('RA')
             ax.set_ylabel('DEC')
-        elif coordsys == 'GAL':
+        elif frame == 'galactic':
             ax.set_xlabel('GLON')
             ax.set_ylabel('GLAT')
 

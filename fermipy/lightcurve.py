@@ -243,9 +243,9 @@ def calcTS_var(loglike, loglike_const, flux_err, flux_const, systematic, fit_suc
         elm for elm,success in zip(loglike_const,fit_success) if success]
     flux_err = [elm for elm,success in zip(flux_err,fit_success) if success]
 
-    v_sqs = [loglike[i] - loglike_const[i] for i in xrange(len(loglike))]
+    v_sqs = [loglike[i] - loglike_const[i] for i in range(len(loglike))]
     factors = [flux_err[i]**2 / (flux_err[i]**2 + systematic**2 * flux_const**2)
-               for i in xrange(len(flux_err))]
+               for i in range(len(flux_err))]
     return 2. * np.sum([a * b for a, b in zip(factors, v_sqs)])
 
 
@@ -323,7 +323,7 @@ class LightCurve(object):
             if isinstance(v, np.ndarray):
                 cols[k] = Column(name=k, data=v, dtype=v.dtype)
 
-        tab = Table(cols.values())
+        tab = Table(cols)
         hdu_lc = fits.table_to_hdu(tab)
         hdu_lc.name = 'LIGHTCURVE'
         hdus = [fits.PrimaryHDU(), hdu_lc]
@@ -444,19 +444,24 @@ class LightCurve(object):
         o = self._create_lc_dict(name, times)
         o['config'] = kwargs
 
-        itimes = enumerate(zip(times[:-1], times[1:]))
+        flux_const = None
         for i, time in itimes:
 
-            if not mapo[i]['fit_success']:
+            next_fit = next(mapo)
+            
+            if not next_fit['fit_success']:
                 self.logger.error(
                     'Fit failed in bin %d in range %i %i.' % (i, time[0], time[1]))
                 continue
 
+            if flux_const is None:
+                flux_const = next_fit['flux_const']                
+            
             for k in o.keys():
 
                 if k == 'config':
                     continue
-                if not k in mapo[i]:
+                if not k in next_fit:
                     continue
                 # if (isinstance(o[k], np.ndarray) and
                 #    o[k][i].shape != mapo[i][k].shape):
@@ -464,7 +469,7 @@ class LightCurve(object):
                 #    continue
 
                 try:
-                    o[k][i] = mapo[i][k]
+                    o[k][i] = next_fit[k]
                 except:
                     pass
 
@@ -473,7 +478,7 @@ class LightCurve(object):
         o['ts_var'] = calcTS_var(loglike=o['loglike_fixed'],
                                  loglike_const=o['loglike_const'],
                                  flux_err=o['flux_err_fixed'],
-                                 flux_const=mapo[0]['flux_const'],
+                                 flux_const=flux_const,
                                  systematic=systematic,
                                  fit_success=o['fit_success_fixed'])
 

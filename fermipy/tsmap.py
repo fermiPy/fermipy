@@ -795,9 +795,8 @@ class TSMapGenerator(object):
         cpix = np.array([xpix, ypix])
 
         map_geom = self._geom.to_image()
-        frame = coordsys_to_frame(map_geom.coordsys)
         skydir = SkyCoord(*map_geom.pix_to_coord((cpix[0], cpix[1])),
-                          frame=frame, unit='deg')
+                          frame=map_geom.frame, unit='deg')
         skydir = skydir.transform_to('icrs')
 
         src_dict['ra'] = skydir.ra.deg
@@ -1060,6 +1059,7 @@ class TSCubeGenerator(object):
         if map_skydir is None:
             # Take the center of the wcs
             map_geom = self._geom.to_image()
+            raise ValueError("%s" % dir(map_geom.coordsys))
             frame = coordsys_to_frame(map_geom.coordsys)
             map_skydir = SkyCoord(*map_geom.pix_to_coord(self._geom.wcs.wcs.crpix), frame=frame, unit='deg')
             map_skydir = map_skydir.transform_to('icrs')

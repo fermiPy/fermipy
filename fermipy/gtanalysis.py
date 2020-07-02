@@ -412,18 +412,21 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         axes = [MapAxis.from_edges(self.energies, interp='log',
                                    name='energy', unit='MeV')]
+
+        frame_map = dict(CEL='icrs', cel='icrs', GAL='galactic', gal='galactic')
+            
         if self.projtype == 'HPX':
             is_nested = self.config['binning']['hpx_ordering_scheme'] == "NESTED"
             self._geom = HpxGeom.create(2**self.config['binning']['hpx_order'],
                                         nest=is_nested,
-                                        coordsys=self.config['binning']['coordsys'],
+                                        frame=frame_map[self.config['binning']['coordsys']],
                                         width=self.config['binning']['roiwidth'],
                                         skydir=self.roi.skydir,
                                         axes=axes)
         else:
 
             self._geom = WcsGeom.create(npix=self.npix, binsz=self._binsz,
-                                        coordsys=self.config['binning']['coordsys'],
+                                        frame=frame_map[self.config['binning']['coordsys']],
                                         proj=self.config['binning']['proj'],
                                         skydir=self.roi.skydir,
                                         axes=axes)
@@ -598,8 +601,13 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         rm['npred'] = 0
         rm['npred_wt'] = 0
         for i, c in enumerate(self.components):
+
             rm['components'][i]['loglike'] = -c.like()
-            rm['components'][i]['model_counts'].fill(0)
+            try:
+                rm['components'][i]['model_counts'].fill(0)
+            except KeyError:
+                raise ValueError("%s" % rm['components'][i].keys())
+
             try:
                 rm['components'][i]['model_counts_wt'].fill(0)
             except:
@@ -934,12 +942,13 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         cfg['fileio']['workdir'] = self.config['fileio']['workdir']
 
+        copy_cfg = {}
         for k in cfg.keys():
-            if not k in GTBinnedAnalysis.defaults:
-                cfg.pop(k)
+            if k in GTBinnedAnalysis.defaults:
+                copy_cfg[k] = cfg[k]
 
         comp = GTBinnedAnalysis(
-            cfg, self.roi, logging=self.config['logging'], **kwargs)
+            copy_cfg, self.roi, logging=self.config['logging'], **kwargs)
 
         return comp
 
@@ -1072,10 +1081,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         # Determine tmin, tmax
         for i, c in enumerate(self._components):
-            self._tmin = (c.tmin if self._tmin is None
-                          else min(self._tmin, c.tmin))
-            self._tmax = (c.tmax if self._tmax is None
-                          else min(self._tmax, c.tmax))
+            if c.tmin is not None:
+                self._tmin = (c.tmin if self._tmin is None
+                            else min(self._tmin, c.tmin))
+            if c.tmax is not None:
+                self._tmax = (c.tmax if self._tmax is None
+                                else min(self._tmax, c.tmax))
 
         if init_sources:
 
@@ -3607,7 +3618,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                    'ref_dfde_emax': 'ref_dnde_e_max',
                    }
 
-        self._roi_data = utils.update_keys(roi_data['roi'], key_map)
+        self._roi_data = roi_data['roi']
 
         if 'erange' in self._roi_data:
             self._roi_data['loge_bounds'] = self._roi_data.pop('erange')
@@ -4455,19 +4466,26 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._coordsys = self.config['binning']['coordsys']
         self._tmin = self.config['selection']['tmin']
         self._tmax = self.config['selection']['tmax']
+
+        if self._tmin is None or self._tmax is None:
+            raise ValueError("%s %s" % (self._tmin, self._tmax))
+        
         axes = [MapAxis.from_edges(self.energies, interp='log',
                                    name='energy', unit='MeV')]
+
+        frame_map = dict(CEL='icrs', cel='icrs', GAL='galactic', gal='galactic')
+
         if self.projtype == 'HPX':
             is_nested = self.config['binning']['hpx_ordering_scheme'] == "NESTED"
             self._geom = HpxGeom.create(2**self.config['binning']['hpx_order'],
                                         nest=is_nested,
-                                        coordsys=self.config['binning']['coordsys'],
+                                        frame=frame_map[self.config['binning']['coordsys']],
                                         width=self.config['binning']['roiwidth'],
                                         skydir=self.roi.skydir,
                                         axes=axes)
         elif self.projtype == "WCS":
             self._geom = WcsGeom.create(npix=self.npix, binsz=self.binsz,
-                                        coordsys=self.config['binning']['coordsys'],
+                                        frame=frame_map[self.config['binning']['coordsys']],
                                         proj=self.config['binning']['proj'],
                                         skydir=self.roi.skydir,
                                         axes=axes)
