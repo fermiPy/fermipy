@@ -192,7 +192,7 @@ class ExtensionFit(object):
                                           spatial_model=spatial_model,
                                           optimizer=kwargs['optimizer'],
                                           psf_scale_fn=psf_scale_fn, width_max=width_max,
-					  width_min=width_min, width_nstep=width_nstep)
+                                          width_min=width_min, width_nstep=width_nstep)
 
         o.update(ext_fit)
 
@@ -536,8 +536,8 @@ class ExtensionFit(object):
 
         spatial_model = kwargs.get('spatial_model', 'RadialGaussian')
         optimizer = kwargs.get('optimizer', {})
-	width_min = kwargs.get('width_min', 10**-2.0)
-	width_max = kwargs.get('width_max', 10**0.5)
+        width_min = kwargs.get('width_min', 10**-2.0)
+        width_max = kwargs.get('width_max', 10**0.5)
         width_nstep = kwargs.get('width_nstep', 21)
         fit_position = kwargs.get('fit_position', False)
         skydir = kwargs.get('skydir', self.roi[name].skydir)
