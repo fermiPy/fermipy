@@ -20,8 +20,9 @@ env:
       - CONDA_CHANNELS=conda-forge
       - CONDA_DEPS='gammapy numpy astropy scipy matplotlib pyyaml astropy-healpix'
       - CONDA2_DEPS='subprocess32 pytest'
-      - FERMI_CONDA_CHANNELS='-c conda-forge/label/cf201901 -c fermi'
+      - FERMI_CONDA_CHANNELS='-c conda-forge/label/cf201901 -c fermi -c fermi/label/beta'
       - FERMIPY_CONDA_ENV='fermipy'
+      - DOCKER_INSTALL=''
       
 matrix:
     include:
@@ -32,8 +33,8 @@ matrix:
           env: NAME=main
                PYTHON_VERSION=2.7
                CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
+	       CONDA_DEPS='gammapy=0.10 healpy=1.13.0 numpy astropy scipy matplotlib pyyaml'
                ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS fermitools"
-               DOCKER_INSTALL=''
  
         # The old build:
         # Python 2, fixed tag of fermitools, all dependencies
@@ -42,7 +43,15 @@ matrix:
                PYTHON_VERSION=2.7
                CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
                ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS fermitools=1.2.23"
-               DOCKER_INSTALL=''
+
+       # Python 3.6, no Fermi ST, all other dependencies
+        - os: linux
+          python : 3.6
+          env: NAME=py36
+               PYTHON_VERSION=3.6
+               ST_INSTALL='conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS fermitools'
+               CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
+
 
         # Python 3.6, no Fermi ST, all other dependencies
         - os: linux
@@ -50,7 +59,6 @@ matrix:
           env: NAME=py36_st-no_dep-yes
                PYTHON_VERSION=3.6
                ST_INSTALL=''
-               DOCKER_INSTALL=''
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
 
         # Python 2, no Fermi ST, all other dependencies
@@ -58,7 +66,6 @@ matrix:
           env: NAME=py2_st-no_dep-yes
                PYTHON_VERSION=2.7
                ST_INSTALL=''
-               DOCKER_INSTALL=''
                CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
 
     allow_failures:
@@ -69,7 +76,6 @@ matrix:
           env: NAME=docs
                PYTHON_VERSION=3.6
                ST_INSTALL=''
-               DOCKER_INSTALL=''
                PIP_DEPS='coverage pytest-cov coveralls'
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
                CONDA_DEPS='gammapy numpy astropy scipy matplotlib pytest pyyaml sphinx sphinx_rtd_theme'
