@@ -60,7 +60,7 @@ matrix:
           python : 3.6
           env: NAME=py36_st-no_dep-yes
                PYTHON_VERSION=3.6
-               ST_INSTALL=''
+               ST_INSTALL='echo'
                CONDA_DEPS='gammapy numpy astropy scipy matplotlib pyyaml astropy-healpix'
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
 
@@ -68,7 +68,7 @@ matrix:
         - os: linux
           env: NAME=py2_st-no_dep-yes
                PYTHON_VERSION=2.7
-               ST_INSTALL=''
+               ST_INSTALL='echo'
                CONDA_DEPS='gammapy=0.10 healpy=1.13.0 numpy astropy scipy matplotlib pyyaml'
                CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
 
@@ -79,7 +79,7 @@ matrix:
           python : 3.6
           env: NAME=docs
                PYTHON_VERSION=3.6
-               ST_INSTALL=''
+               ST_INSTALL='echo'
                PIP_DEPS='coverage pytest-cov coveralls'
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
                CONDA_DEPS='gammapy numpy astropy scipy matplotlib pytest pyyaml sphinx sphinx_rtd_theme'
