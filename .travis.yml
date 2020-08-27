@@ -34,7 +34,7 @@ matrix:
                PYTHON_VERSION=2.7
                CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
                CONDA_DEPS='gammapy=0.10 healpy=1.13.0 numpy astropy scipy matplotlib pyyaml'
-               ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS fermitools"
+               ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV -c conda-forge -c fermi -c fermi/label/beta fermitools"
  
         # The old build:
         # Python 2, fixed tag of fermitools, all dependencies
@@ -43,14 +43,14 @@ matrix:
                PYTHON_VERSION=2.7
                CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
                CONDA_DEPS='gammapy numpy astropy scipy matplotlib pyyaml astropy-healpix'
-               ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS fermitools=1.2.23"
+               ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV -c conda-forge/label/cf201901 -c fermi -c conda-forge fermitools=1.2.23"
 
        # Python 3.6, no Fermi ST, all other dependencies
         - os: linux
           python : 3.6
           env: NAME=py36
                PYTHON_VERSION=3.6
-               ST_INSTALL='conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS fermitools'
+               ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV -c conda-forge -c fermi -c fermi/label/beta fermitools"
                CONDA_DEPS='gammapy numpy astropy scipy matplotlib pyyaml astropy-healpix'
                CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
 
