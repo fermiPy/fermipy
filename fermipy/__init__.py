@@ -56,7 +56,10 @@ def get_git_version_fp():
 
 def get_ft_conda_version():
     """Get the version string from conda"""
-    lines = subprocess.check_output(['conda', 'list', '-f',  'fermitools']).split('\n')
+    try:
+        lines = subprocess.check_output(['conda', 'list', '-f',  'fermitools']).decode().split('\n')
+    except:
+        lines = subprocess.check_output(['conda', 'list', '-f',  'fermitools']).split('\n')
     for l in lines:
         if not l:
             continue

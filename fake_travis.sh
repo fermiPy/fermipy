@@ -4,12 +4,11 @@ export PIP_DEPS='coverage pytest-cov coveralls'
 export INSTALL_CMD='python setup.py install'
 export CONDA_CHANNELS="conda-forge"
 export FERMI_CONDA_CHANNELS="-c conda-forge/label/cf201901 -c fermi"
-export CONDA_DEPS='gammapy=0.10 healpy=1.13.0 numpy astropy scipy matplotlib pyyaml'
-#export CONDA_DEPS='pyyaml gammapy'
+export CONDA_DEPS='gammapy numpy astropy scipy matplotlib pyyaml astropy-healpix'
 export CONDA2_DEPS='subprocess32 pytest'
 export DOCKER_INSTALL=''
 
-NAME='main'
+NAME='py37'
 export FERMIPY_CONDA_ENV="fermipy-test-$NAME"
 
 
@@ -17,39 +16,39 @@ case $NAME in
     main)
 	export PYTHON_VERSION="2.7"
 	export CONDA_PATH="/Users/echarles/miniconda2"
-	export ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS -c fermi -c fermi/label/beta fermitools"
-	;;
-    py36):
-	export PYTHON_VERSION="3.6"
-	export CONDA_PATH="/Users/echarles/miniconda3"
-        export ST_INSTALL='conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS -c fermi -c fermi/label/beta fermitools'   
+	export CONDA_DEPS='gammapy=0.10 healpy=1.13.0 numpy astropy scipy matplotlib pyyaml'	
+	export ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV -c conda-forge -c fermi -c fermi/label/beta fermitools"
 	;;
     old)
 	export PYTHON_VERSION="2.7"
 	export CONDA_PATH="/Users/echarles/miniconda2"
-	export ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS -c fermi fermitools=1.2.23"
+	export CONDA_DEPS='gammapy=0.10 healpy=1.13.0 numpy astropy scipy matplotlib pyyaml'	
+	export ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV -c conda-forge/label/cf201901 -c fermi -c conda-forge fermitools=1.2.23"
+	;;
+    py37)
+	export PYTHON_VERSION="3.7"
+	export CONDA_PATH="/Users/echarles/miniconda3"
+        export ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV -c conda-forge -c fermi -c fermi/label/beta fermitools"
+        export CONDA2_DEPS='pytest'
 	;;
     docs)
-	export PYTHON_VERSION="3.6"
+	export PYTHON_VERSION="3.7"
 	export CONDA_PATH="/Users/echarles/miniconda3"
         export ST_INSTALL=''
-        export CONDA_DEPS='gammapy numpy astropy scipy matplotlib pytest pyyaml sphinx sphinx_rtd_theme'
+	export PIP_DEPS='coverage pytest-cov coveralls'
+	export CONDA2_DEPS='pytest sphinx sphinx_rtd_theme'
 	;;
-    py36_st-no_dep)
-	export PYTHON_VERSION="3.6"
+    py37_st-no_dep)
+	export PYTHON_VERSION="3.7"
 	export CONDA_PATH="/Users/echarles/miniconda3"
         export ST_INSTALL=''
+        export CONDA2_DEPS='pytest'	
 	;;
     py2_st-no_dep)
 	export PYTHON_VERSION="2.7"
 	export CONDA_PATH="/Users/echarles/miniconda2"
+	export CONDA_DEPS='gammapy=0.10 healpy=1.13.0 numpy astropy scipy matplotlib pyyaml'	
         export ST_INSTALL=''
-	;;
-    slac*)
-	export PYTHON_VERSION="2.7"
-	export ST_INSTALL=""
-	export SLAC_ST_BUILD=true
-	export INST_DIR='/u/ek/echarles/dmcat/software/git-releases/FT_01-00-01_orig'
 	;;
     none)
 	exit
