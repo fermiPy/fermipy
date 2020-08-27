@@ -11,14 +11,15 @@ from fermipy import spectrum
 from fermipy.ltcube import LTCube
 from fermipy.skymap import Map
 
+from fermipy.tests.utils import requires_st_version
 try:
     from fermipy.scripts import flux_sensitivity
     from fermipy.sensitivity import SensitivityCalc
 except ImportError:
     pass
 
-# Skip tests in this file if Fermi ST aren't available
-pytestmark = requires_dependency('Fermi ST')
+# Skip tests in this file if Fermi ST aren't up to date
+pytestmark = requires_st_version('01-03-00')
 
 galdiff_path = os.path.join(os.path.expandvars('$FERMI_DIFFUSE_DIR'),
                             'gll_iem_v07.fits')
