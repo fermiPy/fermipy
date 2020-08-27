@@ -49,7 +49,8 @@ matrix:
         # Python 3.6, no Fermi ST, all other dependencies
         - os: linux
           python : 3.7
-          env: NAME=py36_st-no_dep-yes
+          dist : xenial
+          env: NAME=py37_st-no_dep-yes
                PYTHON_VERSION=3.7
                ST_INSTALL='echo'
                CONDA2_DEPS='pytest'
