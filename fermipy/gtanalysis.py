@@ -504,6 +504,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         return self._loge_bounds
 
     @property
+    def binsz(self):
+        """Current analysis spatial binning in degrees per pixel."""
+        return self._binsz
+
+    @property
     def projtype(self):
         """Return the type of projection to use"""
         return self._projtype
