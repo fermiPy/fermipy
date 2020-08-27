@@ -10,7 +10,10 @@ services:
 notifications:
   email: false
 
-python : 2.7
+python :
+    - "2.7"
+    - "3.7"
+
 env:
     global:
       - FERMI_DIR=$HOME/ScienceTools/x86_64-unknown-linux-gnu-libc2.17
