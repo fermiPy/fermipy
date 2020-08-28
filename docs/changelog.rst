@@ -6,6 +6,11 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
+0.20.0 (08/24/2020)
+-------------------
+* Upgrade to P8R3_XXX_V3 irfs in testing
+* Added improvements to extension fitting and residual maps
+
 0.19.0 (03/25/2020)
 -------------------
 * Switch installation procedure and to using fermitools-data for diffuse emission models
