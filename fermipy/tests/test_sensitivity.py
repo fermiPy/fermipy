@@ -11,14 +11,15 @@ from fermipy import spectrum
 from fermipy.ltcube import LTCube
 from fermipy.skymap import Map
 
+from fermipy.tests.utils import requires_st_version
 try:
     from fermipy.scripts import flux_sensitivity
     from fermipy.sensitivity import SensitivityCalc
 except ImportError:
     pass
 
-# Skip tests in this file if Fermi ST aren't available
-pytestmark = requires_dependency('Fermi ST')
+# Skip tests in this file if Fermi ST aren't up to date
+pytestmark = requires_st_version('01-03-00')
 
 galdiff_path = os.path.join(os.path.expandvars('$FERMI_DIFFUSE_DIR'),
                             'gll_iem_v07.fits')
@@ -32,10 +33,10 @@ def test_calc_diff_flux_sensitivity():
     ebins = 10**np.linspace(2.0, 5.0, 8 * 3 + 1)
 
     gdiff = Map.create_from_fits(galdiff_path)
-    iso = np.loadtxt(os.path.expandvars('$FERMI_DIFFUSE_DIR/iso_P8R3_SOURCE_V2_v1.txt'),
+    iso = np.loadtxt(os.path.expandvars('$FERMI_DIFFUSE_DIR/iso_P8R3_SOURCE_V3_v1.txt'),
                      unpack=True)
     scalc = SensitivityCalc(gdiff, iso, ltc, ebins,
-                            'P8R3_SOURCE_V2', [['FRONT', 'BACK']])
+                            'P8R3_SOURCE_V3', [['FRONT', 'BACK']])
 
     fn = spectrum.PowerLaw([1E-13, -2.0], scale=1E3)
     o = scalc.diff_flux_threshold(c, fn, 25.0, 3.0)
@@ -67,10 +68,10 @@ def test_calc_int_flux_sensitivity():
     ebins = 10**np.linspace(2.0, 5.0, 8 * 3 + 1)
 
     gdiff = Map.create_from_fits(galdiff_path)
-    iso = np.loadtxt(os.path.expandvars('$FERMI_DIFFUSE_DIR/iso_P8R3_SOURCE_V2_v1.txt'),
+    iso = np.loadtxt(os.path.expandvars('$FERMI_DIFFUSE_DIR/iso_P8R3_SOURCE_V3_v1.txt'),
                      unpack=True)
     scalc = SensitivityCalc(gdiff, iso, ltc, ebins,
-                            'P8R2_SOURCE_V6', [['FRONT', 'BACK']])
+                            'P8R3_SOURCE_V3', [['FRONT', 'BACK']])
 
     fn = spectrum.PowerLaw([1E-13, -2.0], scale=1E3)
     o = scalc.int_flux_threshold(c, fn, 25.0, 3.0)
@@ -82,13 +83,13 @@ def test_calc_int_flux_sensitivity():
     assert_allclose(o['e2dnde'], 1.66908748971e-07, rtol=3E-3)
 
     assert_allclose(o['bins']['flux'],
-                    np.array([4.17448446e-10, 3.13042173e-10, 2.34748512e-10, 1.76036550e-10,
-                                  1.32008790e-10, 9.89926269e-11, 7.42339977e-11, 5.56676450e-11,
-                                  4.17448446e-11, 3.13042173e-11, 2.34748512e-11, 1.76036550e-11,
-                                  1.32008790e-11, 9.89926269e-12, 7.42339977e-12, 5.56676450e-12,
-                                  4.17448446e-12, 3.13042173e-12, 2.34748512e-12, 1.76036550e-12,
-                                  1.32008790e-12, 9.89926269e-13, 7.42339977e-13, 5.56676450e-13]),
-                    rtol=1E-3)
+                    np.array([4.180875e-10, 3.135214e-10, 2.351078e-10, 1.763060e-10,
+                              1.322108e-10, 9.914417e-11, 7.434764e-11, 5.575286e-11,
+                              4.180876e-11, 3.135216e-11, 2.351078e-11, 1.763060e-11,
+                              1.322108e-11, 9.914417e-12, 7.434764e-12, 5.575286e-12,
+                              4.180875e-12, 3.135214e-12, 2.351078e-12, 1.763060e-12,
+                              1.322108e-12, 9.914417e-13, 7.434764e-13, 5.575286e-13]), rtol=1E-3)
+
 
 
 @requires_file(galdiff_path)
@@ -98,7 +99,7 @@ def test_flux_sensitivity_script(tmpdir):
     outpath = str(p)
     outpath = 'test.fits'
     isodiff = os.path.expandvars(
-        '$FERMI_DIFFUSE_DIR/iso_P8R3_SOURCE_V2_v1.txt')
+        '$FERMI_DIFFUSE_DIR/iso_P8R3_SOURCE_V3_v1.txt')
     flux_sensitivity.run_flux_sensitivity(ltcube=None, galdiff=galdiff_path,
                                           isodiff=isodiff,
                                           glon=10.0, glat=10.0,
