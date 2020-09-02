@@ -338,6 +338,7 @@ class Catalog3FGL(Catalog):
         m = tab['SpectrumType'] == 'PLSuperExpCutoff'
         idxs = {k: i for i, k in
                 enumerate(get_function_par_names('PLSuperExpCutoff'))}
+        print(idxs)
         tab['param_values'][m, idxs['Prefactor']] = (tab['Flux_Density'][m] *
                                                      np.exp((tab['Pivot_Energy'][m] / tab['Cutoff'][m]) **
                                                             tab['Exp_Index'][m]))
@@ -453,10 +454,17 @@ class Catalog4FGL(Catalog):
         m = self.table['Spatial_Function'] == 'RadialGauss'
         self.table['Spatial_Function'][m] = 'RadialGaussian'
         self.table['TS'] = self.table['Signif_Avg'] * self.table['Signif_Avg']
+
+
+        m = self.table['SpectrumType'] == 'PLSuperExpCutoff'
+        self.table['SpectrumType'][m] = 'PLSuperExpCutoff2'
+
         self._fill_params(self.table)
 
     @staticmethod
     def _fill_params(tab):
+
+        print("here")
 
         tab['param_values'] = np.nan * np.ones((len(tab), 10))
 
@@ -469,7 +477,7 @@ class Catalog4FGL(Catalog):
         tab['param_values'][m, idxs['Index']] = -1.0 * tab['PL_Index'][m]
         tab['param_values'][m, idxs['Scale']] = tab['Pivot_Energy'][m]
 
-        # PLSuperExpCutoff2
+        # PLSuperExpCutoff2 or PLSuperExpCutoff
         # Prefactor, Index1, Scale, Expfactor, Index2
         m = tab['SpectrumType'] == 'PLSuperExpCutoff2'
         idxs = {k: i for i, k in

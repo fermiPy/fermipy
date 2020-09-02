@@ -13,6 +13,15 @@ export FERMIPY_CONDA_ENV="fermipy-test-$NAME"
 
 
 case $NAME in
+    sandbox)
+	export CONDA_PATH="/u/ek/echarles/dmcat/software/anaconda3"
+        export FERMIPY_CONDA_ENV="fermipy-py36"
+        export PYTHON_VERSION="3.6"
+        export ST_INSTALL=" "
+        export CONDA_DEPS='gammapy numpy astropy scipy matplotlib pytest pyyaml sphinx sphinx_rtd_theme'
+	export PIP_DEPS=" "
+	export CONDA2_DEPS=" "
+        ;;
     main)
 	export PYTHON_VERSION="2.7"
 	export CONDA_PATH="/Users/echarles/miniconda2"
