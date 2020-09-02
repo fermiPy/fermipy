@@ -218,6 +218,7 @@ class AssembleModel_SG(ScatterGather):
 
     default_options = dict(comp=diffuse_defaults.diffuse['comp'],
                            data=diffuse_defaults.diffuse['data'],
+                           hpx_order=diffuse_defaults.diffuse['hpx_order_fitting'],
                            models=diffuse_defaults.diffuse['models'])
 
     def build_job_configs(self, args):
@@ -244,6 +245,7 @@ class AssembleModel_SG(ScatterGather):
                 logfile = make_nfs_path(outfile.replace('.fits', '.log'))
                 job_configs[fullkey] = dict(input=manifest,
                                             compname=key,
+                                            hpx_order=args['hpx_order'],
                                             logfile=logfile)
         return job_configs
 
@@ -280,7 +282,7 @@ class AssembleModelChain(Chain):
         comp = input_dict.get('comp')
         library = input_dict.get('library')
         models = input_dict.get('models')
-        hpx_order = input_dict.get('hpx_order_fitting')
+        hpx_order = input_dict.get('hpx_order')
         dry_run = input_dict.get('dry_run', False)
 
         self._set_link('init-model', InitModel,
@@ -292,6 +294,7 @@ class AssembleModelChain(Chain):
 
         self._set_link('assemble-model', AssembleModel_SG,
                        comp=comp, data=data,
+                       hpx_order=hpx_order,
                        models=models)
 
 
