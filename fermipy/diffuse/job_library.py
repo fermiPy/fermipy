@@ -52,6 +52,8 @@ class Gtlink_select(Gtlink):
                            infile=diffuse_defaults.gtopts['infile'],
                            outfile=diffuse_defaults.gtopts['outfile'],
                            zmax=diffuse_defaults.gtopts['zmax'],
+                           tmin=diffuse_defaults.gtopts['tmin'],
+                           tmax=diffuse_defaults.gtopts['tmax'],
                            evclass=diffuse_defaults.gtopts['evclass'],
                            evtype=diffuse_defaults.gtopts['evtype'],
                            pfiles=diffuse_defaults.gtopts['pfiles'])
@@ -78,6 +80,8 @@ class Gtlink_bin(Gtlink):
                            emin=diffuse_defaults.gtopts['emin'],
                            emax=diffuse_defaults.gtopts['emax'],
                            enumbins=diffuse_defaults.gtopts['enumbins'],
+                           ebinalg=diffuse_defaults.gtopts['ebinalg'],
+                           ebinfile=diffuse_defaults.gtopts['ebinfile'],
                            pfiles=diffuse_defaults.gtopts['pfiles'])
 
     default_file_args = dict(evfile=FileFlags.in_stage_mask,

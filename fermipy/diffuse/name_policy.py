@@ -13,13 +13,15 @@ DATASET_DICTIONARY = dict(P8_P302='P8R2', P8_P304='P8R3', P8_P305='P8R3')
 EVCLASS_NAME_DICTIONARY = dict(source='SOURCE',
                                clean='CLEAN',
                                ultraclean='ULTRACLEAN',
-                               ultracleanveto='ULTRACLEANVETO')
+                               ultracleanveto='ULTRACLEANVETO',
+                               sourceveto='SOURCEVETO')
 
 # Map event class 'key' to evtype bit mask value
 EVCLASS_MASK_DICTIONARY = dict(source=128,
                                clean=256,
                                ultraclean=512,
-                               ultracleanveto=1024)
+                               ultracleanveto=1024,
+                               sourceveto=2048)
 
 
 class NameFactory(object):
