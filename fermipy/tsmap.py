@@ -925,8 +925,8 @@ class TSMapGenerator(object):
             ts_values[iy, ix] = r[0]
             amp_values[iy, ix] = r[1]
 
-        ts_values = ts_values[yslice, xslice].T
-        amp_values = amp_values[yslice, xslice].T
+        ts_values = ts_values[yslice, xslice]
+        amp_values = amp_values[yslice, xslice]
 
         ts_map = WcsNDMap(map_geom, ts_values)
         sqrt_ts_map = WcsNDMap(map_geom, ts_values**0.5)
