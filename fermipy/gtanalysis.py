@@ -2421,6 +2421,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                                   lnlp['dloglike'],
                                                   cl_limit=0.99)
 
+                if lnlp['npred'].sum() < 0.1:
+                    self.logger.warning("Source model for source %s has no counts in ROI" % name)
+
                 if not np.isfinite(lims['ul']):
                     self.logger.warning('Upper limit not found.  '
                                         'Refitting normalization.')
