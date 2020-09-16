@@ -179,6 +179,7 @@ class RandomDirGen(Link):
         proj = binning.get('proj', 'AIT')
         ra = config['selection']['ra']
         dec = config['selection']['dec']
+
         npix = int(np.round(roiwidth / binsz))
         skydir = SkyCoord(ra * u.deg, dec * u.deg)
 
@@ -214,10 +215,16 @@ class RandomDirGen(Link):
         grid[1] += center[1]
 
         test_grid = wcsgeom.pix_to_coord(grid)
-        glat_vals = test_grid[0].flat
-        glon_vals = test_grid[1].flat
-        conv_vals = SkyCoord(glat_vals * u.deg, glon_vals *
-                             u.deg, frame=Galactic).transform_to(ICRS)
+        
+        lat_vals = test_grid[0].flat
+        lon_vals = test_grid[1].flat
+
+        if wcsgeom.coordsys == 'CEL':
+            conv_vals = SkyCoord(lat_vals * u.deg, lon_vals *u.deg, frame='icrs')
+        elif wcsgeom.coordsys == 'GAL':
+            conv_vals = SkyCoord(lat_vals * u.deg, lon_vals *u.deg, frame='galactic').transform_to(ICRS)
+        else:
+            raise ValueError("Unknown coordsys: %s" % wcsgeom.coordsys)
 
         ra_vals = conv_vals.ra.deg[seed:nsims]
         dec_vals = conv_vals.dec.deg[seed:nsims]
