@@ -19,6 +19,8 @@ def version_str_to_int(version_str):
 
     m = re.search('(\d\d)-(\d\d)-(\d\d)', version_str)
     if m is None:
+        m = re.search('(\d*)\.(\d*)\.(\d*).*', version_str)
+    if m is None:
         return 0
     else:
         return (int(m.group(1)) * 10000 +

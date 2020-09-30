@@ -9,6 +9,10 @@ import math
 
 import yaml
 
+import numpy as np
+
+from astropy.io import fits
+
 from fermipy.jobs.utils import is_null
 from fermipy.jobs.chain import Link
 from fermipy.jobs.chain import Chain
@@ -33,6 +37,25 @@ try:
 except IOError:
     MKTIME_DICT = MktimeFilterDict(aliases=dict(quality='lat_config==1&&data_qual>0'),
                                    selections=dict(standard='{quality}'))
+
+
+def write_ebins_file(ebinsfile, logebins):
+    """
+    """
+    prim = fits.PrimaryHDU()
+    ebins = np.power(10., logebins)
+    ebins *= 1000. # to keV
+
+    nebins = len(ebins)-1
+
+    col_i = fits.Column("CHANNEL","I2", array=np.arange(1, nebins+1))
+    col_emin = fits.Column("E_MIN","f4", array=ebins[0:-1])
+    col_emax = fits.Column("E_MAX","F4", array=ebins[1:])
+
+    ebounds = fits.BinTableHDU.from_columns([col_i, col_emin, col_emax], name='ENERGYBINS')
+
+    outf = fits.HDUList([prim, ebounds])
+    outf.writeto(ebinsfile, overwrite=True)
 
 
 def make_full_path(basedir, outkey, origname):
@@ -136,11 +159,22 @@ class SplitAndMktime(Chain):
         full_out_dir = make_nfs_path(os.path.join(outdir, outkey))
 
         for key_e, comp_e in sorted(self.comp_dict.items()):
+            if 'logebins' in comp_e:
+                ebins_file = make_nfs_path(os.path.join(full_out_dir, 'energy_bins.fits'))
+                write_ebins_file(ebins_file, comp_e['logebins'])
+            else:
+                ebins_file = None
+            enumbins = comp_e['enumbins']
             emin = math.pow(10., comp_e['log_emin'])
             emax = math.pow(10., comp_e['log_emax'])
-            enumbins = comp_e['enumbins']
             zmax = comp_e['zmax']
             zcut = "zmax%i" % comp_e['zmax']
+            tmin = comp_e.get('tmin', None)
+            tmax = comp_e.get('tmax', None)
+            if is_null(tmin):
+                tmin = 'INDEF'
+            if is_null(tmax):
+                tmax = 'INDEF'
             evclassstr = NAME_FACTORY.base_dict['evclass']
 
             kwargs_select = dict(zcut=zcut,
@@ -153,6 +187,8 @@ class SplitAndMktime(Chain):
                            infile=ft1file,
                            outfile=selectfile_energy,
                            zmax=zmax,
+                           tmin=tmin,
+                           tmax=tmax,
                            emin=emin,
                            emax=emax,
                            evclass=NAME_FACTORY.evclassmask(evclassstr),
@@ -221,20 +257,35 @@ class SplitAndMktime(Chain):
                                        zmax=zmax,
                                        emin=emin,
                                        emax=emax,
+                                       tmin=tmin,
+                                       tmax=tmax,
                                        evtype=EVT_TYPE_DICT[psf_type],
                                        evclass=NAME_FACTORY.evclassmask(evtclassval),
                                        pfiles=pfiles,
                                        logfile=os.path.join(full_out_dir, "%s.log" % linkname_select))
-                        self._set_link(linkname_bin, Gtlink_bin,
-                                       coordsys=coordsys,
-                                       hpx_order=hpx_order_psf,
-                                       evfile=selectfile_psf,
-                                       outfile=binfile_psf,
-                                       emin=emin,
-                                       emax=emax,
-                                       enumbins=enumbins,
-                                       pfiles=pfiles,
-                                       logfile=os.path.join(full_out_dir, "%s.log" % linkname_bin))
+                        print("xx", ebins_file)
+                        if ebins_file is None:                            
+                            self._set_link(linkname_bin, Gtlink_bin,
+                                           coordsys=coordsys,
+                                           hpx_order=hpx_order_psf,
+                                           evfile=selectfile_psf,
+                                           outfile=binfile_psf,
+                                           emin=emin,
+                                           emax=emax,
+                                           enumbins=enumbins,
+                                           pfiles=pfiles,
+                                           logfile=os.path.join(full_out_dir, "%s.log" % linkname_bin))
+                        else:
+                            self._set_link(linkname_bin, Gtlink_bin,
+                                           coordsys=coordsys,
+                                           hpx_order=hpx_order_psf,
+                                           evfile=selectfile_psf,
+                                           outfile=binfile_psf,
+                                           ebinalg='FILE',
+                                           ebinfile=ebins_file,
+                                           pfiles=pfiles,
+                                           logfile=os.path.join(full_out_dir, "%s.log" % linkname_bin))
+
 
 
 class SplitAndMktime_SG(ScatterGather):
@@ -279,6 +330,7 @@ class SplitAndMktime_SG(ScatterGather):
 
         inputfiles = create_inputlist(args['ft1file'])
         outdir_base = os.path.join(NAME_FACTORY.base_dict['basedir'], 'counts_cubes')
+        ft2file = os.path.join(NAME_FACTORY.base_dict['basedir'], args['ft2file'])
         data_ver = NAME_FACTORY.base_dict['data_ver']
 
         for idx, infile in enumerate(inputfiles):
@@ -295,6 +347,8 @@ class SplitAndMktime_SG(ScatterGather):
 
             job_configs[key] = comp_dict.copy()
             job_configs[key].update(dict(ft1file=infile,
+                                         ft2file=ft2file,
+                                         data=args['data'],
                                          scfile=scfile,
                                          comp=args['comp'],
                                          hpx_order_max=args['hpx_order_max'],

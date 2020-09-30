@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 import os
+import subprocess
 
 __version__ = "unknown"
 
@@ -29,9 +30,12 @@ def get_st_version():
     try:
         import ST_Version
         if hasattr(ST_Version, 'version'):
-            return ST_Version.version()
+            vv = ST_Version.version()
         elif hasattr(ST_Version, 'get_git_version'):
-            return ST_Version.get_git_version()
+            vv = ST_Version.get_git_version()
+        if vv == "unknown":
+            vv = get_ft_conda_version()
+        return vv
     except ImportError:
         return ''
     except AttributeError:
@@ -48,6 +52,23 @@ def get_git_version_fp():
         return ''
     except AttributeError:
         return ''
+
+
+def get_ft_conda_version():
+    """Get the version string from conda"""
+    try:
+        lines = subprocess.check_output(['conda', 'list', '-f',  'fermitools']).decode().split('\n')
+    except:
+        lines = subprocess.check_output(['conda', 'list', '-f',  'fermitools']).split('\n')
+    for l in lines:
+        if not l:
+            continue
+        if l[0] == '#':
+            continue
+        tokens = l.split()
+        return tokens[1]
+    return "unknown"
+    
 
 
 PACKAGE_ROOT = os.path.abspath(os.path.dirname(__file__))

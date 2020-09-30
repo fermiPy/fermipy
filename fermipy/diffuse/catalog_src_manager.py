@@ -223,6 +223,8 @@ class CatalogSourceManager(object):
                     print(full_cat_info.catalog_table.colnames)
                 used_sources = []
                 rules_dict = source_dict['rules_dict']
+                if rules_dict is None:
+                    rules_dict = {}
                 split_dict = {}
                 for rule_key, rule_val in rules_dict.items():
                     # full_key =\

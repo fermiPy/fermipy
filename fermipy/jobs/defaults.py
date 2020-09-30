@@ -16,7 +16,7 @@ common = {
     'rosterlist': (None, 'Path to the roster list.', str),
     'target': (None, 'Name of analysis target.', str),
     'targetlist': (None, 'Path to the target list.', str),
-    'config': ('config.yaml', 'Path to fermipy config file.', str),
+    'config': (None, 'Path to fermipy config file.', str),
     'roi_baseline': ('fit_baseline', 'Key for roi baseline file.', str),
     'profile_file': (None, 'Path to yaml file with target profile', str),
     'spatial_models': ([], 'Types of spatial models to use', list),

@@ -2027,9 +2027,12 @@ class ROIModel(fermipy.config.Configurable):
                                 os.path.join(row['extdir'], 'Templates')]
 
                 if src_dict['SpatialType'] == 'SpatialMap':
-                    src_dict['Spatial_Filename'] = utils.resolve_file_path(
-                        row['Spatial_Filename'],
-                        search_dirs=search_dirs)
+                    try:
+                        src_dict['Spatial_Filename'] = utils.resolve_file_path(
+                            row['Spatial_Filename'],
+                            search_dirs=search_dirs)
+                    except:
+                        print("Failed to find %s" % row['Spatial_Filename'])
 
             else:
                 src_dict['SourceType'] = 'PointSource'
