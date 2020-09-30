@@ -34,7 +34,7 @@ matrix:
         - os: linux
           env: NAME=main
                PYTHON_VERSION=3.7
-               ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV -c conda-forge -c fermi -c fermi/label/beta fermitools=2.0.2"
+               ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV -c conda-forge -c fermi -c fermi/label/dev fermitools=2.0.2"
  
         # The old build:
         # Python 3, fixed tag of fermitools, all dependencies
