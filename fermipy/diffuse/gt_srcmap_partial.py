@@ -27,7 +27,7 @@ from fermipy.diffuse import defaults as diffuse_defaults
 
 
 NAME_FACTORY = NameFactory()
-HPX_ORDER_TO_KSTEP = {5: -1, 6: -1, 7: -1, 8: 2, 9: 1}
+HPX_ORDER_TO_KSTEP = {5: -1, 6: -1, 7: -1, 8: 2, 9: 1, 10: 1}
 
 
 class GtSrcmapsDiffuse(Link):

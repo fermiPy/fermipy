@@ -60,7 +60,8 @@ def get_function_spec(name):
 
     if isinstance(name, bytes):
         name = name.decode()
-    if not name in get_function_spec.fndict.keys():    
+    name = name.strip()
+    if not name in get_function_spec.fndict.keys():
         raise Exception('Invalid Function Name: %s %s' % (name, get_function_spec.fndict.keys()))
 
     return get_function_spec.fndict[name]

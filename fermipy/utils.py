@@ -1189,6 +1189,8 @@ def create_xml_element(root, name, attrib):
     
         if isinstance(v, bool):
             el.set(k, str(int(v)))
+        elif v is None:
+            print("Skipping xml element %s %s" % (k, v))
         elif isstr(v):
             el.set(k, v)
         elif np.isfinite(v):

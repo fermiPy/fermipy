@@ -507,6 +507,11 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         return self._loge_bounds
 
     @property
+    def binsz(self):
+        """Current analysis spatial binning in degrees per pixel."""
+        return self._binsz
+
+    @property
     def projtype(self):
         """Return the type of projection to use"""
         return self._projtype
@@ -2429,6 +2434,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 lims = utils.get_parameter_limits(lnlp['xvals'],
                                                   lnlp['dloglike'],
                                                   cl_limit=0.99)
+
+                if lnlp['npred'].sum() < 0.1:
+                    self.logger.warning("Source model for source %s has no counts in ROI" % name)
 
                 if not np.isfinite(lims['ul']):
                     self.logger.warning('Upper limit not found.  '

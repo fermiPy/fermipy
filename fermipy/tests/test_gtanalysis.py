@@ -15,7 +15,7 @@ except ImportError:
     pass
 
 # Skip tests in this file if Fermi ST aren't available
-pytestmark = requires_st_version('01-00-07')
+pytestmark = requires_st_version('01-03-00')
 
 
 @pytest.fixture(scope='module')
@@ -173,6 +173,11 @@ def test_gtanalysis_residmap(create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
     gta.residmap(model={}, make_plots=True)
+    gta.residmap(model={'SpatialModel': 'Gaussian',
+                        'Index': 2.0,
+                        'SpatialWidth': 0.1 },
+                 make_plots=True)
+
 
 
 #@requires_git_version('02-00-00')

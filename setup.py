@@ -65,6 +65,7 @@ setup(
         'fermipy-init-model = fermipy.diffuse.gt_assemble_model:InitModel.main',
         'fermipy-assemble-model = fermipy.diffuse.gt_assemble_model:AssembleModel.main',
         'fermipy-assemble-model-sg = fermipy.diffuse.gt_assemble_model:AssembleModel_SG.main',
+        'fermipy-assemble-model-chain = fermipy.diffuse.gt_assemble_model:AssembleModel.main',        
         'fermipy-residual-cr = fermipy.diffuse.residual_cr:ResidualCR.main',
         'fermipy-residual-cr-sg = fermipy.diffuse.residual_cr:ResidualCR_SG.main',
         'fermipy-split-and-bin = fermipy.diffuse.gt_split_and_bin:SplitAndBin.main',

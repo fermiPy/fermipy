@@ -1,5 +1,5 @@
 language: python
-dist: trusty
+dist: xenial
 services:
   - docker
 
@@ -10,70 +10,53 @@ services:
 notifications:
   email: false
 
-python : 2.7
+python : 3.7
+
 env:
     global:
-      - FERMI_DIR=$HOME/ScienceTools/x86_64-unknown-linux-gnu-libc2.17
       - SLAC_ST_BUILD=false
       - PIP_DEPS='coverage pytest-cov'
+      - PYTHON_VERSION=3.7
       - INSTALL_CMD='python setup.py install'
       - CONDA_CHANNELS=conda-forge
+      - CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
       - CONDA_DEPS='gammapy numpy astropy scipy matplotlib pyyaml astropy-healpix'
       - CONDA2_DEPS='subprocess32 pytest'
-      - FERMI_CONDA_CHANNELS='-c conda-forge/label/cf201901 -c fermi'
+      - FERMI_CONDA_CHANNELS='-c conda-forge/label/cf201901 -c fermi -c fermi/label/beta'
       - FERMIPY_CONDA_ENV='fermipy'
+      - DOCKER_INSTALL=''
       
 matrix:
     include:
 
         # The main build:
-        # Python 2, lastest tag of fermitools, all dependencies
+        # Python 3, lastest tag of fermitools, all dependencies
         - os: linux
           env: NAME=main
-               PYTHON_VERSION=2.7
-               CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
-               ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS fermitools"
-               DOCKER_INSTALL=''
+               PYTHON_VERSION=3.7
+               ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV -c conda-forge -c fermi -c fermi/label/beta fermitools=2.0.2"
  
         # The old build:
-        # Python 2, fixed tag of fermitools, all dependencies
+        # Python 3, fixed tag of fermitools, all dependencies
         - os: linux
           env: NAME=old
-               PYTHON_VERSION=2.7
-               CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
-               ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV $FERMI_CONDA_CHANNELS -c $CONDA_CHANNELS fermitools=1.2.23"
-               DOCKER_INSTALL=''
+               ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV -c conda-forge -c fermi -c fermi/label/beta fermitools=2.0.0"
 
-        # Python 3.6, no Fermi ST, all other dependencies
+        # Python 3.7, no Fermi ST, all other dependencies
         - os: linux
-          python : 3.6
-          env: NAME=py36_st-no_dep-yes
-               PYTHON_VERSION=3.6
-               ST_INSTALL=''
-               DOCKER_INSTALL=''
-               CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
+          env: NAME=no-deps
+               ST_INSTALL='echo'
+               CONDA2_DEPS='pytest'
 
-        # Python 2, no Fermi ST, all other dependencies
-        - os: linux
-          env: NAME=py2_st-no_dep-yes
-               PYTHON_VERSION=2.7
-               ST_INSTALL=''
-               DOCKER_INSTALL=''
-               CONDA_DOWNLOAD=Miniconda2-latest-Linux-x86_64.sh
 
     allow_failures:
         # The Sphinx docs build
         # Python 3, no Fermi ST, all other dependencies
         - os: linux
-          python : 3.6
           env: NAME=docs
-               PYTHON_VERSION=3.6
-               ST_INSTALL=''
-               DOCKER_INSTALL=''
+               ST_INSTALL='echo'
                PIP_DEPS='coverage pytest-cov coveralls'
-               CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
-               CONDA_DEPS='gammapy numpy astropy scipy matplotlib pytest pyyaml sphinx sphinx_rtd_theme'
-
+               CONDA2_DEPS='pytest sphinx sphinx_rtd_theme'
 
 #before_install:
 #  - cat Dockerfile

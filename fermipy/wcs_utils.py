@@ -340,7 +340,7 @@ def get_target_skydir(config, ref_skydir=None):
     dec = config.get('dec', None)
 
     if ra is not None and dec is not None:
-        return SkyCoord(ra, dec, unit=u.deg)
+        return SkyCoord(ra, dec, unit=u.deg, frame='icrs')
 
     glon = config.get('glon', None)
     glat = config.get('glat', None)
