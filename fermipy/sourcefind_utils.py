@@ -121,7 +121,7 @@ def fit_error_ellipse(tsmap, xy=None, dpix=3, zmin=None):
     o['pos_ecc2'] = np.sqrt(a**2 / b**2 - 1)
     o['skydir'] = skydir
 
-    if tsmap.geom.coordsys == 'GAL':
+    if wcs_utils.get_coordsys_from_geom(tsmap.geom) == 'GAL':
         gal_cov = utils.ellipse_to_cov(o['pos_err_semimajor'],
                                        o['pos_err_semiminor'],
                                        o['theta'])

@@ -307,8 +307,22 @@ def get_coordsys(wcs):
         return 'CEL'
     elif 'GLON' in wcs.wcs.ctype[0]:
         return 'GAL'
-    else:
-        raise Exception('Unrecognized WCS coordinate system.')
+    raise ValueError('Unrecognized WCS coordinate system.')
+
+
+def get_coordsys_from_geom(geom):
+    if geom.frame == 'galactic':
+        return 'GAL'
+    elif geom.frame == 'icrs':
+        return 'CEL'
+    raise ValueError('Unrecognized WCS coordinate system %s.' % geom.frame)
+
+def coordsys_to_frame(coordsys):
+    if coordsys == 'GAL':
+        return 'galactic'
+    elif coordsys == 'CEL':
+        return 'icrs'
+    raise ValueError('Unrecognized WCS coordinate system %s.' % coordsys)
 
 
 def get_target_skydir(config, ref_skydir=None):

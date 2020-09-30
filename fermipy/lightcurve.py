@@ -445,7 +445,7 @@ class LightCurve(object):
         o['config'] = kwargs
 
         flux_const = None
-        for i, time in itimes:
+        for i, time in enumerate(zip(times[:-1], times[1:])):
 
             next_fit = next(mapo)
             

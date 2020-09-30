@@ -1292,8 +1292,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
         tsmap_renorm.data -= np.max(tsmap_renorm.data)
 
         skydir = loc['tsmap_peak'].geom.get_coord(flat=True)
-        coordsys = loc['tsmap_peak'].geom.coordsys
-        skydir = MapCoord.create(skydir, coordsys=coordsys).skycoord
+        frame = loc['tsmap_peak'].geom.frame
+        skydir = MapCoord.create(skydir, frame=frame).skycoord
 
         path_effect = PathEffects.withStroke(linewidth=2.0,
                                              foreground="black")

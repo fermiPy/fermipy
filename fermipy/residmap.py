@@ -274,7 +274,11 @@ class ResidMapGenerator(object):
             self._make_residmap_fits(o, outfile + '.fits')
 
         if config['write_npy']:
-            np.save(outfile + '.npy', o)
+            o_copy = o.copy()
+            self.logger.warning('Saving maps in .npy files is disabled b/c of incompatibilities in python3, remove the maps from the %s.npy' % outfile)
+            for xrm in ['sigma', 'model', 'data', 'excess']:
+                o_copy.pop(xrm)
+            np.save(outfile + '.npy', o_copy)
 
         self.logger.info('Execution time: %.2f s', timer.elapsed_time)
         return o

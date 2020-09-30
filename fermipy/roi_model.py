@@ -1720,6 +1720,7 @@ class ROIModel(fermipy.config.Configurable):
 
         while to_del:
             ss = to_del.pop()
+            self._src_dict.pop(ss)
             del ss
             
         self._srcs = [s for s in self._srcs if s not in srcs]

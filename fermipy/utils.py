@@ -1388,7 +1388,7 @@ def tolist(x):
             True
     """
     if isinstance(x, list):
-        return map(tolist, x)
+        return [tolist(xx) for xx in x]
     elif isinstance(x, dict):
         return dict((tolist(k), tolist(v)) for k, v in x.items())
     elif isinstance(x, np.ndarray) or isinstance(x, np.number):

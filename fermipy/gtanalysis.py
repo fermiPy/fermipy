@@ -1467,6 +1467,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         if self.like is not None:
             self.like.model = self.like.components[0].model
             self._update_roi()
+
+        if self.roi.has_source(name):
+            raise ValueError("delete source failed for %s" % name)
         return src
 
     def delete_sources(self, cuts=None, distance=None,
