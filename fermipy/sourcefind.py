@@ -301,7 +301,11 @@ class SourceFind(object):
                                      **config)
 
         if config['write_npy']:
-            np.save(outfile + '.npy', dict(loc))
+            self.logger.warning('Saving TS maps in .npy files is disabled b/c of incompatibilities in python3, remove the maps from the %s.npy' % outfile)
+            o_copy = dict(loc)
+            for xrm in ['tsmap', 'tsmap_peak']:
+                o_copy.pop(xrm)
+            np.save(outfile + '.npy', o_copy)
 
         self.logger.info('Execution time: %.2f s', timer.elapsed_time)
         return loc
@@ -620,7 +624,7 @@ class SourceFind(object):
         self.free_norm(name, loglevel=logging.DEBUG)
 
         lnlmap = WcsNDMap.create(skydir=skydir, binsz=scan_cdelt, npix=(nstep, nstep),
-                                 coordsys=wcs_utils.get_coordsys(self.geom.wcs))
+                                 frame=wcs_utils.coordsys_to_frame(wcs_utils.get_coordsys(self.geom.wcs)))
 
         src = self.roi.copy_source(name)
 
@@ -628,7 +632,7 @@ class SourceFind(object):
             self._create_srcmap_cache(src.name, src)
 
         coord = MapCoord.create(lnlmap.geom.get_coord(flat=True),
-                                coordsys=lnlmap.geom.coordsys)
+                                frame=lnlmap.geom.frame)
         scan_skydir = coord.skycoord.icrs
         for lon, lat, ra, dec in zip(coord.lon, coord.lat,
                                      scan_skydir.ra.deg, scan_skydir.dec.deg):

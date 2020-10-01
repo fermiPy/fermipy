@@ -442,13 +442,13 @@ class Model(object):
             src_dict['SpatialModel'] = src_dict['SpatialType']
 
             if 'filefunction' in src_dict:
-                src_dict['Spectrum_Filename'] = src_dict.pop('filefunction')
+                src_dict['Spectrum_Filename'] = src_dict.pop('filefunction', str(''))
 
             if 'mapcube' in src_dict:
-                src_dict['Spatial_Filename'] = src_dict.pop('mapcube')
+                src_dict['Spatial_Filename'] = src_dict.pop('mapcube', str(''))
                 
             if 'radialprofile' in src_dict:
-                 src_dict['Spatial_Filename'] = src_dict.pop('radialprofile')
+                 src_dict['Spatial_Filename'] = src_dict.pop('radialprofile', str(''))
 
         if 'spectral_pars' in src_dict:
             src_dict['spectral_pars'] = cast_pars_dict(
@@ -1015,6 +1015,7 @@ class Source(Model):
 
         spectral_pars = create_pars_from_dict(spectrum_type, spectral_pars,
                                               rescale)
+        #raise ValueError("%s %s" % (spatial_type, spatial_pars))
         spatial_pars = create_pars_from_dict(spatial_type, spatial_pars,
                                              False)
 
@@ -1034,7 +1035,7 @@ class Source(Model):
         elif 'Source_Name' in src_dict:
             name = src_dict['Source_Name']
         else:
-            raise Exception('Source name undefined.')
+            raise Exception('Source name undefined. %s' % src_dict)
 
         skydir = wcs_utils.get_target_skydir(src_dict, roi_skydir)
 
@@ -1104,8 +1105,8 @@ class Source(Model):
         src_dict['SpectrumType'] = spectral_type
         src_dict['SpatialType'] = spatial_type
         src_dict['SourceType'] = src_type
-        src_dict['Spatial_Filename'] = None
-        src_dict['Spectrum_Filename'] = None
+        src_dict['Spatial_Filename'] = ''
+        src_dict['Spectrum_Filename'] = ''
         if 'file' in spat:
             src_dict['Spatial_Filename'] = utils.xmlpath_to_path(spat['file'])
             if not os.path.isfile(src_dict['Spatial_Filename']) \
@@ -1579,7 +1580,7 @@ class ROIModel(fermipy.config.Configurable):
         self.clear()
         for s in sources:
 
-            if isinstance(s, dict):
+            if isinstance(s, dict):                
                 s = Model.create_from_dict(s)
 
             self.load_source(s, build_index=False)
@@ -1709,13 +1710,19 @@ class ROIModel(fermipy.config.Configurable):
 
     def delete_sources(self, srcs):
 
+        to_del = []
         for k, v in self._src_dict.items():
             for s in srcs:
                 if s in v:
                     self._src_dict[k].remove(s)
             if not v:
-                del self._src_dict[k]
+                to_del.append(k)
 
+        while to_del:
+            ss = to_del.pop()
+            self._src_dict.pop(ss)
+            del ss
+            
         self._srcs = [s for s in self._srcs if s not in srcs]
         self._diffuse_srcs = [s for s in self._diffuse_srcs if s not in srcs]
         self._build_src_index()

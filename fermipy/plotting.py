@@ -316,11 +316,11 @@ class ImagePlotter(object):
             cs.levels = ['%.0f' % val for val in cs.levels]
             plt.clabel(cs, inline=1, fontsize=8)
 
-        coordsys = self._geom.coordsys
-        if coordsys == 'CEL':
+        frame = self._geom.frame
+        if frame == 'icrs':
             ax.set_xlabel('RA')
             ax.set_ylabel('DEC')
-        elif coordsys == 'GAL':
+        elif frame == 'galactic':
             ax.set_xlabel('GLON')
             ax.set_ylabel('GLAT')
 
@@ -1292,8 +1292,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
         tsmap_renorm.data -= np.max(tsmap_renorm.data)
 
         skydir = loc['tsmap_peak'].geom.get_coord(flat=True)
-        coordsys = loc['tsmap_peak'].geom.coordsys
-        skydir = MapCoord.create(skydir, coordsys=coordsys).skycoord
+        frame = loc['tsmap_peak'].geom.frame
+        skydir = MapCoord.create(skydir, frame=frame).skycoord
 
         path_effect = PathEffects.withStroke(linewidth=2.0,
                                              foreground="black")

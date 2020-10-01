@@ -1,54 +1,35 @@
 
 export SLAC_ST_BUILD=false
-export PIP_DEPS='coverage pytest-cov coveralls'
+export PIP_DEPS='coverage pytest-cov'
+export PYTHON_VERSION=3.7
 export INSTALL_CMD='python setup.py install'
+export CONDA_PATH="$HOME/miniconda3"
 export CONDA_CHANNELS="conda-forge"
-export FERMI_CONDA_CHANNELS="-c conda-forge/label/cf201901 -c fermi"
+export CONDA_DOWNLOAD="Miniconda3-latest-Linux-x86_64.sh"
 export CONDA_DEPS='gammapy numpy astropy scipy matplotlib pyyaml astropy-healpix'
 export CONDA2_DEPS='subprocess32 pytest'
+export FERMI_CONDA_CHANNELS="-c conda-forge/label/cf201901 -c fermi -c fermi/label/beta"
 export DOCKER_INSTALL=''
 
-NAME='py37'
+NAME='main'
 export FERMIPY_CONDA_ENV="fermipy-test-$NAME"
 
 
 case $NAME in
     main)
-	export PYTHON_VERSION="2.7"
-	export CONDA_PATH="/Users/echarles/miniconda2"
-	export CONDA_DEPS='gammapy=0.10 healpy=1.13.0 numpy astropy scipy matplotlib pyyaml'	
-	export ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV -c conda-forge -c fermi -c fermi/label/beta fermitools"
+	export ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV -c conda-forge -c fermi -c fermi/label/beta fermitools=2.0.0"
 	;;
-    old)
-	export PYTHON_VERSION="2.7"
-	export CONDA_PATH="/Users/echarles/miniconda2"
-	export CONDA_DEPS='gammapy=0.10 healpy=1.13.0 numpy astropy scipy matplotlib pyyaml'	
-	export ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV -c conda-forge/label/cf201901 -c fermi -c conda-forge fermitools=1.2.23"
+    dev)
+	export ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV -c conda-forge -c fermi -c fermi/label/dev fermitools=2.0.2"
 	;;
-    py37)
-	export PYTHON_VERSION="3.7"
-	export CONDA_PATH="/Users/echarles/miniconda3"
-        export ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV -c conda-forge -c fermi -c fermi/label/beta fermitools"
+    no-deps)
+        export ST_INSTALL="echo"
         export CONDA2_DEPS='pytest'
 	;;
     docs)
-	export PYTHON_VERSION="3.7"
-	export CONDA_PATH="/Users/echarles/miniconda3"
-        export ST_INSTALL=''
+        export ST_INSTALL='echo'
 	export PIP_DEPS='coverage pytest-cov coveralls'
 	export CONDA2_DEPS='pytest sphinx sphinx_rtd_theme'
-	;;
-    py37_st-no_dep)
-	export PYTHON_VERSION="3.7"
-	export CONDA_PATH="/Users/echarles/miniconda3"
-        export ST_INSTALL=''
-        export CONDA2_DEPS='pytest'	
-	;;
-    py2_st-no_dep)
-	export PYTHON_VERSION="2.7"
-	export CONDA_PATH="/Users/echarles/miniconda2"
-	export CONDA_DEPS='gammapy=0.10 healpy=1.13.0 numpy astropy scipy matplotlib pyyaml'	
-        export ST_INSTALL=''
 	;;
     none)
 	exit

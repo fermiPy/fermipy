@@ -220,6 +220,11 @@ class LTCube(HpxMap):
         zmin = hdulist['EXPOSURE'].header['ZENMIN']
         zmax = hdulist['EXPOSURE'].header['ZENMAX']
 
+        if not tstart:
+            tstart = None
+        if not tstop:
+            tstop = None
+        
         cth_min = np.array(hdulist['CTHETABOUNDS'].data.field('CTHETA_MIN'))
         cth_max = np.array(hdulist['CTHETABOUNDS'].data.field('CTHETA_MAX'))
         cth_min = cth_min.astype(float)
