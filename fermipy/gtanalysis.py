@@ -224,7 +224,7 @@ def run_gtapp(appname, logger, kw, **kwargs):
 
 
 def filter_dict(d, val):
-    for k, v in d.items():
+    for k, v in list(d.items()):
         if v == val:
             del d[k]
 
@@ -4015,7 +4015,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         """
         self._ccube = skymap.coadd_maps(self.geom, cmaps)
         self._wcube = skymap.coadd_maps(self.geom, wmaps)
-        self._ccube.write(self.files['ccube'], overwrite=True, conv='fgst-ccube')
+        self._ccube.write(self.files['ccube'], overwrite=True, format='fgst-ccube')
 
         if self.projtype == "WCS":
             rm['counts'] += np.sum(self._ccube.data,
