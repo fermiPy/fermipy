@@ -17,10 +17,10 @@ env:
       - SLAC_ST_BUILD=false
       - PIP_DEPS='coverage pytest-cov'
       - PYTHON_VERSION=3.7
-      - INSTALL_CMD='python setup.py install'
+      - INSTALL_CMD='pip install . --no-deps'
       - CONDA_CHANNELS=conda-forge
       - CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
-      - CONDA_DEPS='gammapy numpy astropy scipy matplotlib pyyaml astropy-healpix'
+      - CONDA_DEPS='gammapy numpy astropy<4 scipy matplotlib pyyaml astropy-healpix healpy'
       - CONDA2_DEPS='subprocess32 pytest curl'
       - FERMI_CONDA_CHANNELS='-c conda-forge -c fermi'
       - FERMIPY_CONDA_ENV='fermipy'
