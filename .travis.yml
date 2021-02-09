@@ -21,8 +21,8 @@ env:
       - CONDA_CHANNELS=conda-forge
       - CONDA_DOWNLOAD=Miniconda3-latest-Linux-x86_64.sh
       - CONDA_DEPS='gammapy numpy astropy scipy matplotlib pyyaml astropy-healpix'
-      - CONDA2_DEPS='subprocess32 pytest'
-      - FERMI_CONDA_CHANNELS='-c conda-forge/label/cf201901 -c fermi -c fermi/label/beta'
+      - CONDA2_DEPS='subprocess32 pytest curl'
+      - FERMI_CONDA_CHANNELS='-c conda-forge -c fermi'
       - FERMIPY_CONDA_ENV='fermipy'
       - DOCKER_INSTALL=''
       
@@ -33,7 +33,7 @@ matrix:
         # Python 3, lastest tag of fermitools, all dependencies
         - os: linux
           env: NAME=main
-               ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV -c conda-forge -c fermi -c fermi/label/beta fermitools=2.0.0"
+               ST_INSTALL="conda install -y --name $FERMIPY_CONDA_ENV -c conda-forge -c fermi fermitools>=2"
  
         # Python 3.7, no Fermi ST, all other dependencies
         - os: linux
@@ -60,7 +60,7 @@ install:
         source condainstall.sh;
     else
         $DOCKER_INSTALL;
-        docker exec fermipy-testing /bin/bash --login -c "cd /home/fermipy && python setup.py install";
+        docker exec fermipy-testing /bin/bash --login -c "cd /home/fermipy && pip install . --no-deps";
     fi
 
 # Run test
