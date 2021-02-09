@@ -795,7 +795,7 @@ class Source(Model):
         data['names'] = self.names
         output = []
         output += ['{:15s}:'.format('Name') + ' {name:s}']
-        output += ['{:15s}:'.format('Associations') + ' {names:s}']
+        output += ['{:15s}:'.format('Associations') + ' {names}']
         output += ['{:15s}:'.format('RA/DEC') + ' {ra:10.3f}/{dec:10.3f}']
         output += ['{:15s}:'.format('GLON/GLAT') +
                    ' {glon:10.3f}/{glat:10.3f}']
