@@ -224,7 +224,7 @@ def run_gtapp(appname, logger, kw, **kwargs):
 
 
 def filter_dict(d, val):
-    for k, v in d.items():
+    for k, v in list(d.items()):
         if v == val:
             del d[k]
 
@@ -3439,7 +3439,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         mmap = Map.from_geom(self.geom)
         for m in maps:
             mmap.coadd(m)
-        mmap.write(outfile, overwrite=True, conv='fgst-ccube')
+        mmap.write(outfile, overwrite=True, format='fgst-ccube')
         return [mmap] + maps
 
     def write_weight_map(self, model_name):
@@ -3463,7 +3463,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         # FIXME: Should we average weights maps rather than coadding?
         for m in maps:
             wmap.coadd(m)
-        wmap.write(outfile, overwrite=True, conv='fgst-ccube')
+        wmap.write(outfile, overwrite=True, format='fgst-ccube')
         return [wmap] + maps
 
     def print_roi(self, loglevel=logging.INFO):
@@ -4015,7 +4015,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         """
         self._ccube = skymap.coadd_maps(self.geom, cmaps)
         self._wcube = skymap.coadd_maps(self.geom, wmaps)
-        self._ccube.write(self.files['ccube'], overwrite=True, conv='fgst-ccube')
+        self._ccube.write(self.files['ccube'], overwrite=True, format='fgst-ccube')
 
         if self.projtype == "WCS":
             rm['counts'] += np.sum(self._ccube.data,
@@ -5573,7 +5573,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         srcmap_utils.update_source_maps(self.files['srcmap'],
                                         {'PRIMARY': data},
                                         logger=self.logger)
-        cm.write(self.files['ccubemc'], overwrite=True, conv='fgst-ccube')
+        cm.write(self.files['ccubemc'], overwrite=True, format='fgst-ccube')
 
     def write_model_map(self, model_name=None, name=None):
         """Save counts model map to a FITS file.
@@ -5591,7 +5591,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                'mcube%s.fits' % (suffix))
 
         cmap = self.model_counts_map(name, use_mask=False)
-        cmap.write(outfile, overwrite=True, conv='fgst-ccube')
+        cmap.write(outfile, overwrite=True, format='fgst-ccube')
         return cmap
 
     def write_weight_map(self, model_name=None):
@@ -5610,7 +5610,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                'wcube%s.fits' % (suffix))
 
         wmap = self.weight_map()
-        wmap.write(outfile, overwrite=True, conv='fgst-ccube')
+        wmap.write(outfile, overwrite=True, format='fgst-ccube')
         return wmap
 
     def _update_srcmap_file(self, sources, overwrite=True):

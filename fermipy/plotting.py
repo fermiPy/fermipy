@@ -390,7 +390,7 @@ class ROIPlotter(fermipy.config.Configurable):
         if self._loge_bounds:
             self._data_map = make_cube_slice(self._data_map, self._loge_bounds)
 
-        self._implot = ImagePlotter(self._data_map.sum_over_axes())
+        self._implot = ImagePlotter(self._data_map.sum_over_axes(keepdims=False))
 
     @property
     def data(self):

@@ -316,8 +316,8 @@ class SourceFind(object):
         hdu_data = fits.table_to_hdu(tab)
         hdu_data.name = 'LOC_DATA'
 
-        hdus = [loc['tsmap_peak'].make_hdu(hdu='PRIMARY'),
-                loc['tsmap'].make_hdu(hdu='TSMAP'),
+        hdus = [loc['tsmap_peak'].to_hdu(hdu='PRIMARY'),
+                loc['tsmap'].to_hdu(hdu='TSMAP'),
                 hdu_data]
 
         hdus[0].header['CONFIG'] = json.dumps(loc['config'])

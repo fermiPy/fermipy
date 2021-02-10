@@ -737,13 +737,13 @@ class TSMapGenerator(object):
         for k, v in sorted(maps.items()):
             if v is None:
                 continue
-            hdu_images += [v.make_hdu(hdu=k)]
+            hdu_images += [v.to_hdu(hdu=k)]
 
         tab = fits_utils.dict_to_table(data)
         hdu_data = fits.table_to_hdu(tab)
         hdu_data.name = 'TSMAP_DATA'
 
-        hdus = [data['ts'].make_hdu(hdu='PRIMARY'),
+        hdus = [data['ts'].to_hdu(hdu='PRIMARY'),
                 hdu_data] + hdu_images
 
         data['config'].pop('map_skydir', None)
