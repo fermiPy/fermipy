@@ -78,7 +78,7 @@ def create_config(args):
     )
 
     if args['config'] is not None:
-        config = utils.merge_dict(config, yaml.load(open(args['config'])))
+        config = utils.merge_dict(config, yaml.safe_load(open(args['config'])))
 
     if args['outdir'] is not None:
         config['fileio']['outdir'] = os.path.abspath(args['outdir'])

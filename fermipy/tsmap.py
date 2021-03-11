@@ -16,10 +16,6 @@ from astropy.io import fits
 from astropy.table import Table
 from astropy.coordinates import SkyCoord
 import astropy.wcs as pywcs
-try:
-    from gammapy.maps.geom import coordsys_to_frame
-except ImportError:
-    pass
 from gammapy.maps import WcsNDMap, WcsGeom
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils
@@ -721,7 +717,11 @@ class TSMapGenerator(object):
             self._make_tsmap_fits(o, outfile + '.fits')
 
         if config['write_npy']:
-            np.save(outfile + '.npy', o)
+            self.logger.warning('Saving TS maps in .npy files is disabled b/c of incompatibilities in python3, remove the maps from the %s.npy' % outfile)
+            o_copy = o.copy()
+            for xrm in ['ts', 'sqrt_ts', 'npred', 'amplitude']:
+                o_copy.pop(xrm)
+            np.save(outfile + '.npy', o_copy)
 
         self.logger.log(config['loglevel'],
                         'Execution time: %.2f s', timer.elapsed_time)
@@ -737,13 +737,13 @@ class TSMapGenerator(object):
         for k, v in sorted(maps.items()):
             if v is None:
                 continue
-            hdu_images += [v.make_hdu(hdu=k)]
+            hdu_images += [v.to_hdu(hdu=k)]
 
         tab = fits_utils.dict_to_table(data)
         hdu_data = fits.table_to_hdu(tab)
         hdu_data.name = 'TSMAP_DATA'
 
-        hdus = [data['ts'].make_hdu(hdu='PRIMARY'),
+        hdus = [data['ts'].to_hdu(hdu='PRIMARY'),
                 hdu_data] + hdu_images
 
         data['config'].pop('map_skydir', None)
@@ -795,9 +795,8 @@ class TSMapGenerator(object):
         cpix = np.array([xpix, ypix])
 
         map_geom = self._geom.to_image()
-        frame = coordsys_to_frame(map_geom.coordsys)
         skydir = SkyCoord(*map_geom.pix_to_coord((cpix[0], cpix[1])),
-                          frame=frame, unit='deg')
+                          frame=map_geom.frame, unit='deg')
         skydir = skydir.transform_to('icrs')
 
         src_dict['ra'] = skydir.ra.deg
@@ -1060,7 +1059,8 @@ class TSCubeGenerator(object):
         if map_skydir is None:
             # Take the center of the wcs
             map_geom = self._geom.to_image()
-            frame = coordsys_to_frame(map_geom.coordsys)
+            raise ValueError("%s" % dir(map_geom.coordsys))
+            frame = wcs_utils.coordsys_to_frame(map_geom.coordsys)
             map_skydir = SkyCoord(*map_geom.pix_to_coord(self._geom.wcs.wcs.crpix), frame=frame, unit='deg')
             map_skydir = map_skydir.transform_to('icrs')
             

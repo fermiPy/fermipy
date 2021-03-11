@@ -6,6 +6,10 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
+1.0.0 (10/1/2020)
+-----------------
+* First working python3 version, very close to 0.20.0
+
 0.20.0 (08/24/2020)
 -------------------
 * Upgrade to P8R3_XXX_V3 irfs in testing

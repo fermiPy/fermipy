@@ -28,10 +28,11 @@ class Mock(MagicMock):
     def __getattr__(cls, name):
         return Mock()
 
-MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
-                'BinnedAnalysis','UnbinnedAnalysis','SrcModel','AnalysisBase',
-                'SummedLikelihood','FluxDensity','LikelihoodState',
-                'GtApp']
+#MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
+#                'BinnedAnalysis','UnbinnedAnalysis','SrcModel','AnalysisBase',
+#                'SummedLikelihood','FluxDensity','LikelihoodState',
+#                'GtApp']
+MOCK_MODULES = ['pyLikelihood','pyIrfLoader']
 
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 

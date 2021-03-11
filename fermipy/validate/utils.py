@@ -74,7 +74,7 @@ def load_aliases(alias_files):
         if f.endswith('.xml'):
             aliases.update(get_cuts_from_xml(f))
         elif f.endswith('.yaml'):
-            aliases.update(yaml.load(open(f, 'r')))
+            aliases.update(yaml.safe_load(open(f, 'r')))
         else:
             raise Exception('Invalid file type for aliases option.')
 

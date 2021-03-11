@@ -65,7 +65,7 @@ def main():
     # print(input_files)
     # print(output_files)
 
-    config = yaml.load(open(args.config))
+    config = yaml.safe_load(open(args.config))
 
     if args.batch:
 

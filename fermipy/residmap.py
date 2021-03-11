@@ -274,7 +274,11 @@ class ResidMapGenerator(object):
             self._make_residmap_fits(o, outfile + '.fits')
 
         if config['write_npy']:
-            np.save(outfile + '.npy', o)
+            o_copy = o.copy()
+            self.logger.warning('Saving maps in .npy files is disabled b/c of incompatibilities in python3, remove the maps from the %s.npy' % outfile)
+            for xrm in ['sigma', 'model', 'data', 'excess']:
+                o_copy.pop(xrm)
+            np.save(outfile + '.npy', o_copy)
 
         self.logger.info('Execution time: %.2f s', timer.elapsed_time)
         return o
@@ -289,15 +293,15 @@ class ResidMapGenerator(object):
         for k, v in sorted(maps.items()):
             if v is None:
                 continue
-            hdu_images += [v.make_hdu(k)]
+            hdu_images += [v.to_hdu(k)]
 
         if data['projtype'] == 'WCS':
-            hdus = [data['sigma'].make_hdu(hdu='PRIMARY')] + hdu_images
+            hdus = [data['sigma'].to_hdu(hdu='PRIMARY')] + hdu_images
             hdus[0].header['CONFIG'] = json.dumps(data['config'])
             hdus[1].header['CONFIG'] = json.dumps(data['config'])
         elif data['projtype'] == 'HPX':
             hdus = [fits.PrimaryHDU(),
-                    data['sigma'].make_hdu(hdu="SIGMA")] + hdu_images
+                    data['sigma'].to_hdu(hdu="SIGMA")] + hdu_images
             hdus[1].header['CONFIG'] = json.dumps(data['config'])
             hdus[2].header['CONFIG'] = json.dumps(data['config'])
         fits_utils.write_hdus(hdus, filename)

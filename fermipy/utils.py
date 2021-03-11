@@ -51,7 +51,7 @@ def unicode_representer(dumper, uni):
 yaml.add_representer(six.text_type, unicode_representer)
 
 def load_yaml(infile, **kwargs):
-    return yaml.load(open(infile), **kwargs)
+    return yaml.safe_load(open(infile), **kwargs)
 
 
 def write_yaml(o, outfile, **kwargs):
@@ -59,8 +59,12 @@ def write_yaml(o, outfile, **kwargs):
 
 
 def load_npy(infile):
-    return np.load(infile, allow_pickle=True).flat[0]
+    null_dict = {}
+    return update_keys(np.load(infile, allow_pickle=True, fix_imports=True, encoding='bytes').flat[0], null_dict)
+    #return np.load(infile).flat[0]
 
+
+    
 
 def load_data(infile, workdir=None):
     """Load python data structure from either a YAML or numpy file. """
@@ -1180,8 +1184,9 @@ def path_to_xmlpath(path):
 
 def create_xml_element(root, name, attrib):
     el = et.SubElement(root, name)
-    for k, v in attrib.iteritems():
-
+    #for k, v in attrib.iteritems():
+    for k, v in attrib.items():
+    
         if isinstance(v, bool):
             el.set(k, str(int(v)))
         elif v is None:
@@ -1225,6 +1230,17 @@ def arg_to_list(arg):
         return [arg]
 
 
+def decode_list(input_list, key_map):
+    l = []
+    for v in input_list:
+        if isinstance(v, dict):
+            l.append(update_keys(v, key_map))
+        elif isinstance(v, bytes):
+            l.append(v.decode())
+        else:
+            l.append(v)
+    return l
+
 def update_keys(input_dict, key_map):
     o = {}
     for k, v in input_dict.items():
@@ -1232,10 +1248,19 @@ def update_keys(input_dict, key_map):
         if k in key_map.keys():
             k = key_map[k]
 
-        if isinstance(v, dict):
-            o[k] = update_keys(v, key_map)
+        if isinstance(k, bytes):
+            kk = k.decode()
         else:
-            o[k] = v
+            kk = k
+        
+        if isinstance(v, dict):
+            o[kk] = update_keys(v, key_map)
+        elif isinstance(v, list):
+            o[kk] = decode_list(v, key_map)
+        elif isinstance(v, bytes):
+            o[kk] = v.decode()
+        else:
+            o[kk] = v
 
     return o
 
@@ -1365,7 +1390,7 @@ def tolist(x):
             True
     """
     if isinstance(x, list):
-        return map(tolist, x)
+        return [tolist(xx) for xx in x]
     elif isinstance(x, dict):
         return dict((tolist(k), tolist(v)) for k, v in x.items())
     elif isinstance(x, np.ndarray) or isinstance(x, np.number):

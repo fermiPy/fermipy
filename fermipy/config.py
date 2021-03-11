@@ -210,7 +210,7 @@ class Configurable(object):
 
         if utils.isstr(config) and os.path.isfile(config):
             self._configdir = os.path.abspath(os.path.dirname(config))
-            config_dict = yaml.load(open(config))
+            config_dict = yaml.safe_load(open(config))
         elif isinstance(config, dict) or config is None:
             config_dict = config
         elif utils.isstr(config) and not os.path.isfile(config):
@@ -297,6 +297,6 @@ class ConfigManager(object):
             path = os.path.join(fermipy.PACKAGE_ROOT, 'config', path)
 
         with open(path, 'r') as f:
-            config = yaml.load(f)
+            config = yaml.safe_load(f)
 
         return config

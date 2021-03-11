@@ -40,7 +40,7 @@ def read_sources_from_yaml_file(yamlfile):
     tab : `~astropy.table.Table`
     """
     f = open(yamlfile)
-    dd = yaml.load(f)
+    dd = yaml.safe_load(f)
     srcs = dd['sources']
     f.close()
     roi = ROIModel()

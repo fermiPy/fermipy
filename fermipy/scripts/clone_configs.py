@@ -19,7 +19,7 @@ def clone_configs(basedir, base_configs, opt_configs, scripts, args=''):
     """
     config = {}
     for c in base_configs:
-        config = utils.merge_dict(config, yaml.load(open(c)),
+        config = utils.merge_dict(config, yaml.safe_load(open(c)),
                                   add_new_keys=True)
 
     scriptdir = os.path.abspath(os.path.join(basedir, 'scripts'))
@@ -91,7 +91,7 @@ def main():
 
     src_dict = {}
     for x in args.source_list:
-        src_dict.update(yaml.load(open(x)))
+        src_dict.update(yaml.safe_load(open(x)))
 
     if args.num_config:
         src_dict = {k: src_dict[k] for k in

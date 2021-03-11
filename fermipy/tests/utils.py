@@ -5,7 +5,7 @@ import re
 from astropy.tests.helper import pytest
 from fermipy import get_st_version, get_git_version, get_git_version_fp
 
-__all__ = ['requires_dependency', 'requires_st_version', 'requires_git_version', 'requires_file']
+__all__ = ['requires_dependency', 'requires_st_version', 'requires_git_version', 'requires_file', 'create_diffuse_dir']
 
 
 def requires_file(filepath):
@@ -111,3 +111,22 @@ def requires_dependency(name):
 
     reason = 'Missing dependency: {}'.format(name)
     return pytest.mark.skipif(skip_it, reason=reason)
+
+
+
+@pytest.fixture(scope='package')
+def create_diffuse_dir(request, tmpdir_factory):
+    path = tmpdir_factory.mktemp('diffuse')
+    url = 'https://raw.githubusercontent.com/fermiPy/fermipy-extras/master/data/diffuse.tar.gz'
+    outfile = path.join('diffuse.tar.gz')
+    dirname = path.join()
+    os.system('curl -o %s -OL %s' % (outfile, url))
+    os.system('cd %s;tar xzf %s' % (dirname, outfile))
+    
+    request.addfinalizer(lambda: path.remove(rec=1))
+
+    gll_file = path.join('diffuse', 'gll_iem_v07.fits')
+    if not os.path.isfile(str(gll_file)):
+        raise RuntimeError("Failed to install diffuse file %s" % str(gll_file))
+    os.environ['FERMI_DIFFUSE_DIR'] = os.path.abspath(os.path.dirname(gll_file))
+    

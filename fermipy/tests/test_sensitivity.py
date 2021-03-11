@@ -11,7 +11,7 @@ from fermipy import spectrum
 from fermipy.ltcube import LTCube
 from fermipy.skymap import Map
 
-from fermipy.tests.utils import requires_st_version
+from fermipy.tests.utils import requires_st_version, create_diffuse_dir
 try:
     from fermipy.scripts import flux_sensitivity
     from fermipy.sensitivity import SensitivityCalc
@@ -26,7 +26,7 @@ galdiff_path = os.path.join(os.path.expandvars('$FERMI_DIFFUSE_DIR'),
 
 
 @requires_file(galdiff_path)
-def test_calc_diff_flux_sensitivity():
+def test_calc_diff_flux_sensitivity(create_diffuse_dir):
 
     ltc = LTCube.create_from_obs_time(3.1536E8)
     c = SkyCoord(10.0, 10.0, unit='deg', frame='galactic')
@@ -61,7 +61,7 @@ def test_calc_diff_flux_sensitivity():
 
 
 @requires_file(galdiff_path)
-def test_calc_int_flux_sensitivity():
+def test_calc_int_flux_sensitivity(create_diffuse_dir):
 
     ltc = LTCube.create_from_obs_time(3.1536E8)
     c = SkyCoord(10.0, 10.0, unit='deg', frame='galactic')
@@ -93,7 +93,7 @@ def test_calc_int_flux_sensitivity():
 
 
 @requires_file(galdiff_path)
-def test_flux_sensitivity_script(tmpdir):
+def test_flux_sensitivity_script(create_diffuse_dir, tmpdir):
 
     p = tmpdir.mkdir("sub").join('output.fits')
     outpath = str(p)

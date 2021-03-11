@@ -247,7 +247,7 @@ defined in the output option appended with the job number
             cuts = get_cuts_from_xml(f)
             branches += get_branches(cuts)
         elif f.endswith('.yaml'):
-            cuts = yaml.load(open(f, 'r'))
+            cuts = yaml.safe_load(open(f, 'r'))
             if isinstance(cuts, dict):
                 branches += get_branches(cuts)
             elif isinstance(cuts, list):

@@ -92,7 +92,12 @@ class ExtensionFit(object):
             self._make_extension_fits(ext, outfile + '.fits')
 
         if config['write_npy']:
-            np.save(outfile + '.npy', dict(ext))
+            o_copy = dict(ext)
+            self.logger.warning('Saving maps in .npy files is disabled b/c of incompatibilities in python3, remove the maps from the %s.npy' % outfile)
+            print(o_copy)
+            for xrm in ['tsmap']:
+                o_copy.pop(xrm)
+            np.save(outfile + '.npy', o_copy)
 
         self.logger.info('Execution time: %.2f s', timer.elapsed_time)
         return ext
@@ -356,20 +361,24 @@ class ExtensionFit(object):
         for k, v in sorted(maps.items()):
             if v is None:
                 continue
-            hdu_images += [v.make_hdu(k)]
+            hdu_images += [v.to_hdu(k)]
 
         tab = fits_utils.dict_to_table(ext)
         hdu_data = fits.table_to_hdu(tab)
         hdu_data.name = 'EXT_DATA'
 
         if ext.get('tsmap'):
-            hdus = [ext['tsmap'].make_hdu(hdu='PRIMARY')]
+            hdus = [ext['tsmap'].to_hdu(hdu='PRIMARY')]
         else:
             hdus = [fits.PrimaryHDU()]
 
         hdus += [hdu_data] + hdu_images
-        hdus[0].header['CONFIG'] = json.dumps(utils.tolist(ext['config']))
-        hdus[1].header['CONFIG'] = json.dumps(utils.tolist(ext['config']))
+        ll = utils.tolist(ext['config'])
+        print(ext['config'])
+        print(ll)
+        jstring = json.dumps(ll)
+        hdus[0].header['CONFIG'] = jstring
+        hdus[1].header['CONFIG'] = jstring
         fits_utils.write_hdus(hdus, filename,
                               keywords={'SRCNAME': ext['name']})
 

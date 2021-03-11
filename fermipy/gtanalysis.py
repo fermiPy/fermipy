@@ -224,7 +224,7 @@ def run_gtapp(appname, logger, kw, **kwargs):
 
 
 def filter_dict(d, val):
-    for k, v in d.items():
+    for k, v in list(d.items()):
         if v == val:
             del d[k]
 
@@ -412,18 +412,21 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         axes = [MapAxis.from_edges(self.energies, interp='log',
                                    name='energy', unit='MeV')]
+
+        frame_map = dict(CEL='icrs', cel='icrs', GAL='galactic', gal='galactic')
+            
         if self.projtype == 'HPX':
             is_nested = self.config['binning']['hpx_ordering_scheme'] == "NESTED"
             self._geom = HpxGeom.create(2**self.config['binning']['hpx_order'],
                                         nest=is_nested,
-                                        coordsys=self.config['binning']['coordsys'],
+                                        frame=frame_map[self.config['binning']['coordsys']],
                                         width=self.config['binning']['roiwidth'],
                                         skydir=self.roi.skydir,
                                         axes=axes)
         else:
 
             self._geom = WcsGeom.create(npix=self.npix, binsz=self._binsz,
-                                        coordsys=self.config['binning']['coordsys'],
+                                        frame=frame_map[self.config['binning']['coordsys']],
                                         proj=self.config['binning']['proj'],
                                         skydir=self.roi.skydir,
                                         axes=axes)
@@ -603,8 +606,13 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         rm['npred'] = 0
         rm['npred_wt'] = 0
         for i, c in enumerate(self.components):
+
             rm['components'][i]['loglike'] = -c.like()
-            rm['components'][i]['model_counts'].fill(0)
+            try:
+                rm['components'][i]['model_counts'].fill(0)
+            except KeyError:
+                raise ValueError("%s" % rm['components'][i].keys())
+
             try:
                 rm['components'][i]['model_counts_wt'].fill(0)
             except:
@@ -939,12 +947,13 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         cfg['fileio']['workdir'] = self.config['fileio']['workdir']
 
+        copy_cfg = {}
         for k in cfg.keys():
-            if not k in GTBinnedAnalysis.defaults:
-                cfg.pop(k)
+            if k in GTBinnedAnalysis.defaults:
+                copy_cfg[k] = cfg[k]
 
         comp = GTBinnedAnalysis(
-            cfg, self.roi, logging=self.config['logging'], **kwargs)
+            copy_cfg, self.roi, logging=self.config['logging'], **kwargs)
 
         return comp
 
@@ -1077,10 +1086,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         # Determine tmin, tmax
         for i, c in enumerate(self._components):
-            self._tmin = (c.tmin if self._tmin is None
-                          else min(self._tmin, c.tmin))
-            self._tmax = (c.tmax if self._tmax is None
-                          else min(self._tmax, c.tmax))
+            if c.tmin is not None:
+                self._tmin = (c.tmin if self._tmin is None
+                            else min(self._tmin, c.tmin))
+            if c.tmax is not None:
+                self._tmax = (c.tmax if self._tmax is None
+                                else min(self._tmax, c.tmax))
 
         if init_sources:
 
@@ -1461,6 +1472,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         if self.like is not None:
             self.like.model = self.like.components[0].model
             self._update_roi()
+
+        if self.roi.has_source(name):
+            raise ValueError("delete source failed for %s" % name)
         return src
 
     def delete_sources(self, cuts=None, distance=None,
@@ -3425,7 +3439,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         mmap = Map.from_geom(self.geom)
         for m in maps:
             mmap.coadd(m)
-        mmap.write(outfile, overwrite=True, conv='fgst-ccube')
+        mmap.write(outfile, overwrite=True, format='fgst-ccube')
         return [mmap] + maps
 
     def write_weight_map(self, model_name):
@@ -3449,7 +3463,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         # FIXME: Should we average weights maps rather than coadding?
         for m in maps:
             wmap.coadd(m)
-        wmap.write(outfile, overwrite=True, conv='fgst-ccube')
+        wmap.write(outfile, overwrite=True, format='fgst-ccube')
         return [wmap] + maps
 
     def print_roi(self, loglevel=logging.INFO):
@@ -3615,7 +3629,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                    'ref_dfde_emax': 'ref_dnde_e_max',
                    }
 
-        self._roi_data = utils.update_keys(roi_data['roi'], key_map)
+        self._roi_data = roi_data['roi']
 
         if 'erange' in self._roi_data:
             self._roi_data['loge_bounds'] = self._roi_data.pop('erange')
@@ -4001,7 +4015,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         """
         self._ccube = skymap.coadd_maps(self.geom, cmaps)
         self._wcube = skymap.coadd_maps(self.geom, wmaps)
-        self._ccube.write(self.files['ccube'], overwrite=True, conv='fgst-ccube')
+        self._ccube.write(self.files['ccube'], overwrite=True, format='fgst-ccube')
 
         if self.projtype == "WCS":
             rm['counts'] += np.sum(self._ccube.data,
@@ -4463,19 +4477,26 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         self._coordsys = self.config['binning']['coordsys']
         self._tmin = self.config['selection']['tmin']
         self._tmax = self.config['selection']['tmax']
+
+        if self._tmin is None or self._tmax is None:
+            raise ValueError("%s %s" % (self._tmin, self._tmax))
+        
         axes = [MapAxis.from_edges(self.energies, interp='log',
                                    name='energy', unit='MeV')]
+
+        frame_map = dict(CEL='icrs', cel='icrs', GAL='galactic', gal='galactic')
+
         if self.projtype == 'HPX':
             is_nested = self.config['binning']['hpx_ordering_scheme'] == "NESTED"
             self._geom = HpxGeom.create(2**self.config['binning']['hpx_order'],
                                         nest=is_nested,
-                                        coordsys=self.config['binning']['coordsys'],
+                                        frame=frame_map[self.config['binning']['coordsys']],
                                         width=self.config['binning']['roiwidth'],
                                         skydir=self.roi.skydir,
                                         axes=axes)
         elif self.projtype == "WCS":
             self._geom = WcsGeom.create(npix=self.npix, binsz=self.binsz,
-                                        coordsys=self.config['binning']['coordsys'],
+                                        frame=frame_map[self.config['binning']['coordsys']],
                                         proj=self.config['binning']['proj'],
                                         skydir=self.roi.skydir,
                                         axes=axes)
@@ -5552,7 +5573,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         srcmap_utils.update_source_maps(self.files['srcmap'],
                                         {'PRIMARY': data},
                                         logger=self.logger)
-        cm.write(self.files['ccubemc'], overwrite=True, conv='fgst-ccube')
+        cm.write(self.files['ccubemc'], overwrite=True, format='fgst-ccube')
 
     def write_model_map(self, model_name=None, name=None):
         """Save counts model map to a FITS file.
@@ -5570,7 +5591,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                'mcube%s.fits' % (suffix))
 
         cmap = self.model_counts_map(name, use_mask=False)
-        cmap.write(outfile, overwrite=True, conv='fgst-ccube')
+        cmap.write(outfile, overwrite=True, format='fgst-ccube')
         return cmap
 
     def write_weight_map(self, model_name=None):
@@ -5589,7 +5610,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
                                'wcube%s.fits' % (suffix))
 
         wmap = self.weight_map()
-        wmap.write(outfile, overwrite=True, conv='fgst-ccube')
+        wmap.write(outfile, overwrite=True, format='fgst-ccube')
         return wmap
 
     def _update_srcmap_file(self, sources, overwrite=True):
