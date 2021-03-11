@@ -1,0 +1,12 @@
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python
+  - pyyaml
+  - numpy
+  - scipy
+  - astropy
+  - healpy
+  - astropy-healpix
+  - gammapy==0.17
