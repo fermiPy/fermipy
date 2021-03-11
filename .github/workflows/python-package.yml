@@ -33,15 +33,15 @@ jobs:
       shell: bash -l {0}
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        #pylint --reports=no --errors-only qp
+        #pylint --reports=no --errors-only fermipy
         # stp the build if there are a lot of messages
-        #pylint --reports=no --fail-under=9.5 qp
+        #pylint --reports=no --fail-under=9.5 fermipy
         # exit-zero treats all errors as warnings.
-        $CONDA/bin/pylint --exit-zero qp
+        $CONDA/bin/pylint --exit-zero fermipy
     - name: Test with pytest
       shell: bash -l {0}    
       run: |
-        python -m pytest --cov=./fermipy --cov-report=xml fermipy/tests
+        $CONDA/bin/python -m pytest --cov=./fermipy --cov-report=xml fermipy/tests
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       with:
