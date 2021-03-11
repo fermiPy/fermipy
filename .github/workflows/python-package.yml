@@ -28,7 +28,7 @@ jobs:
       shell: bash -l {0}
       run: |
         $CONDA/bin/python -m pip install --upgrade pip
-        $CONDA/bin/python -m pip install --user pylint pytest pytest-cov        
+        $CONDA/bin/python -m pip install pylint pytest pytest-cov        
     - name: Lint with pylint
       shell: bash -l {0}
       run: |
