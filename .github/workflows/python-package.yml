@@ -29,7 +29,7 @@ jobs:
       run: |
         conda install -y -n fermi scipy matplotlib pyyaml numpy astropy gammapy==0.17 healpy astropy-healpix
         python -m pip install --upgrade pip
-        python -m pip install pylint pytest pytest-cov        
+        python -m pip install --user pylint pytest pytest-cov        
     - name: Lint with pylint
       run: |
         # stop the build if there are Python syntax errors or undefined names
