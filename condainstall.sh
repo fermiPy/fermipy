@@ -26,7 +26,7 @@ fi
 
 # Default conda deps
 if [[ -z $CONDA_DEPS ]]; then
-    CONDA_DEPS='scipy matplotlib pyyaml numpy astropy gammapy healpy astropy-healpix'
+    CONDA_DEPS='scipy matplotlib pyyaml numpy astropy gammapy==0.17 healpy astropy-healpix'
 fi
 
 # Default conda path
@@ -42,7 +42,7 @@ fi
 
 # Default fermitools conda channels
 if [[ -z $FERMI_CONDA_CHANNELS ]]; then
-   FERMI_CONDA_CHANNELS="-c conda-forge/label/cf201901 -c fermi"
+   FERMI_CONDA_CHANNELS="-c fermi"
 fi
 
 # Default conda channels
