@@ -11,13 +11,15 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         python-version: [3.7, 3.9]
         os : ["ubuntu", "macos"]                
     steps:
-    - uses: conda-incubator/setup-miniconda@v2
+    - uses: actions/checkout@v2
+    - name: Setup conda
+      uses: conda-incubator/setup-miniconda@v2
       with:
         auto-update-conda: true
         activate-environment: fermi
