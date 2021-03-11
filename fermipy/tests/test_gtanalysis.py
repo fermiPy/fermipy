@@ -144,6 +144,7 @@ def test_gtanalysis_fit(create_diffuse_dir, create_draco_analysis):
 
 
 #@requires_git_version('00-00-01')
+@requires_git_version('99-00-01')
 def test_gtanalysis_fit_newton(create_diffuse_dir, create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit0')
