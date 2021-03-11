@@ -6,7 +6,6 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
-
 1.0.1 (03/12/2021)
 -----------------
 * Switch primaty installation method to conda
