@@ -28,7 +28,7 @@ class SpectralLibrary(object):
     def create_from_yamlstr(cls, yamlstr):
         """Create the dictionary for a yaml file
         """
-        spectral_dict = yaml.load(yamlstr)
+        spectral_dict = yaml.safe_load(yamlstr)
         return cls(spectral_dict)
 
     @classmethod

@@ -56,7 +56,7 @@ def get_function_spec(name):
     if not hasattr(get_function_spec, 'fndict'):
         modelfile = os.path.join('$FERMIPY_DATA_DIR', 'models.yaml')
         modelfile = os.path.expandvars(modelfile)
-        get_function_spec.fndict = yaml.load(open(modelfile))
+        get_function_spec.fndict = yaml.safe_load(open(modelfile))
 
     if isinstance(name, bytes):
         name = name.decode()

@@ -39,5 +39,5 @@ class MktimeFilterDict(object):
     def build_from_yamlfile(yamlfile):
         """ Build a list of components from a yaml file
         """
-        d = yaml.load(open(yamlfile))
+        d = yaml.safe_load(open(yamlfile))
         return MktimeFilterDict(d['aliases'], d['selections'])

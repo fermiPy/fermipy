@@ -51,7 +51,7 @@ def unicode_representer(dumper, uni):
 yaml.add_representer(six.text_type, unicode_representer)
 
 def load_yaml(infile, **kwargs):
-    return yaml.load(open(infile), **kwargs)
+    return yaml.safe_load(open(infile), **kwargs)
 
 
 def write_yaml(o, outfile, **kwargs):
