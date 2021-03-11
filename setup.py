@@ -104,12 +104,12 @@ setup(
         'fermipy-plot-sed-summary-bands-sg = fermipy.jobs.target_plotting:PlotSEDSummaryBands_SG.main',
     ]},
     install_requires=[
-        "numpy",
+        "numpy>=1.16",
         "pyyaml",
         "scipy",
         "astropy<4",
         "matplotlib",
         "healpy",
-        "gammapy==0.18.1"
+        "gammapy>=0.18"
     ],
 )

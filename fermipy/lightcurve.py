@@ -432,7 +432,7 @@ class LightCurve(object):
         itimes = enumerate(zip(times[:-1], times[1:]))
         if kwargs.get('multithread', False):
             p = Pool(processes=kwargs.get('nthread', None))
-            mapo = p.map(wrap, itimes)
+            mapo = p.imap(wrap, itimes)
             p.close()
         else:
             mapo = map(wrap, itimes)

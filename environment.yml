@@ -6,10 +6,11 @@ channels:
 dependencies:
   - python
   - pyyaml
-  - numpy
+  - numpy>=1.16
   - scipy
-  - astropy
+  - astropy<4
+  - matplotlib
   - healpy
   - astropy-healpix
-  - gammapy==0.17
+  - gammapy>=0.18
   - fermitools
