@@ -1,5 +1,6 @@
 name: fermipy
 channels:
+  - fermi
   - conda-forge
   - defaults
 dependencies:
@@ -11,3 +12,4 @@ dependencies:
   - healpy
   - astropy-healpix
   - gammapy==0.17
+  - fermitools
