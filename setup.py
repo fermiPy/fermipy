@@ -109,7 +109,6 @@ setup(
         "scipy",
         "astropy<4",
         "matplotlib",
-        "healpy",
-        "gammapy>=0.18"
+        "healpy"
     ],
 )
