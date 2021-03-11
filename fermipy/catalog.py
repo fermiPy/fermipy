@@ -464,8 +464,6 @@ class Catalog4FGL(Catalog):
     @staticmethod
     def _fill_params(tab):
 
-        print("here")
-
         tab['param_values'] = np.nan * np.ones((len(tab), 10))
 
         # PowerLaw
