@@ -19,10 +19,10 @@ def tmppath(request, tmpdir_factory):
     return path
 
 
-def check_src_params(rm, src_name, par_names, par_vals):
+def check_src_params(rm, src_name, par_names, par_vals, rtol=1E-4):
     params = rm[src_name].params
     for name, val in zip(par_names, par_vals):
-        assert_allclose(params[name]['value'], val, 1E-4)
+        assert_allclose(params[name]['value'], val, rtol)
 
 def test_write_ds9region():
     skydir = SkyCoord(0.0, 0.0, unit='deg', frame='galactic').icrs
@@ -128,6 +128,35 @@ def test_load_fl8y_catalog_fits():
                       1415.79650878, 0.016446555033])
 
 
+def test_load_4fgldr2_catalog_fits():
+    #tested against web interface: https://heasarc.gsfc.nasa.gov/db-perl/W3Browse/w3query.pl
+    
+    skydir = SkyCoord(0.0, 30.0, unit='deg', frame='galactic').icrs
+    rm = ROIModel(catalogs=['4FGL-DR2'], skydir=skydir, src_radius=20.0)
+    assert len(rm.sources) == 140
+
+    src_name = '4FGL J1605.1-1140'
+    assert(rm[src_name]['SpectrumType'] == 'PowerLaw')
+    check_src_params(rm, src_name,
+                     ['Prefactor', 'Index', 'Scale'],
+                     [3.5487e-14, -2.0657, 3045.06])
+
+    src_name = '4FGL J1557.9-1404'
+    assert(rm[src_name]['SpectrumType'] == 'LogParabola')
+    check_src_params(rm, src_name,
+                     ['norm', 'alpha', 'beta', 'Eb'],
+                     [1.7456e-13, 2.2619, 0.7502, 1771.59])
+
+    src_name = '4FGL J1623.0-0315'
+    assert(rm[src_name]['SpectrumType'] == 'PLSuperExpCutoff2')
+    
+    prefactor = 6.4947e-13 * np.exp( 0.00669 * 1433.48 ** 0.6666667 )
+    #apparently, the Expfactor is supposed to be 0.006691, but the web interface says 0.00669.
+    check_src_params(rm, src_name,
+                     ['Prefactor', 'Index1', 'Index2', 'Expfactor', 'Scale'],
+                     [prefactor, -1.4861, 0.6666667, 0.00669, 1433.48], rtol=1e-3)
+
+
 def test_create_roi_from_source():
 
     rm = ROIModel.create_from_source('3FGL J2021.0+4031e',
@@ -145,6 +174,27 @@ def test_create_roi_from_source():
                     src.spectral_pars['Prefactor']['scale'], 0.4003659112E-12, rtol=1E-4)
     assert_allclose(src.spatial_pars['Prefactor']['value'], 1.0, rtol=1E-4)
     assert_allclose(src.spatial_pars['Prefactor']['scale'], 1.0, rtol=1E-4)
+
+
+def test_create_roi_from_source_4fgldr2():
+
+    rm = ROIModel.create_from_source('4FGL J2021.0+4031e',
+                                     {'catalogs': ['4FGL-DR2'], 'src_radius': 2.0})
+    assert len(rm.sources) == 6
+    src = rm.sources[0]
+    assert src.name == '4FGL J2021.0+4031e'
+    assert src['SpatialType'] == 'RadialDisk'
+    assert src['SourceType'] == 'DiffuseSource'
+    assert src['SpectrumType'] == 'LogParabola'
+    assert_allclose(src['ra'], 305.27, rtol=1E-5)
+    assert_allclose(src['dec'], 40.52, rtol=1E-5)
+    assert_allclose(src.spectral_pars['alpha']['value'], 1.8747, rtol=1E-4)
+    assert_allclose(src.spectral_pars['beta']['value'] *
+                    src.spectral_pars['beta']['scale'], 0.0606, rtol=1E-4)
+    assert_allclose(src.spectral_pars['norm']['value'] *
+                    src.spectral_pars['norm']['scale'], 2.0858e-13, rtol=1E-4)
+    assert_allclose(src.spatial_pars['Radius']['value'], 0.63, rtol=1E-4)
+    assert_allclose(src.spatial_pars['DEC']['scale'], 1.0, rtol=1E-4)
 
 
 def test_load_roi_from_dict(tmppath):
