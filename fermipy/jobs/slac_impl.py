@@ -147,8 +147,8 @@ class SlacInterface(SysInterface):
         full_sub_dict = job_config.copy()
 
         if self._no_batch:
-            full_command = "%s >& %s" % (
-                link.command_template().format(**full_sub_dict), logfile)
+            full_command = "%s" % (
+                link.command_template().format(**full_sub_dict))
         else:
             full_sub_dict['logfile'] = logfile
             full_command_template = build_bsub_command(
@@ -184,8 +184,7 @@ class SlacInterface(SysInterface):
 
         # copy & reverse the keys b/c we will be popping item off the back of
         # the list
-        unsubmitted_jobs = job_keys
-        unsubmitted_jobs.reverse()
+        unsubmitted_jobs = list(job_keys)[::-1]
 
         failed = False
         if unsubmitted_jobs:
@@ -253,7 +252,7 @@ def get_slac_default_args(job_time=1500):
 
     """
     slac_default_args = dict(lsf_args={'W': job_time,
-                                       'R': '\"select[dole]\"'},
+                                       'R': '\"select[centos7]\"'},
                              max_jobs=500,
                              time_per_cycle=15,
                              jobs_per_cycle=20,
