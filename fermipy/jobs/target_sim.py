@@ -297,14 +297,16 @@ class SimulateROI(Link):
         gta.load_roi('sim_baseline_%06i.npy' % current_seed)
         gta.set_random_seed(seed)
         gta.simulate_roi()
+        skip_srcs = []
         if injected_name:
             gta.zero_source(injected_name)
+            skip_srcs.append(injected_name)
 
-        gta.optimize()
+        gta.optimize(skip=skip_srcs)
         if do_find_src:
             gta.find_sources(sqrt_ts_threshold=5.0, search_skydir=gta.roi.skydir,
                              search_minmax_radius=[1.0, np.nan])
-            gta.optimize()
+            gta.optimize(skip=skip_srcs)
 
         gta.free_sources(skydir=gta.roi.skydir, distance=1.0, pars='norm')
         if injected_name:
