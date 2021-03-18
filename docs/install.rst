@@ -23,11 +23,14 @@ Conda-based installation
 The recommended way to install fermipy and the fermitools by using conda.
 
 Conda properly handles a rather complicated set of interdependencies between
-fermipy, the fermitools and packages they depend on.
+fermipy, the fermitools and packages they depend on.  Because conda
+can take some time to solve an environment, we suggest you specify
+exactly which version of fermitools and python to install.
 
 .. code-block:: bash
 
-   $ conda create --name fermipy -c conda-forge -c fermi fermipy
+   $ conda env create --name fermipy -c conda-forge -c fermipy python=3.7 fermitools=2.0.8
+   $ conda install --name fermipy -c conda-forge fermipy
    
 
 .. _installing from source:
