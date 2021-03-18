@@ -19,6 +19,7 @@ from astropy.coordinates import SkyCoord, ICRS, Galactic
 from gammapy.maps import WcsGeom
 
 from fermipy.utils import load_yaml, write_yaml, init_matplotlib_backend
+from fermipy.wcs_utils import coordsys_to_frame
 
 from fermipy import utils
 from fermipy.jobs.utils import is_null, is_not_null
@@ -183,7 +184,7 @@ class RandomDirGen(Link):
         skydir = SkyCoord(ra * u.deg, dec * u.deg)
 
         wcsgeom = WcsGeom.create(npix=npix, binsz=binsz,
-                                 proj=proj, coordsys=coordsys,
+                                 proj=proj, frame=coordsys_to_frame(coordsys),
                                  skydir=skydir)
         return wcsgeom
 
@@ -214,8 +215,8 @@ class RandomDirGen(Link):
         grid[1] += center[1]
 
         test_grid = wcsgeom.pix_to_coord(grid)
-        glat_vals = test_grid[0].flat
-        glon_vals = test_grid[1].flat
+        glat_vals = list(test_grid[0].flat)
+        glon_vals = list(test_grid[1].flat)
         conv_vals = SkyCoord(glat_vals * u.deg, glon_vals *
                              u.deg, frame=Galactic).transform_to(ICRS)
 
@@ -297,14 +298,16 @@ class SimulateROI(Link):
         gta.load_roi('sim_baseline_%06i.npy' % current_seed)
         gta.set_random_seed(seed)
         gta.simulate_roi()
+        skip_srcs = []
         if injected_name:
             gta.zero_source(injected_name)
+            skip_srcs.append(injected_name)
 
-        gta.optimize()
+        gta.optimize(skip=skip_srcs)
         if do_find_src:
             gta.find_sources(sqrt_ts_threshold=5.0, search_skydir=gta.roi.skydir,
                              search_minmax_radius=[1.0, np.nan])
-            gta.optimize()
+            gta.optimize(skip=skip_srcs)
 
         gta.free_sources(skydir=gta.roi.skydir, distance=1.0, pars='norm')
         if injected_name:
