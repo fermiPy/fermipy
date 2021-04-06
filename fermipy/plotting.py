@@ -143,8 +143,14 @@ def load_ds9_cmap():
                  [1.0, 1.0, 1.0]]
     }
 
-    plt.register_cmap(name='ds9_b', data=ds9_b)
-    plt.cm.ds9_b = plt.cm.get_cmap('ds9_b')
+    try:
+        plt.cm.ds9_b = plt.cm.get_cmap('ds9_b')
+
+    except ValueError:
+        ds9_cmap=LinearSegmentedColormap(name = 'ds9_b', segmentdata = ds9_b )
+        plt.register_cmap(cmap = ds9_cmap)
+        plt.cm.ds9_b = plt.cm.get_cmap('ds9_b')
+
     return plt.cm.ds9_b
 
 
@@ -161,8 +167,14 @@ def load_bluered_cmap():
                         (1.0, 0.0, 0.0))
                }
 
-    plt.register_cmap(name='bluered', data=bluered)
-    plt.cm.bluered = plt.cm.get_cmap('bluered')
+    try:
+        plt.cm.bluered = plt.cm.get_cmap('bluered')
+
+    except ValueError:
+        bluered_cmap=LinearSegmentedColormap(name = 'bluered', segmentdata = bluered )
+        plt.register_cmap(cmap = bluered_cmap)
+        plt.cm.bluered = plt.cm.get_cmap('bluered')
+    
     return plt.cm.bluered
 
 
@@ -294,9 +306,9 @@ class ImagePlotter(object):
 
         load_ds9_cmap()
         try:
-            colormap = plt.get_cmap(cmap)
+            colormap = plt.cm.get_cmap(cmap).copy()
         except:
-            colormap = plt.get_cmap('ds9_b')
+            colormap = plt.cm.get_cmap('ds9_b').copy()
 
         colormap.set_under(colormap(0))
 
@@ -716,7 +728,7 @@ class SEDPlotter(object):
         xedge, yedge = np.meshgrid(xedge, yedge)
         im = ax.pcolormesh(xedge, yedge, llhMatrix.T,
                            vmin=llhcut, vmax=0, cmap=cmap,
-                           linewidth=0)
+                           linewidth=0, shading='auto') 
         cb = plt.colorbar(im)
         cb.set_label('Delta LogLikelihood')
 
