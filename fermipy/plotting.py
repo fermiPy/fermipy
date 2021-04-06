@@ -728,7 +728,7 @@ class SEDPlotter(object):
         xedge, yedge = np.meshgrid(xedge, yedge)
         im = ax.pcolormesh(xedge, yedge, llhMatrix.T,
                            vmin=llhcut, vmax=0, cmap=cmap,
-                           linewidth=0, shading='auto')
+                           linewidth=0, shading='auto') 
         cb = plt.colorbar(im)
         cb.set_label('Delta LogLikelihood')
 
