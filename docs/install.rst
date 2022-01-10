@@ -29,7 +29,9 @@ exactly which version of fermitools and python to install.
 
 .. code-block:: bash
 
-   $ conda env create --name fermipy -c conda-forge -c fermipy python=3.7 fermitools=2.0.8
+   $ conda config --add channels conda-forge
+   $ conda config --add channels fermi
+   $ conda create --name fermipy -c conda-forge -c fermipy python=3.7 fermitools=2.0.8
    $ conda install --name fermipy -c conda-forge fermipy
    
 
