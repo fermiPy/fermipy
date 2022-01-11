@@ -167,11 +167,9 @@ class Catalog(object):
             elif name == 'FL8Y':
                 return CatalogFL8Y(fitsfile)
             elif name == '4FGL':
-                print("******************")
                 if 'PLEC_Index' in tab.columns:
                     return Catalog4FGL(fitsfile) ## this is ok for both 4FGL and 4FGL-DR2
                 elif 'PLEC_IndexS' in tab.columns:
-                    print("****************** DR3")
                     return Catalog4FGLDR3(fitsfile) 
             #elif name == '4FGL-DR2': ## this does not work because the CDS-NAME is still 4FGL also for the 4FGL-DR2 catalog
             #    return Catalog4FGLDR2(fitsfile)
@@ -712,12 +710,12 @@ class Catalog4FGLDR3(Catalog):
 
         if extdir is None:
             extdir = os.path.join('$FERMIPY_DATA_DIR', 'catalogs',
-                                  'Extended_8years')
-        #4FGL-DR3 is using the same extended templates as 4FGL ## TO BE CHECKED
+                                  'Extended_12years') ## to be added to the repository
+        #4FGL-DR3 is using a new archive for extended templates
 
         if fitsfile is None:
             fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
-                                    'gll_psc_v28.fit') ## to be added
+                                    'gll_psc_v28.fit') ## to be added to the repository
 
         #hdulist = fits.open(fitsfile)
         table = Table.read(fitsfile, hdu=1)
