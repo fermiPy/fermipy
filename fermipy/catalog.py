@@ -171,7 +171,7 @@ class Catalog(object):
                     return Catalog4FGL(fitsfile) ## this is ok for both 4FGL and 4FGL-DR2
                 elif 'PLEC_IndexS' in tab.columns:
                     return Catalog4FGLDR3(fitsfile) 
-            #elif name == '4FGL-DR2': ## this does not work because the CDS-NAME is still 4FGL also for the 4FGL-DR2 catalog
+            #elif name == '4FGL-DR2': ## does not work because the CDS-NAME is still 4FGL also for the 4FGL-DR2
             #    return Catalog4FGLDR2(fitsfile)
             elif 'gll_psch_v08' in fitsfile:
                 return Catalog2FHL(fitsfile)
