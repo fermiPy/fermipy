@@ -703,7 +703,7 @@ class Catalog4FGLDR2(Catalog):
 
 class Catalog4FGLDR3(Catalog):
     """This class supports the 12-year incremental update/4FGL-DR3.  See
-    https://fermi.gsfc.nasa.gov/ssc/data/access/lat/10yr_catalog/ ## TO BE UPDATED
+    https://fermi.gsfc.nasa.gov/ssc/data/access/lat/12yr_catalog/ 
     """
 
     def __init__(self, fitsfile=None, extdir=None):
