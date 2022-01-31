@@ -9,10 +9,11 @@ from fermipy.tests.utils import requires_dependency,\
     requires_st_version, requires_git_version, create_diffuse_dir
 from fermipy import spectrum
 
-try:
-    from fermipy import gtanalysis
-except ImportError:
-    pass
+from fermipy import gtanalysis
+#try:
+#    from fermipy import gtanalysis
+#except ImportError:
+#    pass
 
 # Skip tests in this file if Fermi ST aren't available
 pytestmark = requires_st_version('02-00-00')
