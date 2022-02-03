@@ -1,0 +1,13 @@
+<?xml version="1.0" ?>
+<source_library title="source library">
+  <source name="S147" type="DiffuseSource">
+    <spectrum normPar="Prefactor" type="PowerLaw">
+      <parameter error="0.09" free="1" max="100" min="0" name="Prefactor" scale="1e-11" value="1.82"/>
+      <parameter error="0.03" free="1" max="5" min="0" name="Index" scale="-1" value="2.19"/>
+      <parameter free="0" max="10" min="0.1" name="Scale" scale="1000" value="0.705"/>
+    </spectrum>
+    <spatialModel file="$(LATEXTDIR)/Templates/S147.fits" map_based_integral="true" type="SpatialMap">
+      <parameter free="0" max="1" min="1" name="Prefactor" scale="1" value="1"/>
+    </spatialModel>
+  </source>
+</source_library>
