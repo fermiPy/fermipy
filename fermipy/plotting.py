@@ -1303,7 +1303,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         tsmap_renorm = copy.deepcopy(tsmap)
         tsmap_renorm.data -= np.max(tsmap_renorm.data)
 
-        skydir = loc['tsmap_peak'].geom.get_coord(flat=True)
+        skydir = loc['tsmap_peak'].geom.get_coord().flat
         frame = loc['tsmap_peak'].geom.frame
         skydir = MapCoord.create(skydir, frame=frame).skycoord
 
