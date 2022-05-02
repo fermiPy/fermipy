@@ -111,7 +111,6 @@ setup(
         "matplotlib",
         "gammapy>=0.18",
         "healpy",
-        "astropy-healpix",
-        "fermitools"
+        "astropy-healpix"
     ],
 )
