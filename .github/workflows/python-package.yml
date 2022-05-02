@@ -8,7 +8,9 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
-
+  schedule:
+    - cron: "0 11 * * *"
+    
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -16,10 +18,12 @@ jobs:
       matrix:
         python-version: [3.7]
         os : ["ubuntu-latest", "macos-latest"]                
+      fail-fast: false
     steps:
     - uses: actions/checkout@v2
     - uses: conda-incubator/setup-miniconda@v2
       with:
+        mamba-version: "*"
         activate-environment: fermipy
         environment-file: environment.yml
         python-version: ${{ matrix.python-versino}}
