@@ -109,7 +109,9 @@ setup(
         "scipy",
         "astropy",
         "matplotlib",
-        "gammapy",
-        "healpy"
+        "gammapy>=0.18",
+        "healpy",
+        "astropy-healpix",
+        "fermitools"
     ],
 )
