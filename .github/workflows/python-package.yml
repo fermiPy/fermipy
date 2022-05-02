@@ -26,8 +26,9 @@ jobs:
         mamba-version: "*"
         activate-environment: fermipy
         environment-file: environment.yml
-        python-version: ${{ matrix.python-versino}}
+        python-version: ${{ matrix.python-version }}
         auto-activate-base: false
+        mamba-version: "*"
     - name: Install
       shell: bash -l {0}
       run: |
