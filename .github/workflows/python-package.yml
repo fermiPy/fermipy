@@ -42,12 +42,19 @@ jobs:
         #pylint --reports=no --fail-under=9.5 fermipy
         # exit-zero treats all errors as warnings.
         pylint --exit-zero fermipy
-    - name: Test with pytest
-      shell: bash -l {0}    
+    - name: Test with pytest and codecov
+      shell: bash -l {0}
       run: |
         python -m pytest --cov=./fermipy --cov-report=xml fermipy
+      if: runner.os == 'macOS'
+    - name: Test with pytest without codecov
+      shell: bash -l {0}
+      run: |
+        python -m pytest fermipy
+      if: runner.os != 'macOS'
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
+      if: runner.os == 'macOS'
       with:
         file: ./coverage.xml
         flags: unittests
