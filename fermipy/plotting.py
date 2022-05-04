@@ -282,8 +282,7 @@ class ImagePlotter(object):
                           'linewidths': 1.0}
 
         kwargs_imshow = {'interpolation': 'nearest',
-                         'origin': 'lower', 'norm': None,
-                         'vmin': None, 'vmax': None}
+                         'origin': 'lower', 'norm': None}
 
         zscale = kwargs.get('zscale', 'lin')
         gamma = kwargs.get('gamma', 0.5)
@@ -699,8 +698,9 @@ class SEDPlotter(object):
         else:
             fmin, fmax = np.log10(ylim)
 
-        fluxM = np.arange(fmin, fmax, 0.01)
-        fbins = len(fluxM)
+        fluxEdges = np.arange(fmin, fmax, 0.01)
+        fluxCenters = 0.5*(fluxEdges[1:] + fluxEdges[:-1])
+        fbins = len(fluxCenters)
         llhMatrix = np.zeros((len(sed['e_ctr']), fbins))
 
         # loop over energy bins
@@ -712,9 +712,9 @@ class SEDPlotter(object):
             logl -= np.max(logl)
             try:
                 fn = interpolate.interp1d(flux, logl, fill_value='extrapolate')
-                logli = fn(fluxM)
+                logli = fn(fluxCenters)
             except:
-                logli = np.interp(fluxM, flux, logl)
+                logli = np.interp(fluxCenters, flux, logl)
             llhMatrix[i, :] = logli
 
         cmap = copy.deepcopy(plt.cm.get_cmap(cmap))
@@ -724,7 +724,7 @@ class SEDPlotter(object):
             cmap = truncate_colormap(cmap, cmap_trunc_lo, cmap_trunc_hi, 1024)
 
         xedge = 10**np.insert(sed['loge_max'], 0, sed['loge_min'][0])
-        yedge = np.logspace(fmin, fmax, fbins)
+        yedge = 10**fluxEdges
         xedge, yedge = np.meshgrid(xedge, yedge)
         im = ax.pcolormesh(xedge, yedge, llhMatrix.T,
                            vmin=llhcut, vmax=0, cmap=cmap,
@@ -1303,7 +1303,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         tsmap_renorm = copy.deepcopy(tsmap)
         tsmap_renorm.data -= np.max(tsmap_renorm.data)
 
-        skydir = loc['tsmap_peak'].geom.get_coord(flat=True)
+        skydir = loc['tsmap_peak'].geom.get_coord().flat
         frame = loc['tsmap_peak'].geom.frame
         skydir = MapCoord.create(skydir, frame=frame).skycoord
 

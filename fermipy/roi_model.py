@@ -518,6 +518,10 @@ class Model(object):
             if t in tab.columns:
                 row_dict[t] = self[t]
 
+        for k in ["Spatial_Filename", "Spectrum_Filename"]:
+            if row_dict[k] is None:
+                row_dict[k] = ''
+
         row = [row_dict[k] for k in tab.columns]
         tab.add_row(row)
 
@@ -2166,8 +2170,8 @@ class ROIModel(fermipy.config.Configurable):
             row_dict['source_name'] = s.name
             row_dict['spectrum_type'] = s['SpectrumType']
             row_dict['spatialModel_type'] = s['SpatialType']
-            row_dict['spectrum_file'] = s['Spectrum_Filename']
-            row_dict['spatialModel_file'] = s['Spatial_Filename']
+            row_dict['spectrum_file'] = s['Spectrum_Filename'] if s['Spectrum_Filename'] is not None else ""
+            row_dict['spatialModel_file'] = s['Spatial_Filename'] if s['Spatial_Filename'] is not None else ""
             tab.add_row([row_dict[k] for k in tab.columns])
 
         return tab

@@ -191,7 +191,8 @@ class SEDGenerator(object):
 
         columns = fits.ColDefs([])
 
-        npar = len(sed['param_names'])
+        npar = len(sed['param_covariance'])
+        
         columns.add_col(fits.Column(name=str('name'),
                                     format='A32',
                                     array=sed['param_names']))

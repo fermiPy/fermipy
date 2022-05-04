@@ -234,10 +234,10 @@ class JobDetails(object):
         col_logfile = Column(name='logfile', dtype='S256')
         col_job_config = Column(name='job_config', dtype='S1024')
         col_timestamp = Column(name='timestamp', dtype=int)
-        col_infile_refs = Column(name='infile_refs', dtype=int, shape=(2))
-        col_outfile_refs = Column(name='outfile_refs', dtype=int, shape=(2))
-        col_rmfile_refs = Column(name='rmfile_refs', dtype=int, shape=(2))
-        col_intfile_refs = Column(name='intfile_refs', dtype=int, shape=(2))
+        col_infile_refs = Column(name='infile_refs', dtype=int, shape=(2,))
+        col_outfile_refs = Column(name='outfile_refs', dtype=int, shape=(2,))
+        col_rmfile_refs = Column(name='rmfile_refs', dtype=int, shape=(2,))
+        col_intfile_refs = Column(name='intfile_refs', dtype=int, shape=(2,))
         col_status = Column(name='status', dtype=int)
         columns = [col_dbkey, col_jobname, col_jobkey, col_appname,
                    col_logfile, col_job_config, col_timestamp,

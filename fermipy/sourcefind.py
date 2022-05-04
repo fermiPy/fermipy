@@ -631,7 +631,7 @@ class SourceFind(object):
         if use_cache and not use_pylike:
             self._create_srcmap_cache(src.name, src)
 
-        coord = MapCoord.create(lnlmap.geom.get_coord(flat=True),
+        coord = MapCoord.create(lnlmap.geom.get_coord().flat,
                                 frame=lnlmap.geom.frame)
         scan_skydir = coord.skycoord.icrs
         for lon, lat, ra, dec in zip(coord.lon, coord.lat,
