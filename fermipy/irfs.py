@@ -565,7 +565,8 @@ class PSFModel(object):
 
         exp = calc_exp(skydir, ltc, event_class, event_types,
                        energies, cth_bins)
-
+        if sum(sum(np.abs(exp))) == 0:
+            raise RuntimeError('irfs.py(569): Zero exposure!')
         return cls(dtheta, energies, cth_bins, np.squeeze(exp), np.squeeze(psf),
                    np.squeeze(wts))
 
