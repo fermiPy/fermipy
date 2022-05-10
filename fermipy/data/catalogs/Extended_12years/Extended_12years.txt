@@ -1,0 +1,49 @@
+Extended sources for 12-year source list, 2020
+----------------------------------------------
+
+
+New extended sources:
+---------------------
+
+- HESS J1640-465 (Mares et al): use HESS template from Abramowski et al 2014; point source becomes small extended source
+
+- G106.3+2.7 (Xin et al 2019, ApJ 885, 162): small 0.25° disk described in 2.2; next to bright PSR J2229+6114
+
+- G279.0+1.1 (Araya 2020, MNRAS 492, 5980): ring of Table 1; replaces source cluster in uw9011; nice improvement.
+
+
+
+Modified extended sources:
+--------------------------
+
+- HESS J1825 (Grondin et al 2011, Principe et al 2020, also Araya et al 2019, MNRAS 485, 1001)
+  Araya is a complex geometry, hard to implement; Principe's global model (Table 1) is worse than previous model; his energy-dependent version does not lead simply to smooth cube; adopt Grondin et al, which differs slightly from previous (unpublished) model.
+
+- G150.3+4.5 (Devin et al): use Gaussian model from Table 1
+
+- Vela X (Tibaldo et al 2018, A&A 617, A78): adopt radio template; accounts for a cluster of uw9011 sources; no need for specific high-energy model
+
+- HB 21 (Ambrogi et al 2019, A&A 623, A86): smaller disk (Sect 3.1), separate point source (detected by Toby, but unassociated)
+
+
+
+Not implemented yet:
+--------------------
+
+- IC 443 (J. Hewitt): not ready
+
+- HESS J1912+101 (D. Green, F. de Palma): not ready
+
+- new HESS shells (F. de Palma): not ready
+
+- CenA lobes (J. Magill): not ready
+
+- Cygnus Loop: not ready
+
+- CTB 37A (Abdollahi et al): wait until pulsar contribution is settled
+
+- HESS J1731-347 (Condon et al 2017, Guo et al 2018): TSExt < 16
+
+- Geminga halo (di Mauro et al): under discussion
+
+- W 30 (Bing Liu et al 2019, ApJ 881, 94): smaller disk with no point source inside: not as good

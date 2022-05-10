@@ -170,7 +170,7 @@ class SourceFactory(object):
         ----------
 
         catalog_type : str
-            Specifies catalog type, options include 2FHL | 3FGL | 4FGLP
+            Specifies catalog type, options include 2FHL | 3FGL | 4FGLP | 4FGL | 4FGL-DR2 | 4FGL-DR3
         catalog_file : str
             FITS file with catalog tables
         catalog_extdir : str
@@ -189,6 +189,8 @@ class SourceFactory(object):
             return catalog.Catalog4FGL(fitsfile=catalog_file, extdir=catalog_extdir)
         elif catalog_type == '4FGL-DR2':
             return catalog.Catalog4FGLDR2(fitsfile=catalog_file, extdir=catalog_extdir)
+        elif catalog_type == '4FGL-DR3':
+            return catalog.Catalog4FGLDR3(fitsfile=catalog_file, extdir=catalog_extdir)
         elif catalog_type == 'FL8Y':
             return catalog.CatalogFL8Y(fitsfile=catalog_file, extdir=catalog_extdir)
         else:

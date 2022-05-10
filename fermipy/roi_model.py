@@ -298,6 +298,17 @@ def spectral_pars_from_catalog(cat):
         pars['Index2'] = make_parameter_dict(pars['Index2'], False, False)
         pars['Expfactor2'] = make_parameter_dict(pars['Expfactor2'], False, True)
 
+    elif spectrum_type == 'PLSuperExpCutoff4':
+
+        pars['IndexS']['value'] *= -1.0
+        pars['IndexS']['scale'] = -1.0
+        pars['Index2']['scale'] = 1.0
+        pars['Prefactor'] = make_parameter_dict(pars['Prefactor'])
+        pars['Scale'] = make_parameter_dict(pars['Scale'], True, False)
+        pars['IndexS'] = make_parameter_dict(pars['IndexS'], False, False)
+        pars['Index2'] = make_parameter_dict(pars['Index2'], False, False)
+        pars['ExpfactorS'] = make_parameter_dict(pars['ExpfactorS'], False, True)
+
     else:
         raise Exception('Unsupported spectral type:' + spectrum_type)
 
@@ -563,6 +574,12 @@ class Model(object):
             o['Flux_Density'] = params['Prefactor']['value']
             o['Pivot_Energy'] = params['Scale']['value']
             o['Expfactor'] = params['Expfactor2']['value']
+        elif self['SpectrumType'] == 'PLSuperExpCutoff4':
+            o['Spectral_Index'] = -1.0 * params['IndexS']['value']
+            o['Exp_Index'] = params['Index2']['value']
+            o['Flux_Density'] = params['Prefactor']['value']
+            o['Pivot_Energy'] = params['Scale']['value']
+            o['Expfactor'] = params['ExpfactorS']['value']
 
         return o
 
