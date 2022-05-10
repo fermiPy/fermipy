@@ -1,0 +1,9 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Fermitools error reporting
+    url: https://github.com/fermi-lat/Fermitools-conda/wiki/Error-Reporting
+    about: Please see here for issues with the fermitools.
+  - name: Fermi help desk
+    url: mailto:fermihelp@milkyway.gsfc.nasa.gov
+    about: Ask questions about the fermitools or general fermi data analysis
+    
