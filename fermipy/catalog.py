@@ -715,7 +715,7 @@ class Catalog4FGLDR3(Catalog):
 
         if fitsfile is None:
             fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
-                                    'gll_psc_v28.fit') ## to be added to the repository
+                                    'gll_psc_v29.fit') #added to the repository
 
         #hdulist = fits.open(fitsfile)
         table = Table.read(fitsfile, hdu=1)
