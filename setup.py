@@ -108,7 +108,7 @@ setup(
         "pyyaml",
         "scipy",
         "astropy",
-        "matplotlib",
+        "matplotlib>=3.3",
         "gammapy>=0.18",
         "healpy",
         "astropy-healpix"

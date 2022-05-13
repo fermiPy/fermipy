@@ -9,7 +9,7 @@ dependencies:
   - numpy>=1.16
   - scipy
   - astropy
-  - matplotlib
+  - matplotlib>=3.3
   - healpy
   - astropy-healpix
   - gammapy>=0.18
