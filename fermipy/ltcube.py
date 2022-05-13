@@ -433,8 +433,14 @@ class LTCube(HpxMap):
                 hdu_bnds, hdu_gti]
 
         for hdu in hdus:
-            hdu.header['TSTART'] = self.tstart
-            hdu.header['TSTOP'] = self.tstop
-
+            if self.tstart is not None:
+                hdu.header['TSTART'] = self.tstart
+            else:
+                hdu.header['TSTART'] = ''
+            if self.tstop is not None:
+                hdu.header['TSTOP'] = self.tstop
+            else:
+                hdu.header['TSTOP'] = ''
+                
         with fits.HDUList(hdus) as hdulist:
             hdulist.writeto(outfile, clobber=True)
