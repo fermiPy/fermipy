@@ -3901,14 +3901,14 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         pars2 = {
             'Prefactor': copy.deepcopy(prefactor),
             'Index1': copy.deepcopy(index),
-            'Cutoff': {'value': 1000.0, 'scale': 1E3,
-                       'min': 10.0, 'max': 1E4, 'free': True},
-            'Index2': {'value': 1.0, 'scale': 1.0,
-                       'min': 1.0, 'max': 1.0, 'free': False},
+            'Expfactor_S': {'value': 0.1, 'scale': 1.0,
+                       'min': 0.0, 'max': 10.0, 'free': True},
+            'Index2': {'value': 0.6667, 'scale': 1.0,
+                       'min': 0.1, 'max': 1.0, 'free': True},
             'Scale': copy.deepcopy(scale)
         }
 
-        self.set_source_spectrum(str(name), 'PLSuperExpCutoff',
+        self.set_source_spectrum(str(name), 'PLSuperExpCutoff4',
                                  spectrum_pars=pars2,
                                  update_source=False)
 
@@ -3933,7 +3933,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self.logger.info('LogLike_PL: %12.3f LogLike_LP: %12.3f LogLike_PLE: %12.3f',
                          o.loglike_pl, o.loglike_lp, o.loglike_ple)
         self.logger.info('TS_curv:        %.3f (LP)', o.lp_ts_curv)
-        self.logger.info('TS_curv:        %.3f (PLE)', o.ple_ts_curv)
+        self.logger.info('TS_curv:        %.3f (PLSE)', o.ple_ts_curv)
         return o
 
     def bowtie(self, name, fd=None, loge=None):
