@@ -3900,8 +3900,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         pars2 = {
             'Prefactor': copy.deepcopy(prefactor),
-            'Index1': copy.deepcopy(index),
-            'Expfactor_S': {'value': 0.1, 'scale': 1.0,
+            'IndexS': copy.deepcopy(index),
+            'ExpfactorS': {'value': 0.1, 'scale': 1.0,
                        'min': 0.0, 'max': 10.0, 'free': True},
             'Index2': {'value': 0.6667, 'scale': 1.0,
                        'min': 0.1, 'max': 1.0, 'free': True},
