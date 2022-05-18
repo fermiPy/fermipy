@@ -3840,6 +3840,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         ----------
         name : str
             Source name.
+            
+        Index2: double
+            Exponent for super-exponential cutoff PL test. Default: 2/3
+            
+        free_Index: bool
+            Test also super-exponential cutoff PL with free index. Only recommended for sources with high TS.
 
         """
 
@@ -3898,13 +3904,18 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                  spectrum_pars=old_pars,
                                  update_source=False)
 
+        if "Index2" in kwargs:
+            b = kwargs["Index2"]
+        else:
+            b = 0.6667
+
         pars2 = {
             'Prefactor': copy.deepcopy(prefactor),
             'IndexS': copy.deepcopy(index),
             'ExpfactorS': {'value': 0.1, 'scale': 1.0,
                        'min': 0.0, 'max': 10.0, 'free': True},
-            'Index2': {'value': 0.6667, 'scale': 1.0,
-                       'min': 0.1, 'max': 1.0, 'free': True},
+            'Index2': {'value': b, 'scale': 1.0,
+                       'min': 0.1, 'max': 1.0, 'free': False},
             'Scale': copy.deepcopy(scale)
         }
 
@@ -3921,19 +3932,56 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                  update_source=False)
         saved_state.restore()
 
+
+        if "free_Index" in kwargs and kwargs["free_Index"]:
+
+            pars3 = {
+                'Prefactor': copy.deepcopy(prefactor),
+                'IndexS': copy.deepcopy(index),
+                'ExpfactorS': {'value': 0.1, 'scale': 1.0,
+                           'min': 0.0, 'max': 10.0, 'free': True},
+                'Index2': {'value': b, 'scale': 1.0,
+                           'min': 0.1, 'max': 1.0, 'free': True},
+                'Scale': copy.deepcopy(scale)
+            }
+
+            self.set_source_spectrum(str(name), 'PLSuperExpCutoff4',
+                                     spectrum_pars=pars3,
+                                     update_source=False)
+
+            self.free_source(name, loglevel=logging.DEBUG)
+            self.free_index(name, loglevel=logging.DEBUG)
+            fit_ple_free = self._fit(loglevel=logging.DEBUG)
+
+            # Revert to initial spectral model
+            self.set_source_spectrum(str(name), old_type,
+                                     spectrum_pars=old_pars,
+                                     update_source=False)
+            saved_state.restore()
+            ple_free_ts_curv = 2.0 * (fit_ple_free['loglike'] - fit_pl['loglike'])
+            temp = fit_ple_free['loglike']
+        
+        else:
+            temp = np.nan
+            ple_free_ts_curv = np.nan
+
         lp_ts_curv = 2.0 * (fit_lp['loglike'] - fit_pl['loglike'])
         ple_ts_curv = 2.0 * (fit_ple['loglike'] - fit_pl['loglike'])
         o = MutableNamedTuple(ts_curv=lp_ts_curv,
                               lp_ts_curv=lp_ts_curv,
                               ple_ts_curv=ple_ts_curv,
+                              ple_free_ts_curv=ple_free_ts_curv,
                               loglike_pl=fit_pl['loglike'],
                               loglike_lp=fit_lp['loglike'],
-                              loglike_ple=fit_ple['loglike'])
+                              loglike_ple=fit_ple['loglike'],
+                              loglike_ple_free=temp)
 
-        self.logger.info('LogLike_PL: %12.3f LogLike_LP: %12.3f LogLike_PLSE: %12.3f',
-                         o.loglike_pl, o.loglike_lp, o.loglike_ple)
+        self.logger.info('LogLike_PL: %12.3f LogLike_LP: %12.3f LogLike_PLSE: %12.3f LogLike_PLSE_free: %12.3f',
+                         o.loglike_pl, o.loglike_lp, o.loglike_ple, o.loglike_ple_free)
         self.logger.info('TS_curv:        %.3f (LP)', o.lp_ts_curv)
         self.logger.info('TS_curv:        %.3f (PLSE)', o.ple_ts_curv)
+        if temp is not np.nan:
+            self.logger.info('TS_curv:        %.3f (PLSE free index)', o.ple_free_ts_curv)
         return o
 
     def bowtie(self, name, fd=None, loge=None):
