@@ -51,7 +51,7 @@ To set up a conda environment with the dependencies
 
    $ git clone https://github.com/fermiPy/fermipy.git
    $ cd fermipy
-   $ conda create --name fermipy -f environment.yml
+   $ conda env create -f environment.yml
    
 To install the latest commit in the master branch run ``setup.py
 install`` from the root directory:
