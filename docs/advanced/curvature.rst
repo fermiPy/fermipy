@@ -1,7 +1,7 @@
 .. _curvature:
 
 Curvature test
-============
+==============
 
 The :py:meth:`~fermipy.gtanalysis.GTAnalysis.curvature` method
 tests for spectral curvature (deviation from a power-law energy
@@ -9,14 +9,14 @@ spectrum) for a given source via likelihood ratio test.
 
 The likelihood is maximized under three different spectral hypotheses for the source in question:
 
- * `PowerLaw<https://fermi.gsfc.nasa.gov/ssc/data/analysis/scitools/source_models.html#PowerLaw>`
- * `LogParabola<https://fermi.gsfc.nasa.gov/ssc/data/analysis/scitools/source_models.html#LogParabola>`, and
- * `PLSuperExpCutoff4<https://fermi.gsfc.nasa.gov/ssc/data/analysis/scitools/source_models.html#PLSuperExpCutoff4>`
+ * `PowerLaw <https://fermi.gsfc.nasa.gov/ssc/data/analysis/scitools/source_models.html#PowerLaw>`_
+ * `LogParabola <https://fermi.gsfc.nasa.gov/ssc/data/analysis/scitools/source_models.html#LogParabola>`_, and
+ * `PLSuperExpCutoff4 <https://fermi.gsfc.nasa.gov/ssc/data/analysis/scitools/source_models.html#PLSuperExpCutoff4>`_.
 
 For the first two models, all parameters except for the pivot energy are fit.
 For the power law with super-exponential cutoff, the parameter ``Index2``
 (also referred to as ``b``) is fixed to 0.6667 (the recommended value for pulsars
-from `4FGL-DR3<https://arxiv.org/abs/2201.11184>`) by default.
+from `4FGL-DR3 <https://arxiv.org/abs/2201.11184>`_) by default.
 The user may supply a different value of `Index2`
 and/or allow its value to float during the likelihood fit. The latter is
 only recommended for sources with high detection significance.
@@ -40,7 +40,7 @@ is equivalent to ``LogParabola``.
 
 
 Usage
---------
+-----
 
 The :py:meth:`~fermipy.gtanalysis.GTAnalysis.cuvature` method is executed
 by passing the name of a source in the ROI as a single argument.
@@ -62,7 +62,7 @@ are documented in :ref:`curvature_dict`.
 .. _curvature_dict:
             
 Curvature Dictionary
---------------
+--------------------
    
 The following table describes the contents of the
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.curvature` output dictionary:
@@ -73,12 +73,13 @@ The following table describes the contents of the
    :delim: tab
    :widths: 10,10,80
 
+.. _config_curvature:
 
 Configuration
 -------------
 
 The default configuration of the method is controlled with the
-:ref:`config_curvature` section of the configuration file.  The default
+Curvature section of the configuration file.  The default
 configuration can be overriden by passing the option as a *kwargs*
 argument to the method.
 

@@ -1,7 +1,7 @@
-``lp_ts_curv``  `float` Likelihood ratio for ``LogParabola`` fit.
-``ple_ts_curv``  `float` Likelihood ratio for ``PLSuperExpCutoff4`` fit with fixed ``Index2``.
-``ple_free_ts_curv``  `float`    Likelihood ratio for ``PLSuperExpCutoff4`` fit with free ``Index2``.
-``loglike_pl``  `float` Likelihood ratio for ``PowerLaw`` fit.
-``loglike_lp``  `float` Likelihood ratio for ``LogParabola`` fit.
-``loglike_ple``  `float`    Likelihood value for ``PLSuperExpCutoff4`` fit with fixed ``Index2``.
-``loglike_ple_free``  `float`    Likelihood value for ``PLSuperExpCutoff4`` fit with free ``Index2``.
+``lp_ts_curv``	`float`	Likelihood ratio for ``LogParabola`` fit.
+``ple_ts_curv``	`float`	Likelihood ratio for ``PLSuperExpCutoff4`` fit with fixed ``Index2``.
+``ple_free_ts_curv``	`float`	Likelihood ratio for ``PLSuperExpCutoff4`` fit with free ``Index2``.
+``loglike_pl``	`float`	Likelihood ratio for ``PowerLaw`` fit.
+``loglike_lp``	`float`	Likelihood ratio for ``LogParabola`` fit.
+``loglike_ple``	`float`	Likelihood value for ``PLSuperExpCutoff4`` fit with fixed ``Index2``.
+``loglike_ple_free``	`float`	Likelihood value for ``PLSuperExpCutoff4`` fit with free ``Index2``.
