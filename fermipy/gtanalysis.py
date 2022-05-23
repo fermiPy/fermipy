@@ -3977,7 +3977,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                               loglike_pl=fit_pl['loglike'],
                               loglike_lp=fit_lp['loglike'],
                               loglike_ple=fit_ple['loglike'],
-                              loglike_ple_free=temp)
+                              loglike_ple_free=temp,
+                              Index2=b)
 
         self.logger.info('LogLike_PL: %12.3f LogLike_LP: %12.3f LogLike_PLSC: %12.3f LogLike_PLSC_free: %12.3f',
                          o.loglike_pl, o.loglike_lp, o.loglike_ple, o.loglike_ple_free)

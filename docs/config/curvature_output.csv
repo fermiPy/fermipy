@@ -5,3 +5,4 @@
 ``loglike_lp``	`float`	Likelihood ratio for ``LogParabola`` fit.
 ``loglike_ple``	`float`	Likelihood value for ``PLSuperExpCutoff4`` fit with fixed ``Index2``.
 ``loglike_ple_free``	`float`	Likelihood value for ``PLSuperExpCutoff4`` fit with free ``Index2``.
+``Index2``	`float`	(starting) value of ``Index2`` for  ``PLSuperExpCutoff4`` fit.
