@@ -3844,8 +3844,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         Index2: double
             Exponent for super-exponential cutoff PL test. Default: 2/3
             
-        free_Index: bool
-            Test also super-exponential cutoff PL with free index. Only recommended for sources with high TS.
+        free_Index2: bool
+            Test also super-exponential cutoff PL with free index.
+            Only recommended for sources with high TS.
 
         """
 
@@ -3933,7 +3934,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         saved_state.restore()
 
 
-        if "free_Index" in kwargs and kwargs["free_Index"]:
+        if "free_Index2" in kwargs and kwargs["free_Index2"]:
 
             pars3 = {
                 'Prefactor': copy.deepcopy(prefactor),
@@ -3976,12 +3977,12 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                               loglike_ple=fit_ple['loglike'],
                               loglike_ple_free=temp)
 
-        self.logger.info('LogLike_PL: %12.3f LogLike_LP: %12.3f LogLike_PLSE: %12.3f LogLike_PLSE_free: %12.3f',
+        self.logger.info('LogLike_PL: %12.3f LogLike_LP: %12.3f LogLike_PLSC: %12.3f LogLike_PLSC_free: %12.3f',
                          o.loglike_pl, o.loglike_lp, o.loglike_ple, o.loglike_ple_free)
         self.logger.info('TS_curv:        %.3f (LP)', o.lp_ts_curv)
-        self.logger.info('TS_curv:        %.3f (PLSE)', o.ple_ts_curv)
+        self.logger.info('TS_curv:        %.3f (PLSC, Index2 = %.3f)', o.ple_ts_curv, b)
         if temp is not np.nan:
-            self.logger.info('TS_curv:        %.3f (PLSE free index)', o.ple_free_ts_curv)
+            self.logger.info('TS_curv:        %.3f (PLSC, free Index2)', o.ple_free_ts_curv)
         return o
 
     def bowtie(self, name, fd=None, loge=None):
