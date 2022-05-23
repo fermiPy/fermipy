@@ -253,6 +253,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         'residmap': defaults.residmap,
         'lightcurve': defaults.lightcurve,
         'find_sources': defaults.sourcefind,
+        'curvature': defaults.curvature
     }
 
     defaults = {'logging': defaults.logging,
@@ -275,6 +276,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 'localize': defaults.localize,
                 'roiopt': defaults.roiopt,
                 'plotting': defaults.plotting,
+                'curvature': defaults.curvature,
                 'components': (None, '', list)}
 
     def __init__(self, config, roi=None, **kwargs):
@@ -3852,6 +3854,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         name = self.roi.get_source_by_name(name).name
 
+        conf = self.config['curvature']
+        conf.update(kwargs)
+
         saved_state = LikelihoodState(self.like)
         source = self.components[0].like.logLike.getSource(str(name))
 
@@ -3905,10 +3910,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                  spectrum_pars=old_pars,
                                  update_source=False)
 
-        if "Index2" in kwargs:
-            b = kwargs["Index2"]
-        else:
-            b = 0.6667
+        b = conf["Index2"]
 
         pars2 = {
             'Prefactor': copy.deepcopy(prefactor),
@@ -3934,7 +3936,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         saved_state.restore()
 
 
-        if "free_Index2" in kwargs and kwargs["free_Index2"]:
+        if conf["free_Index2"]:
 
             pars3 = {
                 'Prefactor': copy.deepcopy(prefactor),
