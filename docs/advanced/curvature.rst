@@ -38,6 +38,10 @@ contains both the ``LogParabola`` and ``PLSuperExpCutoff4`` model with
 fixed ``Index2`` as special cases. ``PLSuperExpCutoff4`` with ``Index2=0``
 is equivalent to ``LogParabola``.
 
+.. warning::
+
+   The likelihood fits within the :py:meth:`~fermipy.gtanalysis.GTAnalysis.curvature` function sometimes fail to find the global minima. This can lead to an over- or under-estimate of the curvature TS. If in doubt, please perform dedicated fits with your own starting values and check fit quality.
+
 
 Usage
 -----
