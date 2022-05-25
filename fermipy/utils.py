@@ -16,7 +16,6 @@ from scipy.optimize import brentq
 from scipy.ndimage.measurements import label
 import scipy.special as special
 from numpy.core import defchararray
-from astropy.time import Time
 try:
     from astropy.extern import six
 except ImportError:
@@ -288,13 +287,13 @@ def met_to_mjd(time):
     elapsed_days = time / 86400.
 
     # Add the elapsed days to the refrence epoch
-    MJD_added = MJDREFF + MJDREFFI + elapsed_days
+    MJD = MJDREFF + MJDREFFI + elapsed_days
 
-    # Load into astropy, specifying it is in MJD/terrestrial time
-    MJD_final = Time(MJD_added, format='mjd', scale='tt')
-
-    # Return the MJD in UTC format
-    return MJD_final.utc.mjd
+    # Return the MJD in TT format.
+    # Note: NASA's HEASARC tool xTime returns MJD in UTC format, which differs
+    # slightly from what is returned here.
+    # Note: Some truncation occurs, as only a float is returned.
+    return MJD
 
 
 RA_NGP = np.radians(192.8594812065348)
