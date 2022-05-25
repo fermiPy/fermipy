@@ -277,7 +277,23 @@ def strip_suffix(filename, suffix):
 
 def met_to_mjd(time):
     """"Convert mission elapsed time to mean julian date."""
-    return 54682.65 + (time - 239557414.0) / (86400.)
+
+    # The LAT refrence epoch in MJD
+    # https://fermi.gsfc.nasa.gov/ssc/data/analysis/documentation/Cicerone/Cicerone_Data/Time_in_ScienceTools.html
+    MJDREFF = 51910
+    MJDREFFI = 7.428703703703703 * (10**-4)
+
+    # Convert from elapsed seconds to elapsed days
+    elapsed_days = time / 86400.
+
+    # Add the elapsed days to the refrence epoch
+    MJD = MJDREFF + MJDREFFI + elapsed_days
+
+    # Return the MJD in TT format.
+    # Note: NASA's HEASARC tool xTime returns MJD in UTC format, which differs
+    # slightly from what is returned here.
+    # Note: Some truncation occurs, as only a float is returned.
+    return MJD
 
 
 RA_NGP = np.radians(192.8594812065348)
