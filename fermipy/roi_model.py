@@ -1889,7 +1889,7 @@ class ROIModel(fermipy.config.Configurable):
         * Name matching a value in ``names``
 
         Sources can be excluded from the selection by adding their
-        name to the ``exclude`` list.
+        name to the ``exclude`` list. ``exclude`` can be a str or a list of str.
 
         Returns
         -------
@@ -1902,6 +1902,7 @@ class ROIModel(fermipy.config.Configurable):
 
         if exclude is None:
             exclude = []
+        exclude = utils.arg_to_list(exclude)
 
         rsrc, srcs = self.get_sources_by_position(skydir,
                                                   distance,
