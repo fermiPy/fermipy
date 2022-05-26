@@ -514,6 +514,13 @@ sed_output = OrderedDict((
     ('config', (None, 'Copy of input configuration to this method.', dict)),
 ))
 
+# Options for curvature test
+curvature = {
+    'Index2': (0.6667, 'Index2 parameter for PLSuperExpCutoff4 fit.', float),
+    'free_Index2': (False, 'Whether or not to perform curvature test with PLSuperExpCutoff4 model with free Index2`` parameter', bool),
+}
+
+
 # Options for extension analysis
 extension = {
     'spatial_model': ('RadialGaussian', 'Spatial model that will be used to test the source'

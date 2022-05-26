@@ -27,6 +27,9 @@ available in Fermipy:
   with the `~fermipy.gtanalysis.GTAnalysis.sed` method.  This method
   fits the source amplitude in a sequence of energy bins.
 
+* :ref:`curvature`: Quickly test for spectral curvature with the
+  `~fermipy.gtanalysis.GTAnalysis.curvature` method.
+
 * :ref:`lightcurve`: Extract the lightcurve of a source with the
   `~fermipy.gtanalysis.GTAnalysis.lightcurve` method.  This method
   fits the source amplitude in a sequence of time bins.
@@ -46,6 +49,7 @@ available in Fermipy:
    :maxdepth: 1
 
    sed
+   curvature
    lightcurve
    extension
    tsmap
