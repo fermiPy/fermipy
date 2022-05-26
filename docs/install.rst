@@ -26,9 +26,9 @@ These instructions will install fermipy as well as its dependecies.
 Conda-based installation
 ------------------------
 
-The recommended way to install fermipy and the fermitools by using `mamba<https://github.com/conda-forge/miniforge#mambaforge>`.
+The recommended way to install fermipy and the fermitools by using `mamba <https://github.com/conda-forge/miniforge#mambaforge>`_.
 
-You can use conda instead but it can take longer to solve the requested
+You can use ``conda`` instead but it can take longer to solve the requested
 environment.
 
 .. code-block:: bash
