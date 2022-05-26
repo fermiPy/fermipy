@@ -97,7 +97,7 @@ master_doc = 'index'
 # General information about the project.
 project = u'Fermipy'
 author = u'Fermipy Developers'
-copyright = u'2016, ' + author
+copyright = u'2016-2022, ' + author
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the

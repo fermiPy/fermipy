@@ -3,16 +3,22 @@
 Installation
 ============
 
-.. note:: 
+.. warning::
 
-   From version 1.0.1 fermipy is only compatible with
-   fermitools version 2 or later, and with python version 3.7 or
+   Fermitools 2.1.xx and fermipy 1.1.xx are still undergoing testing.
+   Please refer to fermipy 1.0.1 and fermitools 2.0.8 for science analysis.
+   Report any issues on `github <https://github.com/fermiPy/fermipy/issues>`_.
+   
+.. note::
+
+   From version 1.1.1 fermipy is only compatible with
+   fermitools version 2.1 or later, and with python version 3.9 or
    higher.
    If you are using an earlier version, you will need to download and
    install the latest version from the `FSSC
-   <http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.  
+   <http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.
 
-These instructions will install fermipy as well as it's dependecies.
+These instructions will install fermipy as well as its dependecies.
 
 
 .. _conda_installation:
@@ -20,18 +26,16 @@ These instructions will install fermipy as well as it's dependecies.
 Conda-based installation
 ------------------------
 
-The recommended way to install fermipy and the fermitools by using conda.
+The recommended way to install fermipy and the fermitools by using `mamba<https://github.com/conda-forge/miniforge#mambaforge>`.
 
-Conda properly handles a rather complicated set of interdependencies between
-fermipy, the fermitools and packages they depend on.  Because conda
-can take some time to solve an environment, we suggest you specify
-exactly which version of fermitools and python to install.
+You can use conda instead but it can take longer to solve the requested
+environment.
 
 .. code-block:: bash
 
-   $ conda env create --name fermipy -c conda-forge -c fermipy python=3.7 fermitools=2.0.8
-   $ conda install --name fermipy -c conda-forge fermipy
-   
+   $ mamba create --name fermipy -c conda-forge -c fermi -c fermi/label/dev python=3.9 "fermitools>=2.1.0" healpy gammapy
+   $ mamba activate fermipy
+   $ pip install fermipy
 
 .. _installing from source:
 
@@ -51,7 +55,7 @@ To set up a conda environment with the dependencies
 
    $ git clone https://github.com/fermiPy/fermipy.git
    $ cd fermipy
-   $ conda create --name fermipy -f environment.yml
+   $ mamba create --name fermipy -f environment.yml
    
 To install the latest commit in the master branch run ``setup.py
 install`` from the root directory:
