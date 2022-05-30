@@ -60,3 +60,9 @@ jobs:
         env_vars: OS,PYTHON
         name: codecov-umbrella
         fail_ci_if_error: true
+    - name: Test gammapy dev version with pytest
+      shell: bash -l {0}
+      run: |
+        conda remove gammapy --force
+        python -m pip install git+https://github.com/gammapy/gammapy.git --no-deps
+        python -m pytest fermipy
