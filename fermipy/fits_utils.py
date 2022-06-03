@@ -176,7 +176,7 @@ def read_projection_from_fits(fitsfile, extname=None):
     return None, f, None
 
 
-def write_tables_to_fits(filepath, tablelist, clobber=False,
+def write_tables_to_fits(filepath, tablelist, overwrite=False,
                          namelist=None, cardslist=None, hdu_list=None):
     """
     Write some astropy.table.Table objects to a single fits file

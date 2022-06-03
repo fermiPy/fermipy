@@ -506,4 +506,4 @@ def extract_mapcube_region(infile, skydir, outfile, maphdu=0):
 
     hdu_image = fits.PrimaryHDU(data, header=region_wcs.to_header())
     hdulist = fits.HDUList([hdu_image, h['ENERGIES']])
-    hdulist.writeto(outfile, clobber=True)
+    hdulist.writeto(outfile, overwrite=True)

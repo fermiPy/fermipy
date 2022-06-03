@@ -48,7 +48,7 @@ def main():
     hdulistout = do_gather(args.files)
     
     if args.output:
-        hdulistout.writeto(args.output, clobber=args.clobber)
+        hdulistout.writeto(args.output, overwrite=args.clobber)
 
         if args.gzip:
             os.system('gzip -9 %s'%args.output)
