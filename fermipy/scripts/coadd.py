@@ -34,7 +34,7 @@ def main():
                         args.files[0])
 
     if args.output:
-        hdulist.writeto(args.output, clobber=args.clobber, output_verify='silentfix')
+        hdulist.writeto(args.output, overwrite=args.clobber, output_verify='silentfix')
 
 if __name__ == '__main__':
     main()
