@@ -33,7 +33,7 @@ environment.
 
 .. code-block:: bash
 
-   $ mamba create --name fermipy -c conda-forge -c fermi -c fermi/label/dev python=3.9 "fermitools>=2.1.0" healpy gammapy
+   $ mamba create --name fermipy -c conda-forge -c fermi -c fermi/label/rc python=3.9 "fermitools>=2.1.0" healpy gammapy
    $ mamba activate fermipy
    $ pip install fermipy
 

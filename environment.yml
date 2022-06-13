@@ -1,6 +1,6 @@
 name: fermipy
 channels:
-  - fermi/label/dev
+  - fermi/label/rc
   - fermi
   - conda-forge
 dependencies:
