@@ -6,6 +6,16 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
+1.1.4 (06/xx/2022)
+-----------------
+* Small fixes in lightcurve code (see `#472
+  <https://github.com/fermiPy/fermipy/issues/467>`_ and <https://github.com/fermiPy/fermipy/issues/467>`_)
+* Install fermitools from rc branch instead of dev
+
+1.1.3 (06/04/2022)
+-----------------
+* Update interface to astropy.fits.writeto for compatibility w/ astropy 5.1
+
 1.1.2 (05/26/2022)
 -----------------
 * Minor bug fixes & doc updates.
