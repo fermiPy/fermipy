@@ -175,7 +175,8 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
 
     # Optimize the model
     gta.optimize(skip=diff_sources,
-                 shape_ts_threshold=kwargs.get('shape_ts_threshold'))
+                 shape_ts_threshold=kwargs.get('shape_ts_threshold'),
+                 max_free_sources=kwargs.get('max_free_sources') )
 
     fit_results = _fit_lc(gta, name, **kwargs)
     gta.write_xml('fit_model_final.xml')
