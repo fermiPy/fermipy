@@ -437,10 +437,6 @@ class LightCurve(object):
         else:
             mapo = map(wrap, itimes)
 
-        if not kwargs.get('save_bin_data', False):
-            for m in mapo:
-                shutil.rmtree(m['config']['fileio']['outdir'])
-
         o = self._create_lc_dict(name, times)
         o['config'] = kwargs
 
@@ -449,6 +445,10 @@ class LightCurve(object):
 
             next_fit = next(mapo)
             
+            #delete temporary data products
+            if not kwargs.get('save_bin_data', False):
+                shutil.rmtree(next_fit['config']['fileio']['outdir'])
+
             if not next_fit['fit_success']:
                 self.logger.error(
                     'Fit failed in bin %d in range %i %i.' % (i, time[0], time[1]))
