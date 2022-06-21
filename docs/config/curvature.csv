@@ -1,2 +1,2 @@
-``Index2``	0.6677	``Index2`` (``b``) parameter for the ``PLSuperExpCutoff4`` fit.
-``free_Index2``	False	Whether or not to perform curvature test with ``PLSuperExpCutoff4`` model with free ``Index2`` parameter.
+``Index2``	0.6667	Index2 parameter for PLSuperExpCutoff4 fit.
+``free_Index2``	False	Whether or not to perform curvature test with PLSuperExpCutoff4 model with free Index2`` parameter
