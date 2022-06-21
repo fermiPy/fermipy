@@ -44,6 +44,9 @@ free by setting ``free_background=True``:
    # Free normalizations of sources within 2 degrees of sourceA
    gta.extension('sourceA', free_radius=2.0)
 
+.. warning::
+
+    If the best-fit extension differs significantly from the nominal value, the user is recommended to re-optimize the ROI.
 
 Energy-dependent Extension Fit
 ------------------------------
@@ -63,6 +66,22 @@ found with ``gta.log_energies``. For example if in the analysis
 8 energy bins per decade are considered and you want to make the SED in 4 bins
 per decade you can specify ``loge_bins=gta.log_energies[::2]``.
 
+
+User-defined Fit Range
+----------------------
+
+The default extension scan covers 21 points between 0.01 deg and 1.0 deg,
+evenly spaced in log space. The user may overwrite the fit range
+(``width_min`` and ``width_max`` keywords) and/or the number of
+points for the scan (``width_nstep``) or directly supply a list
+of extensions to be tested (``width`` keyword).
+
+The point source hypothesis is always tested as well. If the extension
+range includes the nominal extension value used during ROI optimization,
+this value will be explicitly scanned as well.
+
+.. warning::
+    The wider the range of extension values to be fit over, the more important it is to consider freeing the normalization of the background sources to avoid artifacts.
 
 
 Extension Dictionary
