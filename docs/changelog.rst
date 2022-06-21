@@ -6,22 +6,27 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
+master
+------
+* Allow user-defined energy bins for energy-dependent extension fit.
+
+
 1.1.2 (05/26/2022)
------------------
+------------------
 * Minor bug fixes & doc updates.
 * Implemented new super-exponential cutoff PL for curvature test. 
 
 1.1.1 (05/13/2022)
------------------
+------------------
 * More bug fixes for lightcurve module
 
 1.1 (05/10/2022)
------------------
+----------------
 * Fixes to work with recent astropy and matplotlib releases
 * Bug fixes for lightcurve module
 
 1.0.1 (03/12/2021)
------------------
+------------------
 * Switch primaty installation method to conda
 * Fixes to work with recent gammapy and yaml releases
 * Remove old installation scripts
