@@ -43,7 +43,31 @@ free by setting ``free_background=True``:
 
    # Free normalizations of sources within 2 degrees of sourceA
    gta.extension('sourceA', free_radius=2.0)
-   
+
+
+Energy-dependent Extension Fit
+------------------------------
+
+Use the option ``fit_ebin=True`` to perform separate exention scans
+in each energy bin (in addition to the joint fit):
+
+.. code-block:: python
+
+   gta.extension('sourceA', fit_ebin=True, loge_bins=np.linspace(3, 6.5, 15) )
+
+By default, the method will use the energy bins of the underlying
+analysis.  The ``loge_bins`` keyword argument can be used to override
+the default binning with the restriction that the SED energy bins
+must align with the analysis bins. The bins used in the analysis can be
+found with ``gta.log_energies``. For example if in the analysis
+8 energy bins per decade are considered and you want to make the SED in 4 bins
+per decade you can specify ``loge_bins=gta.log_energies[::2]``.
+
+
+
+Extension Dictionary
+--------------------
+
 The results of the extension analysis are written to a dictionary
 which is the return value of the extension method.  
    
