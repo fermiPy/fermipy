@@ -5,14 +5,14 @@ Installation
 
 .. warning::
 
-   Fermitools 2.1.xx and fermipy 1.1.xx are still undergoing testing.
-   Please refer to fermipy 1.0.1 and fermitools 2.0.8 for science analysis.
+   Fermipy 1.1.xx is still undergoing testing.
+   Please refer to fermipy 1.0.1 and fermitools 2.0.8 for the previous version.
    Report any issues on `github <https://github.com/fermiPy/fermipy/issues>`_.
    
 .. note::
 
-   From version 1.1.1 fermipy is only compatible with
-   fermitools version 2.1 or later, and with python version 3.9 or
+   From version 1.1.xx, fermipy is only compatible with
+   fermitools version 2.2 or later, and with python version 3.9 or
    higher.
    If you are using an earlier version, you will need to download and
    install the latest version from the `FSSC
@@ -33,7 +33,7 @@ environment.
 
 .. code-block:: bash
 
-   $ mamba create --name fermipy -c conda-forge -c fermi -c fermi/label/rc python=3.9 "fermitools>=2.1.0" healpy gammapy
+   $ mamba create --name fermipy -c conda-forge -c fermi python=3.9 "fermitools>=2.2.0" healpy gammapy
    $ mamba activate fermipy
    $ pip install fermipy
 
