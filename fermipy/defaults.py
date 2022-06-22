@@ -557,6 +557,7 @@ extension = {
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
+    'reoptimize':(True, 'Re-fit ROI in each energy bin. No effect if fit_ebin=False or there are no free parameters', bool ),
 }
 
 # Options for localization analysis

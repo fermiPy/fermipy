@@ -422,7 +422,7 @@ class ExtensionFit(object):
                                                         optimizer=kwargs[
                                                             'optimizer'],
                                                         psf_scale_fn=psf_scale_fn,
-                                                        reoptimize=False,
+                                                        reoptimize=reoptimize,
                                                         ebin_e_min = o.ebin_e_min,
                                                         ebin_e_max = o.ebin_e_max)
 
