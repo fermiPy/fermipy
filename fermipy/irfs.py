@@ -48,8 +48,8 @@ def loglog_quad(x, y, dim):
 
     xs0[dim] = slice(None, -1)
     xs1[dim] = slice(1, None)
-    log_ratio = np.log(x[xs1] / x[xs0])
-    return 0.5 * (y[ys0] * x[xs0] + y[ys1] * x[xs1]) * log_ratio
+    log_ratio = np.log(x[tuple(xs1)] / x[tuple(xs0)])
+    return 0.5 * (y[tuple(ys0)] * x[tuple(xs0)] + y[tuple(ys1)] * x[tuple(xs1)]) * log_ratio
 
 
 def bins_per_dec(edges):
