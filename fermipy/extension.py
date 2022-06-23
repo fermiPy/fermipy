@@ -125,7 +125,7 @@ class ExtensionFit(object):
         update = kwargs['update']
         sqrt_ts_threshold = kwargs['sqrt_ts_threshold']
         log_energies = np.array( kwargs.get('loge_bins', self.log_energies) )
-        enumbins = len(log_energies) - 1
+        enumbins = np.max( [len(log_energies) - 1, 0] )
 
         if kwargs['psf_scale_fn']:
             def psf_scale_fn(t): return 1.0 + np.interp(np.log10(t),
