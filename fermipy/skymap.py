@@ -4,7 +4,7 @@ import copy
 import numpy as np
 import healpy as hp
 from scipy.interpolate import RegularGridInterpolator
-from scipy.ndimage.interpolation import map_coordinates
+from scipy.ndimage import map_coordinates
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.table import Table
