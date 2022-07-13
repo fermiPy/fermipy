@@ -6,7 +6,6 @@
 ``make_plots``	False	Generate diagnostic plots.
 ``make_tsmap``	True	Make a TS map for the source of interest.
 ``psf_scale_fn``	None	Tuple of two vectors (logE,f) defining an energy-dependent PSF scaling function that will be applied when building spatial models for the source of interest.  The tuple (logE,f) defines the fractional corrections f at the sequence of energies logE = log10(E/MeV) where f=0 corresponds to no correction.  The correction function f(E) is evaluated by linearly interpolating the fractional correction factors f in log(E).  The corrected PSF is given by P'(x;E) = P(x/(1+f(E));E) where x is the angular separation.
-``reoptimize``	True	Re-fit ROI in each energy bin. No effect if fit_ebin=False or there are no free parameters
 ``save_model_map``	False	Save model counts cubes for the best-fit model of extension.
 ``spatial_model``	RadialGaussian	Spatial model that will be used to test the sourceextension.  The spatial scale parameter of the model will be set such that the 68% containment radius of the model is equal to the width parameter.
 ``sqrt_ts_threshold``	None	Threshold on sqrt(TS_ext) that will be applied when ``update`` is True.  If None then nothreshold is applied.
