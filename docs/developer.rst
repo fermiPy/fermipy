@@ -48,6 +48,10 @@ To support a new catalog will require some changes in the
    ``fermipy/data/catalogs`` area, so the catalog files should be
    added to that area.
 
+Installing development versions of fermitools
+---------------------------------------------
+
+To test fermipy against future versions of fermitools, use the ``rc`` (release candidate) or ``dev`` (development) versions in the respective conda channels, e.g. ``mamba install -c fermi/label/rc fermitools=2.1.36``.
 
 
 Creating a New Release

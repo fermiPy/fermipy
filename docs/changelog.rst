@@ -10,11 +10,18 @@ master
 ------
 * Allow user-defined energy bins for energy-dependent extension fit.
 
+1.1.4 (06/24/2022)
+------------------
+* Compatibility with numpy 1.23
+
+1.1.3 (06/04/2022)
+------------------
+* Compatibility with astropy 5.1
 
 1.1.2 (05/26/2022)
 ------------------
 * Minor bug fixes & doc updates.
-* Implemented new super-exponential cutoff PL for curvature test. 
+* Implemented new super-exponential cutoff PL for curvature test.
 
 1.1.1 (05/13/2022)
 ------------------

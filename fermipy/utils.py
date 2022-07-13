@@ -13,7 +13,7 @@ import scipy.optimize
 from scipy.ndimage import map_coordinates
 from scipy.interpolate import UnivariateSpline
 from scipy.optimize import brentq
-from scipy.ndimage.measurements import label
+from scipy.ndimage import label
 import scipy.special as special
 from numpy.core import defchararray
 try:
@@ -1416,7 +1416,7 @@ def tolist(x):
         return dict(x)
     elif isinstance(x, np.bool_):
         return bool(x)
-    elif isstr(x) or isinstance(x, np.str):
+    elif isstr(x) or isinstance(x, str):
         x = str(x)  # convert unicode & numpy strings
         try:
             return int(x)
