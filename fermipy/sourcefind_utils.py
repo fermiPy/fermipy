@@ -2,7 +2,7 @@
 from __future__ import absolute_import, division, print_function
 import numpy as np
 import scipy
-from scipy.ndimage.filters import maximum_filter
+from scipy.ndimage import maximum_filter
 from astropy.coordinates import SkyCoord
 from fermipy import utils
 from fermipy import wcs_utils

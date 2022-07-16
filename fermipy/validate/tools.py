@@ -236,9 +236,9 @@ class Validator(object):
 
         if compress:
             fp = gzip.GzipFile(outfile + '.gz', 'wb')
-            hdulist.writeto(fp, clobber=True)
+            hdulist.writeto(fp, overwrite=True)
         else:
-            hdulist.writeto(outfile, clobber=True)
+            hdulist.writeto(outfile, overwrite=True)
 
     def calc_sep(self, tab, src_list):
 
