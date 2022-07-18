@@ -7,10 +7,8 @@ This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
 1.1.5 (07/18/2022)
------------------
-* Small fixes in lightcurve code (see 
-`#472 <https://github.com/fermiPy/fermipy/issues/472>`_ and 
-`#467 <https://github.com/fermiPy/fermipy/issues/467>`_)
+------------------
+* Small fixes in lightcurve code (see `#472 <https://github.com/fermiPy/fermipy/issues/472>`_ and `#467 <https://github.com/fermiPy/fermipy/issues/467>`_)
 * Install ``fermitools`` release version 2.2.0 or higher.
 * Minor other fixes.
 
@@ -19,17 +17,17 @@ releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 * Compatibility with numpy 1.23
 
 1.1.3 (06/04/2022)
------------------
+------------------
 * Update interface to astropy.fits.writeto for compatibility w/ astropy 5.1
 
 
 1.1.2 (05/26/2022)
------------------
+------------------
 * Minor bug fixes & doc updates.
 * Implemented new super-exponential cutoff PL for curvature test.
 
 1.1.1 (05/13/2022)
------------------
+------------------
 * More bug fixes for lightcurve module
 
 1.1 (05/10/2022)
