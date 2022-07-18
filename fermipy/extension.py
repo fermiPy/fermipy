@@ -559,12 +559,16 @@ class ExtensionFit(object):
         reoptimize = kwargs.get('reoptimize', True)
 
         src = self.roi.copy_source(name)
+        
+        if (src['SpatialModel'] in ['RadialGaussian', 'RadialDisk'] and
+                (src['SpatialWidth'] < width_min or src['SpatialWidth'] > width_max ) ):
+            self.logger.warning(f"The extension scan does not cover the nominal extension value of {src['SpatialWidth']:.2f}, consider enlarging the scan range or re-optimizing the ROI with {src['name']} at a more appropriate extension.")
 
         # If the source is extended split the likelihood scan into two
         # parts centered on the best-fit value -- this ensures better
         # fit stability
         if (src['SpatialModel'] in ['RadialGaussian', 'RadialDisk'] and
-                src['SpatialWidth'] > width_min):
+                (src['SpatialWidth'] > width_min and src['SpatialWidth'] < width_max ) ):
             width_lo = np.logspace(np.log10(width_min), np.log10(src['SpatialWidth']), width_nstep // 2 + (width_nstep % 2 > 0))
             width_hi = np.logspace(np.log10(src['SpatialWidth']), np.log10(width_max), width_nstep // 2 + 1)
             loglike_lo = self._scan_extension(name, spatial_model=spatial_model,
