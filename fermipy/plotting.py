@@ -287,17 +287,21 @@ class ImagePlotter(object):
         zscale = kwargs.get('zscale', 'lin')
         gamma = kwargs.get('gamma', 0.5)
         transform = kwargs.get('transform', None)
+        
+        vmin = kwargs.get('vmin', None)
+        vmax = kwargs.get('vmax', None)
+        clip = kwargs.get('clip', False)
 
         if zscale == 'pow':
-            kwargs_imshow['norm'] = PowerNorm(gamma=gamma)
+            kwargs_imshow['norm'] = PowerNorm(gamma=gamma, vmin = vmin, vmax = vmax, clip = clip)
         elif zscale == 'sqrt':
-            kwargs_imshow['norm'] = PowerNorm(gamma=0.5)
+            kwargs_imshow['norm'] = PowerNorm(gamma=0.5, vmin = vmin, vmax = vmax, clip = clip)
         elif zscale == 'log':
-            kwargs_imshow['norm'] = LogNorm()
+            kwargs_imshow['norm'] = LogNorm(vmin = vmin, vmax = vmax, clip = clip)
         elif zscale == 'lin':
-            kwargs_imshow['norm'] = Normalize()
+            kwargs_imshow['norm'] = Normalize(vmin = vmin, vmax = vmax, clip = clip)
         else:
-            kwargs_imshow['norm'] = Normalize()
+            kwargs_imshow['norm'] = Normalize(vmin = vmin, vmax = vmax, clip = clip)
 
         fig = plt.gcf()
 
@@ -584,7 +588,7 @@ class ROIPlotter(fermipy.config.Configurable):
 
         im_kwargs = dict(cmap=self.config['cmap'],
                          interpolation='nearest', transform=None,
-                         vmin=None, vmax=None, levels=None,
+                         vmin=None, vmax=None, clip=False, levels=None,
                          zscale='lin', subplot=111, colors=['k'])
 
         cb_kwargs = dict(orientation='vertical', shrink=1.0, pad=0.1,
