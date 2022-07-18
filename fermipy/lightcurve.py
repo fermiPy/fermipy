@@ -362,7 +362,7 @@ class LightCurve(object):
             elif isinstance(v, np.ndarray):
                 o[k] = np.nan * np.ones(o['tmin'].shape + v.shape)
                 o[k+'_fixed'] = copy.deepcopy(o[k])
-            elif isinstance(v, np.float):
+            elif isinstance(v, float):
                 o[k] = np.nan * np.ones(o['tmin'].shape)
                 o[k+'_fixed'] = copy.deepcopy(o[k])
 

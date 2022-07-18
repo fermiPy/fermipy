@@ -3,8 +3,8 @@ from __future__ import absolute_import, division, print_function
 import copy
 import numpy as np
 from scipy.ndimage import map_coordinates
-from scipy.ndimage.interpolation import spline_filter
-from scipy.ndimage.interpolation import shift
+from scipy.ndimage import spline_filter
+from scipy.ndimage import shift
 from astropy.io import fits
 import fermipy.utils as utils
 import fermipy.wcs_utils as wcs_utils

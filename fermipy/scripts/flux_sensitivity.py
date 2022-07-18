@@ -4,8 +4,6 @@ from __future__ import absolute_import, division, print_function
 import os
 import argparse
 
-import pyLikelihood as pyLike
-
 import numpy as np
 from astropy.coordinates import SkyCoord
 from astropy.table import Table, Column
