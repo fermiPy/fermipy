@@ -44,6 +44,13 @@ class ExtensionFit(object):
         name : str
             Source name.
 
+        loge_bins : `~numpy.ndarray`
+            Sequence of energies in log10(E/MeV) defining the edges of
+            the energy bins.  If this argument is None then the
+            analysis energy bins will be used.  The energies in this
+            sequence must align with the bin edges of the underyling
+            analysis instance.
+
         {options}
 
         optimizer : dict
@@ -63,6 +70,7 @@ class ExtensionFit(object):
                               optimizer=self.defaults['optimizer'])
         schema.add_option('prefix', '')
         schema.add_option('outfile', None, '', str)
+        schema.add_option('loge_bins', None, '', list)
         config = utils.create_dict(self.config['extension'],
                                    optimizer=self.config['optimizer'])
         config = schema.create_config(config, **kwargs)
@@ -116,6 +124,8 @@ class ExtensionFit(object):
         tsmap_fitter = kwargs.get('tsmap_fitter', 'tsmap')
         update = kwargs['update']
         sqrt_ts_threshold = kwargs['sqrt_ts_threshold']
+        log_energies = np.array( kwargs.get('loge_bins', self.log_energies) )
+        enumbins = np.max( [len(log_energies) - 1, 0] )
 
         if kwargs['psf_scale_fn']:
             def psf_scale_fn(t): return 1.0 + np.interp(np.log10(t),
@@ -171,18 +181,18 @@ class ExtensionFit(object):
         o.loglike_base = loglike_base
         o.loglike_init = loglike_init
         o.config = kwargs
-        o.ebin_ext = np.ones(self.enumbins) * np.nan
-        o.ebin_ext_err = np.ones(self.enumbins) * np.nan
-        o.ebin_ext_err_lo = np.ones(self.enumbins) * np.nan
-        o.ebin_ext_err_hi = np.ones(self.enumbins) * np.nan
-        o.ebin_ext_ul95 = np.ones(self.enumbins) * np.nan
-        o.ebin_ts_ext = np.ones(self.enumbins) * np.nan
-        o.ebin_loglike = np.ones((self.enumbins, len(width))) * np.nan
-        o.ebin_dloglike = np.ones((self.enumbins, len(width))) * np.nan
-        o.ebin_loglike_ptsrc = np.ones(self.enumbins) * np.nan
-        o.ebin_loglike_ext = np.ones(self.enumbins) * np.nan
-        o.ebin_e_min = self.energies[:-1]
-        o.ebin_e_max = self.energies[1:]
+        o.ebin_ext = np.ones(enumbins) * np.nan
+        o.ebin_ext_err = np.ones(enumbins) * np.nan
+        o.ebin_ext_err_lo = np.ones(enumbins) * np.nan
+        o.ebin_ext_err_hi = np.ones(enumbins) * np.nan
+        o.ebin_ext_ul95 = np.ones(enumbins) * np.nan
+        o.ebin_ts_ext = np.ones(enumbins) * np.nan
+        o.ebin_loglike = np.ones((enumbins, len(width))) * np.nan
+        o.ebin_dloglike = np.ones((enumbins, len(width))) * np.nan
+        o.ebin_loglike_ptsrc = np.ones(enumbins) * np.nan
+        o.ebin_loglike_ext = np.ones(enumbins) * np.nan
+        o.ebin_e_min = 10**log_energies[:-1]
+        o.ebin_e_max = 10**log_energies[1:]
         o.ebin_e_ctr = np.sqrt(o.ebin_e_min * o.ebin_e_max)
 
         self.logger.debug('Width scan vector:\n %s', width)
@@ -394,8 +404,8 @@ class ExtensionFit(object):
                                    use_pylike=False,
                                    psf_scale_fn=psf_scale_fn)
 
-        for i, (logemin, logemax) in enumerate(zip(self.log_energies[:-1],
-                                                   self.log_energies[1:])):
+        for i, (logemin, logemax) in enumerate(zip(np.log10(o.ebin_e_min),
+                                                np.log10(o.ebin_e_max))):
 
             self.set_energy_range(logemin, logemax)
             o.ebin_loglike_ptsrc[i] = -self.like()
@@ -412,10 +422,12 @@ class ExtensionFit(object):
                                                         optimizer=kwargs[
                                                             'optimizer'],
                                                         psf_scale_fn=psf_scale_fn,
-                                                        reoptimize=False)
+                                                        reoptimize=reoptimize,
+                                                        ebin_e_min = o.ebin_e_min,
+                                                        ebin_e_max = o.ebin_e_max)
 
-        for i, (logemin, logemax) in enumerate(zip(self.log_energies[:-1],
-                                                   self.log_energies[1:])):
+        for i, (logemin, logemax) in enumerate(zip(np.log10(o.ebin_e_min),
+                                                np.log10(o.ebin_e_max))):
             ul_data = utils.get_parameter_limits(o.width, o.ebin_loglike[i])
             o.ebin_ext[i] = max(ul_data['x0'], 10**-2.5)
             o.ebin_ext_err[i] = ul_data['err']
@@ -490,11 +502,13 @@ class ExtensionFit(object):
         skydir = kwargs.pop('skydir', self.roi[name].skydir)
         psf_scale_fn = kwargs.pop('psf_scale_fn', None)
         reoptimize = kwargs.pop('reoptimize', True)
+        ebin_e_min = kwargs.pop('ebin_e_min', self.energies[:-1])
+        ebin_e_max = kwargs.pop('ebin_e_max', self.energies[1:])
 
         src = self.roi.copy_source(name)
         spatial_pars = {'ra': skydir.ra.deg, 'dec': skydir.dec.deg}
 
-        loglike = np.ones((self.enumbins, len(width)))
+        loglike = np.ones((len(ebin_e_max), len(width)))
         for i, w in enumerate(width):
 
             spatial_pars['SpatialWidth'] = max(w, 0.00316)
@@ -504,8 +518,8 @@ class ExtensionFit(object):
                                        use_pylike=False,
                                        psf_scale_fn=psf_scale_fn)
 
-            for j, (logemin, logemax) in enumerate(zip(self.log_energies[:-1],
-                                                       self.log_energies[1:])):
+            for j, (logemin, logemax) in enumerate(zip(np.log10(ebin_e_min),
+                                                        np.log10(ebin_e_max))):
                 self.set_energy_range(logemin, logemax)
                 if reoptimize:
                     fit_output = self._fit(loglevel=logging.DEBUG, **optimizer)

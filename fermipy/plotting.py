@@ -1440,7 +1440,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         if ext.get('tsmap') is not None:
             self._plot_extension_tsmap(ext, roi=roi, **kwargs)
 
-        if ext.get('ebin_ts_ext') is not None:
+        if ext.get('ebin_ts_ext') is not None and len(ext['ebin_ts_ext']>0):
             self._plot_extension_ebin(ext, roi=roi, **kwargs)
 
     def _plot_extension_ebin(self, ext, roi=None, **kwargs):
@@ -1451,7 +1451,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
         name = ext.get('name', '')
         name = name.lower().replace(' ', '_')
 
-        m = ext['ebin_ts_ext'] > 4.0
+        ul_ts_threshold = kwargs.pop('ul_ts_threshold', 4)
+        m = ext['ebin_ts_ext'] > ul_ts_threshold
 
         fig = plt.figure(figsize=figsize)
 
@@ -1461,15 +1462,20 @@ class AnalysisPlotter(fermipy.config.Configurable):
         xerr0 = np.vstack((delo[m], dehi[m]))
         xerr1 = np.vstack((delo[~m], dehi[~m]))
 
+        kw = {}
+        kw['marker'] = kwargs.get('marker', 'o')
+        kw['linestyle'] = kwargs.get('linestyle', 'None')
+        kw['color'] = kwargs.get('color', 'k')
+
         ax = plt.gca()
 
         ax.errorbar(ectr[m], ext['ebin_ext'][m], xerr=xerr0,
                     yerr=(ext['ebin_ext_err_lo'][m],
                           ext['ebin_ext_err_hi'][m]),
-                    color='k', linestyle='None', marker='o')
+                    **kw)
         ax.errorbar(ectr[~m], ext['ebin_ext_ul95'][~m], xerr=xerr1,
                     yerr=0.2 * ext['ebin_ext_ul95'][~m], uplims=True,
-                    color='k', linestyle='None', marker='o')
+                    **kw)
         ax.set_xlabel('Energy [log$_{10}$(E/MeV)]')
         ax.set_ylabel('Extension [deg]')
         ax.set_xscale('log')
@@ -1483,7 +1489,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
             ymin = min(ymin, 0.8 * np.nanmin(ext['ebin_ext_ul95']))
             ymax = max(ymax, 1.2 * np.nanmax(ext['ebin_ext_ul95']))
 
-        if ext['ts_ext'] > 4.0:
+        if ext['ts_ext'] > ul_ts_threshold:
             plt.axhline(ext['ext'], color='k')
             ext_lo = ext['ext'] - ext['ext_err_lo']
             ext_hi = ext['ext'] + ext['ext_err_hi']
@@ -1503,8 +1509,56 @@ class AnalysisPlotter(fermipy.config.Configurable):
         outfile = utils.format_filename(self.config['fileio']['workdir'],
                                         'extension_ebin', prefix=[prefix, name],
                                         extension=fmt)
-
+        
         plt.savefig(outfile)
+        
+        #add likelihood scan
+        llhcut = kwargs.pop('llhcut', -2.70)
+        cmap = kwargs.pop('cmap', 'BuGn')
+        cmap_trunc_lo = kwargs.pop('cmap_trunc_lo', None)
+        cmap_trunc_hi = kwargs.pop('cmap_trunc_hi', None)
+
+        widthEdges = np.arange(ymin, ymax, 0.01)
+        widthCenters = 0.5*(widthEdges[1:] + widthEdges[:-1])
+        wbins = len(widthCenters)
+        llhMatrix = np.zeros((len(ext['ebin_e_ctr']), wbins))
+
+        # loop over energy bins
+        for i in range(len(ext['ebin_e_ctr'])):
+            m = ext['width'] > 0
+            width_scan = ext['width'][m]
+            width = width_scan
+            logl = ext['ebin_dloglike'][i][m]
+            logl -= np.max(logl)
+            try:
+                fn = interpolate.interp1d(width, logl, fill_value='extrapolate')
+                logli = fn(widthCenters)
+            except:
+                logli = np.interp(widthCenters, width, logl)
+            llhMatrix[i, :] = logli
+
+        cmap = copy.deepcopy(plt.cm.get_cmap(cmap))
+        # cmap.set_under('w')
+
+        if cmap_trunc_lo is not None or cmap_trunc_hi is not None:
+            cmap = truncate_colormap(cmap, cmap_trunc_lo, cmap_trunc_hi, 1024)
+
+        xedge = np.insert(ext['ebin_e_max'], 0, ext['ebin_e_min'][0])
+        yedge = widthEdges
+        xedge, yedge = np.meshgrid(xedge, yedge)
+        im = ax.pcolormesh(xedge, yedge, llhMatrix.T,
+                           vmin=llhcut, vmax=0, cmap=cmap,
+                           linewidth=0, shading='auto')
+        cb = plt.colorbar(im)
+        cb.set_label('Delta LogLikelihood')
+
+        outfile = utils.format_filename(self.config['fileio']['workdir'],
+                                        'extension_ebin_llh', prefix=[prefix, name],
+                                        extension=fmt)
+        
+        plt.savefig(outfile)
+
+        
         plt.close(fig)
 
     def _plot_extension_tsmap(self, ext, roi=None, **kwargs):

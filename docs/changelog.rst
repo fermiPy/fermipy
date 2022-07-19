@@ -6,6 +6,12 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
+
+1.1.6 (07/19/20220
+------------------
+* Allow user-defined energy bins for energy-dependent extension fit.
+* Make sure the last time bin in the light curve ends at ``tmax``.
+
 1.1.5 (07/18/2022)
 ------------------
 * Small fixes in lightcurve code (see `#472 <https://github.com/fermiPy/fermipy/issues/472>`_ and `#467 <https://github.com/fermiPy/fermipy/issues/467>`_)
@@ -13,13 +19,12 @@ releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 * Minor other fixes.
 
 1.1.4 (06/24/2022)
------------------
+------------------
 * Compatibility with numpy 1.23
 
 1.1.3 (06/04/2022)
 ------------------
 * Update interface to astropy.fits.writeto for compatibility w/ astropy 5.1
-
 
 1.1.2 (05/26/2022)
 ------------------
@@ -31,12 +36,12 @@ releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 * More bug fixes for lightcurve module
 
 1.1 (05/10/2022)
------------------
+----------------
 * Fixes to work with recent astropy and matplotlib releases
 * Bug fixes for lightcurve module
 
 1.0.1 (03/12/2021)
------------------
+------------------
 * Switch primaty installation method to conda
 * Fixes to work with recent gammapy and yaml releases
 * Remove old installation scripts
