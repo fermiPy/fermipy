@@ -7,15 +7,14 @@ This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
 
-master
-------
+1.1.6 (07/19/20220
+------------------
 * Allow user-defined energy bins for energy-dependent extension fit.
+* Make sure the last time bin in the light curve ends at ``tmax``.
 
 1.1.5 (07/18/2022)
 ------------------
-* Small fixes in lightcurve code (see 
-`#472 <https://github.com/fermiPy/fermipy/issues/472>`_ and 
-`#467 <https://github.com/fermiPy/fermipy/issues/467>`_)
+* Small fixes in lightcurve code (see `#472 <https://github.com/fermiPy/fermipy/issues/472>`_ and `#467 <https://github.com/fermiPy/fermipy/issues/467>`_)
 * Install ``fermitools`` release version 2.2.0 or higher.
 * Minor other fixes.
 

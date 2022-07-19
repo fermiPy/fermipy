@@ -379,6 +379,10 @@ class LightCurve(object):
         else:
             times = np.arange(self.tmin, self.tmax,
                               kwargs['binsz'])
+            times = np.append( times, self.tmax ) #np.arange never includes the end point
+            
+            if times[-1] - times[-2] < kwargs['binsz']:
+                log.warning(f"Last lightcurve bin ({times[-1] - times[-2]} s) is shorter than nominal ({kwargs['binsz']} s).")
 
         diff_sources = [s.name for s in self.roi.sources if s.diffuse]
         skydir = self.roi[name].skydir
