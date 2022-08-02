@@ -1,20 +1,20 @@
 ---
-name: "\U0001F41B Bug Report"
-about: "If something isn't working as expected \U0001F914."
+name: "\U0001F630 Help! Fermipy is crashing"
+about: "If something isn't working as expected \U0001F630."
 title: ''
 labels: ''
 assignees: ''
 
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is. What data are you using and how was it obtained? 
+**Describe the error**
+A clear and concise description of what happened. What data are you using and how was it obtained? 
 
-*NOTE:* This is for fermipy bug reports and not for questions about data analysis or issues with fermitools.
+*NOTE:* This is for errors in fermipy and not for questions about data analysis or issues with fermitools.
 
 **To Reproduce**
 
-Please provide enough information for someone else to reporoduce this bug. That means e.g. a script + (links to) necessary files + any command line options, or an ipython notebook or something similar.
+Please provide enough information for someone else to reporoduce this error. That means e.g. a script + (links to) necessary files + any command line options, or an ipython notebook or something similar.
 
 **Expected behavior**
 A clear and concise description of what you expected to happen.
