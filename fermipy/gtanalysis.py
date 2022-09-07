@@ -849,7 +849,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         """
         name = self.roi.get_source_by_name(name).name
 
-        if self.roi[name]['SpectrumType'] != 'FileFunction':
+        if self.roi[name]['SpectrumType'] == 'FileFunction':
 
             src = self.components[0].like.logLike.getSource(str(name))
             spectrum = src.spectrum()
