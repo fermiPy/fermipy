@@ -6,6 +6,10 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
+1.2 (09/21/2022)
+----------------
+* Small bug fixes.
+* No more glaring issues remain open.
 
 1.1.6 (07/19/2022)
 ------------------

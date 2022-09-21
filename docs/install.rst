@@ -3,12 +3,6 @@
 Installation
 ============
 
-.. warning::
-
-   Fermipy 1.1.xx is still undergoing testing.
-   Please refer to fermipy 1.0.1 and fermitools 2.0.8 for the previous version.
-   Report any issues on `github <https://github.com/fermiPy/fermipy/issues>`_.
-   
 .. note::
 
    From version 1.1.xx, fermipy is only compatible with
@@ -17,6 +11,9 @@ Installation
    If you are using an earlier version, you will need to download and
    install the latest version from the `FSSC
    <http://fermi.gsfc.nasa.gov/ssc/data/analysis/software/>`_.
+
+   Please report any issues on `github <https://github.com/fermiPy/fermipy/issues>`_.
+
 
 These instructions will install fermipy as well as its dependecies.
 
