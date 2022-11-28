@@ -53,10 +53,11 @@ jobs:
 #        python -m pytest fermipy
 #      if: runner.os != 'macOS'
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v3
       with:
-        file: ./coverage.xml
+        files: ./coverage.xml
         flags: unittests
         env_vars: OS,PYTHON
         name: codecov-umbrella
         fail_ci_if_error: true
+        
