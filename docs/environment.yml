@@ -2,5 +2,15 @@ name: fermipy_env_py3
 
 channels:
   - conda-forge
+  - fermi
 
 dependencies:
+  - fermitools
+  - numpy
+  - scipy
+  - matplotlib
+  - astropy
+  - pyyaml
+  - healpy
+  - gammapy
+  - sphinx>=5.0.0
