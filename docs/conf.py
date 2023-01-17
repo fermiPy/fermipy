@@ -24,9 +24,16 @@ else:
     from unittest.mock import Mock as MagicMock
 
 class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
+    def __init__(self, *args, **kwargs):
+        pass
+    
+    def __call__(self, *args, **kwargs):
         return Mock()
+    
+    @classmethod
+    def __getattr__(self, name):
+        return Mock() if name not in ('__file__', '__path__') else '/dev/null'
+
 
 MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
                 'BinnedAnalysis','UnbinnedAnalysis','SrcModel','AnalysisBase',
