@@ -1,5 +1,8 @@
 version: 2
 
+build:
+  image: testing
+  
 formats:
   - epub
   - pdf
