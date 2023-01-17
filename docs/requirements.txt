@@ -5,3 +5,4 @@ astropy
 pyyaml
 healpy
 gammapy
+sphinx>=5.0.0

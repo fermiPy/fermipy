@@ -24,22 +24,17 @@ else:
     from unittest.mock import Mock as MagicMock
 
 class Mock(MagicMock):
-    def __init__(self, *args, **kwargs):
-        pass
-    
-    def __call__(self, *args, **kwargs):
-        return Mock()
     
     @classmethod
     def __getattr__(self, name):
         return Mock()
 
 
-MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
-                'BinnedAnalysis','UnbinnedAnalysis','SrcModel','AnalysisBase',
-                'SummedLikelihood','FluxDensity','LikelihoodState',
-                'GtApp']
-#MOCK_MODULES = ['pyLikelihood','pyIrfLoader']
+#MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
+#                'BinnedAnalysis','UnbinnedAnalysis','SrcModel','AnalysisBase',
+#                'SummedLikelihood','FluxDensity','LikelihoodState',
+#                'GtApp']
+MOCK_MODULES = ['pyLikelihood','pyIrfLoader']
 
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
