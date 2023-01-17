@@ -32,7 +32,7 @@ class Mock(MagicMock):
     
     @classmethod
     def __getattr__(self, name):
-        return Mock() if name not in ('__file__', '__path__') else '/dev/null'
+        return Mock()
 
 
 MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
