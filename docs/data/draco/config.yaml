@@ -1,0 +1,64 @@
+logging : 
+
+  verbosity : 3
+
+data:
+
+  evfile: draco_ft1.fits
+  scfile: null
+  ltcube : ltcube_239557414_428903014_z100_r180_gti.fits
+
+binning:
+
+  # Binning
+  roiwidth   : 10.0
+  npix       : null
+  binsz      : 0.1 # spatial bin size in deg
+  binsperdec : 8   # nb energy bins per decade
+  coordsys   : 'GAL'
+
+selection:
+
+  # Data selections
+  emin    : 500
+  emax    : 500000
+  zmax    : 100
+  evclass : 128
+  evtype  : 3
+  tmin    : 239557414
+  tmax    : 428903014 # 6 years
+  filter  : null
+
+  # Set the ROI center to these coordinates
+  ra: 260.05167
+  dec: 57.91528
+
+gtlike:
+  # IRFs
+  edisp : True
+  irfs : 'P8R2_SOURCE_V6'
+  edisp_disable : ['isodiff','galdiff']
+
+# Settings for ROI model
+model:
+
+  # Include catalog sources within this distance from the ROI center
+  src_radius  : null
+
+  # Include catalog sources within a box of width roisrc.
+  src_roiwidth : 15.0
+
+  galdiff  : '$FERMI_DIFFUSE_DIR/gll_iem_v07.fits'
+  isodiff  : '$FERMI_DIFFUSE_DIR/iso_P8R3_SOURCE_V2_v1.txt'
+
+  # List of catalogs to be used in the model.
+  catalogs : 
+    - '3FGL'
+
+  sources :
+    - { name : 'draco', ra : 260.05167, dec : 57.91528, 
+        SpectrumType : 'PowerLaw', Index : 2.0, Prefactor : { 'value' : 0.0, 'scale' : 1e-13 } } 
+
+components: null
+
+
