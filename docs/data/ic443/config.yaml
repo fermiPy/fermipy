@@ -1,0 +1,66 @@
+logging : 
+
+  verbosity : 3
+
+data:
+
+  # Define input data files (FT1, FT2, LTCube)
+
+   # FT1 file
+  evfile : ic443_ft1.fits
+
+  # Spacecraft file
+  scfile : null 
+
+  ltcube : ltcube_239557414_428903014_z090_r180_gti.fits
+
+binning:
+
+  # Binning
+  roiwidth   : 6.0
+  npix       : null
+  binsz      : 0.05 # spatial bin size in deg
+  binsperdec : 8   # nb energy bins per decade
+  coordsys   : 'GAL'
+
+selection:
+
+  # Data selections
+  emin    : 1000
+  emax    : 100000
+  zmax    : 90
+  evclass : 128
+  evtype  : 56
+  tmin    : 239557414
+  tmax    : 428903014 # 6 years
+  filter  : null
+
+  # Set the ROI center to the coordinates of this source
+  target : '4FGL J0617.2+2234e'
+
+gtlike:
+  # IRFs
+  edisp : True
+  irfs : 'P8R3_SOURCE_V3'
+  edisp_disable : ['isodiff']
+
+# Settings for ROI model
+model:
+
+  # Include catalog sources within a box of width roisrc.
+  src_roiwidth : 10.0
+
+  galdiff  : '$FERMI_DIFFUSE_DIR/gll_iem_v07.fits'
+  isodiff  : '$FERMI_DIFFUSE_DIR/iso_P8R3_SOURCE_V3_v1.txt'
+
+  # List of catalogs to be used in the model.
+  catalogs : 
+    - '4FGL-DR3'
+
+components: null
+
+extension:
+  width_min : 0.00316
+  width_max : 1.0
+  width_nstep : 26
+
