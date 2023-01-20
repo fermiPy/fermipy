@@ -136,6 +136,15 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
     config = copy.deepcopy(config)
     config['selection']['tmin'] = time[0]
     config['selection']['tmax'] = time[1]
+    
+    if 'components' in config:
+        for component in config['components']:
+            if 'selection' in component:
+                if 'tmin' in component['selection']:
+                    component['selection']['tmin'] = time[0]
+                if 'tmin' in component['selection']:
+                    component['selection']['tmax'] = time[1]
+
 
     # create output directories labeled in MET vals
     outdir = basedir + 'lightcurve_%.0f_%.0f' % (time[0], time[1])
