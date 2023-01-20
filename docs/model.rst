@@ -193,6 +193,7 @@ free and fix parameters by name using the
 For example:
 
 .. code-block:: python
+
    gta.free_parameter(name="SourceA", par="Index", free=False)
    gta.free_parameter(name="SourceB", par="Prefactor", free=True)
 
@@ -215,6 +216,7 @@ value and allowed range. Parameters can also accessed via the ROI
 dictionsary. For example, the following are equivalent:
 
 .. code-block:: python
+
    indexA = gta._get_param(name="SourceA", par="Index")["value"]
    indexA = gta.roi["SourceA"].spectral_pars["Index"]["value"]
 
@@ -225,6 +227,7 @@ is always unscaled. The following calls are equivalent:
 
 
 .. code-block:: python
+
    gta.set_parameter("SourceA", "Prefactor", 1.236583491e-13, bounds=[0.01, 100], scale=1e-13, true_value=True)
    gta.set_parameter("SourceA", "Prefactor", 1.236583491,     bounds=[0.01, 100], scale=1e-13, true_value=False)
 
