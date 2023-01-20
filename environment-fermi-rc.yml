@@ -1,0 +1,15 @@
+name: fermipy
+channels:
+  - fermi/label/rc
+  - conda-forge
+dependencies:
+  - python
+  - pyyaml
+  - numpy>=1.16
+  - scipy
+  - astropy
+  - matplotlib>=3.3
+  - healpy
+  - astropy-healpix
+  - gammapy>=0.18
+  - fermitools>=2.2.0

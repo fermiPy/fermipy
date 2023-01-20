@@ -1,0 +1,46 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Python package
+
+on:
+  schedule:
+    - cron: "0 5 * * 5" #5:00 GMT every Friday (= 9PM PST Thursday = midnight EST)
+    
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        python-version: [3.9]
+        os : ["ubuntu-latest", "macos-latest"]
+        environment-file: ["environment-fermi-dev.yml", "environment-fermi-rc.yml"]
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v3
+    - uses: conda-incubator/setup-miniconda@v2
+      with:
+        miniforge-variant: Mambaforge
+        activate-environment: fermipy
+        environment-file: ${{ matrix.environment-file }}
+        python-version: ${{ matrix.python-version }}
+        auto-activate-base: false
+    - name: Install
+      shell: bash -l {0}
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install pylint pytest
+    - name: Lint with pylint
+      shell: bash -l {0}
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        #pylint --reports=no --errors-only fermipy
+        # stp the build if there are a lot of messages
+        #pylint --reports=no --fail-under=9.5 fermipy
+        # exit-zero treats all errors as warnings.
+        pylint --exit-zero fermipy
+    - name: Test with pytest (no codecov here)
+      shell: bash -l {0}
+      run: |
+        python -m pytest fermipy
+        
