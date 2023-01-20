@@ -23,7 +23,7 @@ jobs:
     - uses: actions/checkout@v3
     - uses: conda-incubator/setup-miniconda@v2
       with:
-        mamba-version: "*"
+        miniforge-variant: Mambaforge
         activate-environment: fermipy
         environment-file: environment.yml
         python-version: ${{ matrix.python-version }}
