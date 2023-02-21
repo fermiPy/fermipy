@@ -233,7 +233,3 @@ is always unscaled. The following calls are equivalent:
 
 In either case, the allowed parameter values range from ``1e-15`` to ``1e-11``.
 
-
-
-
-
