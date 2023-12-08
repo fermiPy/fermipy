@@ -82,7 +82,7 @@ class GtSrcmapsCatalog(Link):
         if max_idx < 0:
             max_idx = srcNames.size()
 
-        for i in xrange(min_idx, max_idx):
+        for i in range(min_idx, max_idx):
             if i == min_idx:
                 like.logLike.saveSourceMaps(args.outfile)
                 pyLike.CountsMapBase.copyAndUpdateDssKeywords(args.cmap,
