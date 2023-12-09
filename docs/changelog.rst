@@ -6,6 +6,11 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
+1.2.1 (12/08/2023)
+----------------
+* Small bug fixes.
+* pinned astropy<6
+
 1.2 (09/21/2022)
 ----------------
 * Small bug fixes.
