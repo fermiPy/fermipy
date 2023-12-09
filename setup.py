@@ -107,7 +107,7 @@ setup(
         "numpy>=1.16",
         "pyyaml",
         "scipy",
-        "astropy",
+        "astropy<6",
         "matplotlib>=3.3",
         "gammapy>=0.18",
         "healpy",
