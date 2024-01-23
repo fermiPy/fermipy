@@ -106,7 +106,7 @@ setup(
     install_requires=[
         "numpy>=1.16",
         "pyyaml",
-        "scipy",
+        "scipy<1.12",
         "astropy<6",
         "matplotlib>=3.3",
         "gammapy>=0.18",
