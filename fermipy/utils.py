@@ -990,8 +990,8 @@ def fit_parabola(z, ix, iy, dpix=3, zmin=None):
 
     coeffx = poly_to_parabola(np.polyfit(x[sx, iy], z[sx, iy], 2))
     coeffy = poly_to_parabola(np.polyfit(y[ix, sy], z[ix, sy], 2))
-    #p0 = [coeffx[2], coeffx[0], coeffy[0], coeffx[1], coeffy[1], 0.0]
-    p0 = [coeffx[2], float(ix), float(iy), coeffx[1], coeffy[1], 0.0]
+    p0 = [coeffx[2], coeffx[0], coeffy[0], coeffx[1], coeffy[1], 0.0]
+    #p0 = [coeffx[2], float(ix), float(iy), coeffx[1], coeffy[1], 0.0]
 
     o = {'fit_success': True, 'p0': p0}
 
