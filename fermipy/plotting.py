@@ -1172,6 +1172,14 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                           extension=fmt))
         plt.close(fig)
 
+    def make_psmap_plots(self):
+        """
+
+        :return:
+        """
+        fmt = kwargs.get('format', self.config['format'])
+        figsize = kwargs.get('figsize', self.config['figsize'])
+
     def make_roi_plots(self, gta, mcube_tot, **kwargs):
         """Make various diagnostic plots for the 1D and 2D
         counts/model distributions.

@@ -27,6 +27,7 @@ import fermipy.sed as sed
 import fermipy.lightcurve as lightcurve
 from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator, TSCubeGenerator
+from fermipy.psmap import PSMapGenerator
 from fermipy.sourcefind import SourceFind
 from fermipy.extension import ExtensionFit
 from fermipy.utils import merge_dict
@@ -234,6 +235,7 @@ def filter_dict(d, val):
 
 class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                  ResidMapGenerator, TSMapGenerator, TSCubeGenerator,
+                 PSMapGenerator,
                  SourceFind, ExtensionFit, lightcurve.LightCurve):
     """High-level analysis interface that manages a set of analysis
     component objects.  Most of the functionality of the Fermipy
@@ -250,6 +252,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         'sed': defaults.sed,
         'localize': defaults.localize,
         'tsmap': defaults.tsmap,
+        'psmap': defaults.psmap,
         'residmap': defaults.residmap,
         'lightcurve': defaults.lightcurve,
         'find_sources': defaults.sourcefind,
@@ -268,6 +271,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 'mc': defaults.mc,
                 'residmap': defaults.residmap,
                 'tsmap': defaults.tsmap,
+                'psmap': defaults.psmap,
                 'tscube': defaults.tscube,
                 'sourcefind': defaults.sourcefind,
                 'sed': defaults.sed,
