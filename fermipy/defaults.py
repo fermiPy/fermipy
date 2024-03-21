@@ -352,6 +352,8 @@ psmap = {
     'ipix':(-1, "number of pixel i axis", int),
     'jpix':(-1, "number of pixel j axis", int),
     'rebin':(1, "Rebin", int),
+    'make_plots': common['make_plots'],
+    'write_fits': common['write_fits'],
 }
 
 

@@ -46,7 +46,6 @@
 
 import sys, getopt
 import numpy as np
-import matplotlib.pyplot as plt
 from astropy.wcs import WCS
 from astropy.io import fits
 from astropy.coordinates import SkyCoord
@@ -55,6 +54,8 @@ from scipy.stats import poisson
 from scipy.special import gammainc
 from scipy.special import gammaincc
 from scipy.special import erfcinv
+
+from gammapy.maps import WcsNDMap, WcsGeom
 
 #import cProfile
 #import pstats
@@ -228,7 +229,9 @@ def run(args):
     ipix = args['ipix']
     jpix = args['jpix']
     rebin = args['rebin']
+    write_fits = args['write_fits']
 
+    o = {} # this sintax is to respect matt syntax where all the output are saved in the dictionary called "o"
     optweight = 1
     if weight_filename == '':
         optweight = 0
@@ -366,9 +369,9 @@ def run(args):
     if chatter>0:
         print('Computing the PS map (%d bins in energy range [%3.2f,%3.2f], nbinpdf=%d, scaleaxis=%3.2f, maxpoissoncount=%3.2f, prob_epsilon=%g):\n(for each column of the map, the integer part of the maximum value of abs(PS) is given as one character [1,..,9,A=10,B=11,..,Y=34,Z>=35])' %(naxis3rebin,selenergymin[0],selenergymax[-1],nbinpdf,scaleaxis,maxpoissoncount,prob_epsilon))
         
-    psmap=np.zeros((naxis2,naxis1))
-    psmapsigma=np.zeros((naxis2,naxis1))
-    totresmap=np.zeros((naxis2,naxis1))
+    psmap      = np.zeros((naxis2,naxis1))
+
+    totresmap  = np.zeros((naxis2,naxis1))
 
     psmax = -1;
     imax = 0
@@ -439,6 +442,14 @@ def run(args):
             coordx=maxdir.ra.to_string(decimal=True)
             coordy=maxdir.dec.to_string(decimal=True)
         print ('Maximum PS: %f found at the position (%s,%s)=(%s,%s) [fits pixel (%d,%d)]' % (psmax,coordname1,coordname2,coordx,coordy,imax+1,jmax+1))
+    o['psmax'] = psmax
+    o['coordname1'] = coordname1
+    o['coordname2'] = coordname2
+    o['coordx'] = coordx
+    o['coordy'] = coordy
+    o['ipix'] = imax + 1
+    o['jpix'] = jmax + 1
+
 
     modcounts = mod_summed_map[:,jmax,imax]
     datcounts = dat_summed_map[:,jmax,imax]
@@ -449,17 +460,27 @@ def run(args):
         for i in range(naxis3rebin):
             print ('bin %02d data %f model %g weight %g' % (i,datcounts[i],modcounts[i],weights[i]))
 
-    if chatter>0:
-        print ('Saving the PS map in file %s' %(out_filename))
-        
-    hdu_ps = fits.PrimaryHDU(psmap,wcs2d.to_header())
-    psmapsigma = np.sign(psmap) * np.sqrt(2) * erfcinv(np.power(10.,-np.abs(psmap)))
-    hdu_ps_sigma = fits.ImageHDU(psmapsigma,wcs2d.to_header())
+    psmapsigma = np.sign(psmap) * np.sqrt(2) * erfcinv(np.power(10., -np.abs(psmap)))
+
+
+    o['wcs2d'] = wcs2d
+    o['psmap'] = psmap
+    o['psmapsigma'] = psmapsigma
+    return o
+
+def make_psmap_fits(o, out_filename):
+    psmap      = o['psmap']
+    psmapsigma = o['psmapsigma']
+    wcs2d      = o['wcs2d']
+
+    o['file_name'] = out_filename
+    hdu_ps = fits.PrimaryHDU(psmap, wcs2d.to_header())
+    hdu_ps_sigma = fits.ImageHDU(psmapsigma, wcs2d.to_header())
     hdr = hdu_ps_sigma.header
     hdr['EXTNAME'] = 'PS in sigma'
-    
-    hdul = fits.HDUList([hdu_ps,hdu_ps_sigma])
-    hdul.writeto(out_filename,overwrite=True)
+
+    hdul = fits.HDUList([hdu_ps, hdu_ps_sigma])
+    hdul.writeto(out_filename, overwrite=True)
 
 if __name__ == "__main__":
     import argparse
@@ -498,8 +519,8 @@ if __name__ == "__main__":
 
 
     args = vars(parser.parse_args())
-    print(args)
-    run(args)
+    o=run(args)
+    make_psmap_fits(o,out_filename=args['outfile'])
 
     # define the PSF-like energy dependent cut
 

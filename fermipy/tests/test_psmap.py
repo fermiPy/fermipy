@@ -9,4 +9,5 @@ gta.print_roi()
 
 gta.write_roi('fit0')
 
-gta.psmap(model_name='model01')
+psmap = gta.psmap(model_name='model01', make_plots=True)
+
