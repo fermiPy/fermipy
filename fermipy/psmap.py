@@ -102,3 +102,4 @@ class PSMapGenerator(object):
             plotter.make_psmap_plots(o, self.roi)
 
         self.logger.log(config['loglevel'], 'Finished PS map')
+        return o

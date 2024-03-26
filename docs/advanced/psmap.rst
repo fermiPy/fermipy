@@ -4,22 +4,64 @@ PS Map
 ======
 
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.psmap` generates a PS map for an additional source component centered at each
-spatial bin in the ROI.  The PSmap algorithm is described in detail in Bruel P. (2021), A&A, 656, A81. (`doi:10.1051/0004-6361/202141553 <https://arxiv.org/pdf/2109.07443.pdf>`_).
+spatial bin in the ROI.  The PSmap algorithm is described in detail in
+Bruel P. (2021), A&A, 656, A81. (`doi:10.1051/0004-6361/202141553 <https://arxiv.org/pdf/2109.07443.pdf>`_).
 
 For each spatial bin the method calculates the maximum likelihood test
 statistic given by
 
 .. math::
 
-   \mathrm{TS} = 2 \sum_{k} \ln L(\mu,\theta|n_{k}) - \ln L(0,\theta|n_{k})
+   \mathrm{L} = - \sum_{k}\log P(x_{k} m_{k})
 
-where the summation index *k* runs over both spatial and energy bins,
-μ is the test source normalization parameter, and θ represents the
-parameters of the background model.  The likelihood fitting
-implementation used by :py:meth:`~fermipy.gtanalysis.GTAnalysis.psmap`
-only fits the test source normalization (μ).  Shape parameters of the
-test source and parameters of background components are fixed to their
-current values.
+where P is the Poisson probability and :math:`x_{k}` are independent random Poisson
+variables of mean :math:`m_{k}`, the spatially integrated number of model counts in the spectral bin :math:`k`.
+The p-value is the integral of the probability distribution function (pdf) of :math:`L` above
+:math:`L_{data} = − \sum_{k} log P(n_{k} , m_{k})`, the value obtained with the data integrated count spectra :math:`n_{k}`.
+In other words, the p-value is the :math:`L` complementary cumulative distribution function (CCDF) at Ldata.
+For the spectral bins with Gaussian statistics, the Poisson probability of parameter :math:`m_{k}` can be replaced with
+a Gaussian with mean and variance equal to :math:`m_{k}`. Ignoring the constant term, we have:
+
+.. math::
+   L_{Gaus} = \frac{1}{2} \sum_{k} \frac{(x_{k}-m_{k})^{2}}{m_{k}}
+
+As a consequence, the :math:`L_{Gaus}` pdf can be simply derived from the :math:`\chi^2` distribution with a number of
+degrees of freedom equal to the number of spectral bins with Gaussian statistics. In order to compute the :math:`L` pdf,
+we thus start by sorting the counts in decreasing order, then compute the :math:`L_{Gaus}` pdf corresponding to all the
+bins with a number of counts greater than ``maxpoissoncount=100`` and finally perform the iterative computation over the
+remaining bins. We note that this p-value computation provides a simple extension of the :math:`\chi^2`-test to
+histograms with counts in the Poisson regime.
+The PS data/model deviation estimator is defined as:
+
+.. math::
+   \mathrm{|PS|} = - \log_{10} \mathrm{(p-value)}
+
+and give it the sign of the sum of the residuals in sigma units:
+
+.. math::
+   \mathrm{sign(PS)} = \mathrm{sign}\left(\sum_{k} \frac{(x_{k}-m_{k})}{\mathrm{max}(1,\sqrt{m_{k}})}\right)
+
+which allows us to estimate whether the deviation is positive (data>model) or negative (data<model).
+The name PS was chosen because P can stand for both p-value and PSF and also because the output map name, PS map, sounds close to TS map.
+
+Log-likelihood weights have been introduced in the Fermi-LAT general catalog analysis in order to account for
+systematic uncertainties, especially those coming from the modelling of the diffuse emission (Abdollahi et al. 2020).
+The first thing to do is thus to also introduce weights in the definition of the random variable :math:`L` used to compute the
+p-value:
+
+.. math::
+    L_{data} = − \sum_{k} w_{k} \log P(n_{k} , m_{k})
+
+and for bin of the count spectrum that follow Gaussian statistics:
+
+.. math::
+   L_{Gaus} = \frac{1}{2} \sum_{k} \frac{(x_{k}-m_{k})^{2}}{m_{k}/w_{k}}
+
+In the case of weight, PS sign definition is modified as:
+
+.. math::
+   \mathrm{sign(PS)} = \mathrm{sign}\left(\sum_{k} \frac{(x_{k}-m_{k})}{\mathrm{max}(1,\sqrt{m_{k}/w_{k}})}\right)
+
 
 Examples
 --------
@@ -31,84 +73,66 @@ dictionary format is the same as accepted by
 
 .. code-block:: python
    
-   # Generate TS map for a power-law point source with Index=2.0
-   model = {'Index' : 2.0, 'SpatialModel' : 'PointSource'}
-   maps = gta.tsmap('fit1',model=model)
+   # Write the source model map (after performing the fit)
+   gta.write_model_map(model_name="model01")
 
-   # Generate TS map for a power-law point source with Index=2.0 and
-   # restricting the analysis to E > 3.16 GeV
-   model = {'Index' : 2.0, 'SpatialModel' : 'PointSource'}
-   maps = gta.tsmap('fit1_emin35',model=model,erange=[3.5,None])
+   # Generate the PS map
+   psmap = gta.psmap(model_name='model01', make_plots=True)
 
-   # Generate TS maps for a power-law point source with Index=1.5, 2.0, and 2.5
-   model={'SpatialModel' : 'PointSource'}
-   maps = []
-   for index in [1.5,2.0,2.5]:
-       model['Index'] = index
-       maps += [gta.tsmap('fit1',model=model)]
-
-The ``multithread`` option can be enabled to split the calculation
-across all available cores:
-       
-.. code-block:: python
-                
-   maps = gta.tsmap('fit1',model=model,multithread=True)
-
-Note that care should be taken when using this option in an
-environment where the number of cores per process is restricted such
-as a batch farm.
-
-:py:meth:`~fermipy.gtanalysis.GTAnalysis.tsmap` returns a ``maps``
-dictionary containing `~fermipy.skymap.Map` representations of the TS
-and predicted counts (NPred) of the best-fit test source at each position.
-
-.. code-block:: python
-   
-   model = {'Index' : 2.0, 'SpatialModel' : 'PointSource'}
-   maps = gta.tsmap('fit1',model=model)   
-   print('TS at Pixel (50,50): ',maps['ts'].counts[50,50])
-   
-The contents of the output dictionary are given in the following table.
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.psmap` returns a dictionary containing the following variables:
 
 ============= ====================== =================================================================
 Key           Type                   Description
 ============= ====================== =================================================================
-amplitude     `~fermipy.skymap.Map`  Best-fit test source amplitude
-                                     expressed in terms of the spectral prefactor.
-npred         `~fermipy.skymap.Map`  Best-fit test source amplitude
-                                     expressed in terms of the total model counts (Npred).
-ts            `~fermipy.skymap.Map`  Test source TS (twice the logLike difference between null and
-	                             alternate hypothese).
-sqrt_ts       `~fermipy.skymap.Map`  Square-root of the test source TS.
-file          str                    Path to a FITS file containing the maps (TS, etc.) generated by
-                                     this method. 
-src_dict      dict                   Dictionary defining the properties of the test source.
+psmax         float                  maximum of the ps map
+coordname1    str                    Name of the coordinate of the ps maximum
+coordname2    str                    Name of the coordinaste of the ps maximum
+coordx        float                  Value of the X coordinate of the ps maximum
+coordy        float                  Value of the Y coordinate of the ps maximum
+ipix          int                    Value of the i pixel of the of the ps maximum
+jpix          int                    Value of the j pixel of the of the ps maximum
+wcs2d         WCS Keywords           WCS of the ps map
+psmap         np.array               PSMAP
+psmapsigma    np.array               PSMAP in sigma units
+name          str                    NAmke of the model
+ps_map        `~fermipy.skymap.Map`  WcsNDMap PSMAP
+pssigma_map   `~fermipy.skymap.Map`  WcsNDMap PSMAP in sigma units
+config        dict                   Dictionary of the input configuration
+file          str                    Name of the output file
+file_name     str                    Full path of the output file
 ============= ====================== =================================================================
 
-The ``write_fits`` and ``write_npy`` options can used to write the
-output to a FITS or numpy file.  All output files are prepended with
-the `prefix` argument.
+The ``write_fits`` option can used to write the output to a FITS or numpy file.
+
+.. code-block:: python
+
+   print('PS maximum value=%.2f, at %s=%.2f, %s=%.2f' %(psmap['psmax'],
+                                                     psmap['coordname1'],float(psmap['coordx']),
+                                                     psmap['coordname2'],float(psmap['coordy'])))
+
+   PS maximum value=3.85, at GLON-AIT=86.75, GLAT-AIT=38.62
 
 Diagnostic plots can be generated by setting ``make_plots=True`` or by
-passing the output dictionary to
-`~fermipy.plotting.AnalysisPlotter.make_residmap_plots`:
+passing the output dictionary to `~fermipy.plotting.AnalysisPlotter.make_psmap_plots`:
 
 .. code-block:: python
    
-   maps = gta.tsmap('fit1',model=model, make_plots=True)
-   gta.plotter.make_tsmap_plots(maps, roi=gta.roi)
+   psmap = gta.psmap(model_name='model01', make_plots=True)
+   //equivalent to:
+   gta.plotter.make_tsmap_plots(psmap, roi=gta.roi)
 
 This will generate the following plots:
 
-* ``tsmap_sqrt_ts`` : Map of sqrt(TS) values.  The color map is truncated at
-  5 sigma with isocontours at 2 sigma intervals indicating values
+* ``image_psmap`` : Map of PS values.  The color map is truncated at
+  5 sigma with isocontours at 3,4,5 PS intervals indicating values
   above this threshold.
 
-* ``tsmap_npred`` : Map of best-fit source amplitude in counts.
+* ``image_pssigma`` : Map of PS values converted in sigma. The color map is truncated at
+  5 sigma with isocontours at 3,4,5 PS intervals indicating values
+  above this threshold.
   
-* ``tsmap_ts_hist`` : Histogram of TS values for all points in the
-  map. Overplotted is the reference distribution for chi-squared with
-  one degree of freedom (expectation from Chernoff's theorem).
+* ``image_ps_hist`` : Histogram of PS values for all points in the
+  map. Overplotted is the reference distribution for a gaussian with mean 0 and sigma=1.
    
 .. |image_psmap| image:: model01_psmap_psmap.png
    :width: 100%
@@ -130,7 +154,7 @@ Configuration
 -------------
 
 The default configuration of the method is controlled with the
-:ref:`config_tsmap` section of the configuration file.  The default
+:ref:`config_psmap` section of the configuration file.  The default
 configuration can be overriden by passing the option as a *kwargs*
 argument to the method.
 

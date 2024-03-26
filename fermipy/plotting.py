@@ -1212,7 +1212,10 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         p = ROIPlotter(psmaps['ps_map'], roi=roi, **kwargs)
 
+        ps_levels = [ 2.57, 4.20, 6.24]
+
         p.plot(vmin=-5, vmax=5,
+               levels=ps_levels,
                cb_label='PSMAP', interpolation='bicubic',
                zoom=zoom)
         plt.savefig(utils.format_filename(workdir,
@@ -1221,7 +1224,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                                           extension=fmt))
         plt.close(fig)
 
-        sigma_levels = [3, 5, 7] + list(np.logspace(1, 3, 17))
+        sigma_levels = [3, 4, 5]
 
         fig = plt.figure(figsize=figsize)
         p = ROIPlotter(psmaps['pssigma_map'], roi=roi, **kwargs)
