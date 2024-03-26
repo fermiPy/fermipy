@@ -15,25 +15,22 @@ class PSMapGenerator(object):
     generates PS maps."""
 
     def psmap(self, prefix='', **kwargs):
-        ''' Generate a spatial PS map for a source component with
-        properties defined by the `model` argument.  The PS map will
-        have the same geometry as the ROI.  The output of this method
+        ''' Generate a spatial PS map for evaluate the data/model comparison
+        The PS map will have the same geometry as the ROI.  The output of this method
         is a dictionary containing `~fermipy.skymap.Map` objects with
-        the PS and amplitude of the best-fit test source.  By default
+        the PS amplitude and sigma equivalent. By default
         this method will also save maps to FITS files and render them
         as image files.
-
-        This method uses a simplified likelihood fitting
-        implementation that only fits for the normalization of the
-        test source.  Before running this method it is recommended to
-        first optimize the ROI model (e.g. by running
-        :py:meth:`~fermipy.gtanalysis.GTAnalysis.optimize`
-
+        psmap requirtes a model map to be compute, therefore the user must run
+        gta.write_model_map(model_name="model01") before running
+        psmap = gta.psmap(model_name='model01')
 
         Parameters
         ----------
         prefix : str
            Optional string that will be prepended to all output files.
+        kwargs : Any
+            these will override the psmap configuration file
 
         {options}
 

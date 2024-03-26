@@ -65,11 +65,10 @@ In the case of weight, PS sign definition is modified as:
 
 Examples
 --------
-
-The spatial and spectral properties of the convolution kernel are
-defined with the ``model`` dictionary argument.  The ``model``
-dictionary format is the same as accepted by
-:py:meth:`~fermipy.gtanalysis.GTAnalysis.add_source`.
+The basic idea of PS map is to diagnose the quality of the fit comparing the optimized model with the data.
+First the user mist to compute the source model map using the :py:meth:`~fermipy.gtanalysis.GTAnalysis.write_model_map'
+function specifying the name of the model with the parameter ``model_name``.
+The :py:meth:`~fermipy.gtanalysis.GTAnalysis.psmap` will then be called with the same ``model_name``.
 
 .. code-block:: python
    
@@ -102,7 +101,8 @@ file          str                    Name of the output file
 file_name     str                    Full path of the output file
 ============= ====================== =================================================================
 
-The ``write_fits`` option can used to write the output to a FITS or numpy file.
+The ``write_fits`` option can used to write the output to a FITS or numpy file. The value of the maximum of the PS map
+can be retrieved from the output dictionary:
 
 .. code-block:: python
 
