@@ -58,8 +58,8 @@ class PSMapGenerator(object):
         if os.path.exists(mcube):
             self.logger.info('Using source model: %s' % mcube)
         else:
-            self.logger.info('Generate source model: %s' % mcube)
-            gta.write_model_map(model_name=model_name)
+            raise FileExistsError('You must first generate a source model map using gta.write_model_map(model_name="%s")' % model_name)
+            #gta.write_model_map(model_name=model_name)
 
         schema.add_option('loglevel', logging.INFO)
 
@@ -69,7 +69,6 @@ class PSMapGenerator(object):
         config = schema.create_config(self.config['psmap'], **kwargs)
 
         self.logger.info('Generating PS map')
-        print (config)
 
         o = gtpsmap.run(config)
         map_geom = self._geom.to_image()
@@ -82,7 +81,6 @@ class PSMapGenerator(object):
         o['pssigma_map']=pssigma_map
         o['config']=kwargs
 
-        print(o)
         o['file'] = None
         if config['write_fits']:
             outfile = config.get('outfile', None)
@@ -97,7 +95,7 @@ class PSMapGenerator(object):
             gtpsmap.make_psmap_fits(o,outfile + '.fits')
 
         if config['make_plots']:
-            print('making some plots...')
+
             plotter = plotting.AnalysisPlotter(self.config['plotting'],
                                                fileio=self.config['fileio'],
                                                logging=self.config['logging'])
