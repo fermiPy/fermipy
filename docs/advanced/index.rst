@@ -7,6 +7,10 @@ Advanced Analysis Methods
 This page documents some of the more advanced methods and features
 available in Fermipy:
 
+* :ref:`psmap`: Generate a PS map for a new source
+  centered at each spatial bin in the ROI using the algorithm described in
+  Bruel P. (2021), A&A, 656, A81. (`doi:10.1051/0004-6361/202141553 <https://arxiv.org/pdf/2109.07443.pdf>`_).
+
 * :ref:`tsmap`: Generate a test statistic (TS) map for a new source
   centered at each spatial bin in the ROI.
 
@@ -52,6 +56,7 @@ available in Fermipy:
    curvature
    lightcurve
    extension
+   psmap
    tsmap
    tscube
    residmap

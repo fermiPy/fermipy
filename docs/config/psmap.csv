@@ -1,0 +1,20 @@
+``model_name``,  None,    Name of the model file
+``wmap``,    None,    weights 3d map
+``outfile``, psmap.fits,  Name of the output fits file
+``fixedradius``, -1.0,    Fixed radius
+``psfpar0``, 4.0,     PSF parameter 0
+``psfpar1``, 100.0, PSF parameter 1
+``psfpar2``, 0.9, PSF parameter 2
+``psfpar3``, 0.1, PSF parameter 3
+``maxpoissoncount``, 100.0, Maximum number of counts
+``prob_epsilon``, 1e-07, precision parameter
+``nbinpdf``, 50, Number of bin of the PSF
+``scaleaxis``, 20.0, Scale axis
+``emin``, 1.0, minimum energy/MeV
+``emax``, 1000000000.0, maximum energy/MeV
+``chatter``, 1, output verbosity
+``ipix``, -1, number of pixel i axis
+``jpix``, -1, number of pixel j axis
+``rebin``, 1, Rebin
+``make_plots``, False, Make Plots
+``write_fits``, True, Write fits file in output

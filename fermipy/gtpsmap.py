@@ -505,10 +505,10 @@ if __name__ == "__main__":
     parser.add_argument("-psf2", "--psfpar2", required=False, type=float, default=0.9, help="PSF parameter 2")
     parser.add_argument("-psf3", "--psfpar3", required=False, type=float, default=0.1, help="PSF parameter 3")
 
-    parser.add_argument("-mpc", "--maxpoissoncount", required=False, type=float, default=100, help="Output file")
+    parser.add_argument("-mpc", "--maxpoissoncount", required=False, type=float, default=100, help="Maximum number of counts")
     parser.add_argument("-pe", "--prob_epsilon", required=False, type=float, default=1e-7, help="precision parameter")
     parser.add_argument("-nb", "--nbinpdf", required=False, type=int, default=50, help="Number of bin of the PSF")
-    parser.add_argument("-sa", "--scaleaxis", required=False, type=float, default=20, help="Output file")
+    parser.add_argument("-sa", "--scaleaxis", required=False, type=float, default=20, help="Scale axis")
     parser.add_argument("-emin", "--emin", required=False, type=float, default=1.0, help="minimum energy/MeV")
     parser.add_argument("-emax", "--emax", required=False, type=float, default=1e9, help="maximum energy/MeV")
     parser.add_argument("-c", "--chatter", required=False, type=int, default=1, help="output verbosity")

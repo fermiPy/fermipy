@@ -1200,7 +1200,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fmt = kwargs.get('format', self.config['format'])
         figsize = kwargs.get('figsize', self.config['figsize'])
         workdir = kwargs.pop('workdir', self.config['fileio']['workdir'])
-        suffix = kwargs.pop('suffix', 'tsmap')
+        suffix = kwargs.pop('suffix', 'psmap')
         zoom = kwargs.pop('zoom', None)
 
         prefix=psmaps['name']
