@@ -721,7 +721,10 @@ class SEDPlotter(object):
                 logli = np.interp(fluxCenters, flux, logl)
             llhMatrix[i, :] = logli
 
-        cmap = copy.deepcopy(plt.cm.get_cmap(cmap))
+        #cmap = copy.deepcopy(plt.cm.get_cmap(cmap))
+        cmap = copy.deepcopy(matplotlib.colormaps.get_cmap(cmap))
+
+
         # cmap.set_under('w')
 
         if cmap_trunc_lo is not None or cmap_trunc_hi is not None:
@@ -919,7 +922,7 @@ class ExtensionPlotter(object):
                                             loge_bounds=self._loge_bounds)
             p._data += p1.data
             p.plot_projection(iaxis, color=matplotlib.cm.Reds(cf),
-                              noerror=True, label='%.4f$^\circ$' % w)
+                              noerror=True, label=r'%.4f$^\circ$' % w)
 
 
 class AnalysisPlotter(fermipy.config.Configurable):
@@ -1012,7 +1015,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fig = plt.figure(figsize=figsize)
         p = ROIPlotter(maps['sigma'], roi=roi, **kwargs)
         p.plot(vmin=-5, vmax=5, levels=sigma_levels,
-               cb_label='Significance [$\sigma$]', interpolation='bicubic',
+               cb_label=r'Significance [$\sigma$]', interpolation='bicubic',
                cmap=cmap_resid, zoom=zoom)
         plt.savefig(utils.format_filename(workdir,
                                           'residmap_sigma',
@@ -1128,7 +1131,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fig = plt.figure(figsize=figsize)
         p = ROIPlotter(maps['sqrt_ts'], roi=roi, **kwargs)
         p.plot(vmin=0, vmax=5, levels=sigma_levels,
-               cb_label='Sqrt(TS) [$\sigma$]', interpolation='bicubic',
+               cb_label=r'Sqrt(TS) [$\sigma$]', interpolation='bicubic',
                zoom=zoom)
         plt.savefig(utils.format_filename(workdir,
                                           '%s_sqrt_ts' % suffix,
@@ -1409,7 +1412,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         p.plot(levels=[-200, -100, -50, -20, -9.21, -5.99, -2.3, -1.0],
                cmap=cmap, vmin=vmin, colors=['k'],
-               interpolation='bicubic', cb_label='2$\\times\Delta\ln$L')
+               interpolation='bicubic', cb_label=r'2$\times\Delta\ln$L')
 
         cdelt0 = np.abs(tsmap.geom.wcs.wcs.cdelt[0])
         cdelt1 = np.abs(tsmap.geom.wcs.wcs.cdelt[1])
@@ -1484,7 +1487,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         p.plot(levels=[-200, -100, -50, -20, -9.21, -5.99, -2.3, -1.0],
                cmap=cmap, vmin=vmin, colors=['k'],
-               interpolation='bicubic', cb_label='2$\\times\Delta\ln$L')
+               interpolation='bicubic', cb_label=r'2$\times\Delta\ln$L')
 
         cdelt0 = np.abs(tsmap.geom.wcs.wcs.cdelt[0])
         cdelt1 = np.abs(tsmap.geom.wcs.wcs.cdelt[1])
@@ -1503,16 +1506,16 @@ class AnalysisPlotter(fermipy.config.Configurable):
                      label='New Position')
 
         plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='w',
-                           color='w', colname='pos_r68', label='68% Uncertainty')
+                           color='w', colname='pos_r68', label=r'68% Uncertainty')
         plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='w',
-                           color='w', colname='pos_r99', label='99% Uncertainty',
+                           color='w', colname='pos_r99', label=r'99% Uncertainty',
                            linestyle='--')
 
         handles, labels = plt.gca().get_legend_handles_labels()
         h0 = Line2D([], [], color='w', marker='None',
-                    label='68% Uncertainty', linewidth=1.0)
+                    label=r'68% Uncertainty', linewidth=1.0)
         h1 = Line2D([], [], color='w', marker='None',
-                    label='99% Uncertainty', linewidth=1.0,
+                    label=r'99% Uncertainty', linewidth=1.0,
                     linestyle='--')
         plt.legend(handles=handles + [h0, h1])
 
@@ -1625,7 +1628,8 @@ class AnalysisPlotter(fermipy.config.Configurable):
                 logli = np.interp(widthCenters, width, logl)
             llhMatrix[i, :] = logli
 
-        cmap = copy.deepcopy(plt.cm.get_cmap(cmap))
+        #cmap = copy.deepcopy(plt.cm.get_cmap(cmap))
+        cmap = copy.deepcopy(matplotlib.colormaps.get_cmap(cmap))
         # cmap.set_under('w')
 
         if cmap_trunc_lo is not None or cmap_trunc_hi is not None:
@@ -1672,14 +1676,14 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         if ext['ts_ext'] > 9.0:
             p.draw_circle(ext['ext'], skydir=c, edgecolor='lime', linestyle='-',
-                          linewidth=1.0, label='R$_{68}$', path_effects=[path_effect])
+                          linewidth=1.0, label=r'R$_{68}$', path_effects=[path_effect])
             p.draw_circle(ext['ext'] + ext['ext_err'], skydir=c, edgecolor='lime', linestyle='--',
-                          linewidth=1.0, label='R$_{68}$ $\pm 1 \sigma$', path_effects=[path_effect])
+                          linewidth=1.0, label=r'R$_{68}$ $\pm 1 \sigma$', path_effects=[path_effect])
             p.draw_circle(ext['ext'] - ext['ext_err'], skydir=c, edgecolor='lime', linestyle='--',
                           linewidth=1.0, path_effects=[path_effect])
         else:
             p.draw_circle(ext['ext_ul95'], skydir=c, edgecolor='lime', linestyle='--',
-                          linewidth=1.0, label='R$_{68}$ 95% UL',
+                          linewidth=1.0, label=r'R$_{68}$ 95% UL',
                           path_effects=[path_effect])
         leg = plt.gca().legend(frameon=False, loc='upper left')
 
