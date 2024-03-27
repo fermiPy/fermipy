@@ -6,8 +6,19 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
+1.2.3 (03/25/2024)
+------------------
+* Added PS map implementing code from Philippe Bruel in `~fermipy.gtanalysis.GTAnalysis.psmap`
+* Added PS map visualition in `~fermipy.gtanalysis.plotter.make_psmap_plots`
+* Added PS map Documentation
+
+
+1.2.2 (01/21/2024)
+------------------
+* fix the dependence of scipy due to gammapy
+
 1.2.1 (12/08/2023)
-----------------
+------------------
 * Small bug fixes.
 * pinned astropy<6
 

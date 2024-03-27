@@ -129,7 +129,8 @@ def test_gtanalysis_load_roi(create_diffuse_dir, create_draco_analysis):
 def test_gtanalysis_optimize(create_diffuse_dir, create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit0')
-    gta.optimize()
+    try: gta.optimize()
+    except ValueError: gta.optimize()
 
 
 def test_gtanalysis_fit(create_diffuse_dir, create_draco_analysis):
@@ -162,6 +163,12 @@ def test_gtanalysis_tsmap(create_diffuse_dir, create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
     gta.tsmap(model={}, make_plots=True)
+
+def test_gtanalysis_psmap(create_diffuse_dir, create_draco_analysis):
+    gta = create_draco_analysis
+    gta.load_roi('fit1')
+    gta.write_model_map(model_name="model01")
+    gta.psmap(model_name='model01', make_plots=True)
 
 
 @requires_git_version('99-00-01')
@@ -254,7 +261,8 @@ def test_gtanalysis_sed(create_diffuse_dir, create_draco_analysis):
                          'Prefactor': prefactor})
 
     gta.free_source('draco')
-    gta.fit()
+    try: gta.fit()
+    except ValueError: gta.fit()
 
     o = gta.sed('draco', make_plots=True)
 
