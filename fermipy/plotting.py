@@ -1258,7 +1258,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         ax.legend(loc='upper right', frameon=False)
 
         # labels and such
-        ax.set_xlabel('PS')
+        ax.set_xlabel('PSMAP [SIGMA])
         ax.set_ylabel('Probability')
         plt.savefig(utils.format_filename(workdir,
                                           '%s_ps_hist' % suffix,
