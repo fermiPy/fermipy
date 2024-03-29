@@ -129,8 +129,7 @@ def test_gtanalysis_load_roi(create_diffuse_dir, create_draco_analysis):
 def test_gtanalysis_optimize(create_diffuse_dir, create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit0')
-    try: gta.optimize()
-    except ValueError: gta.optimize()
+    gta.optimize()
 
 
 def test_gtanalysis_fit(create_diffuse_dir, create_draco_analysis):
@@ -261,8 +260,7 @@ def test_gtanalysis_sed(create_diffuse_dir, create_draco_analysis):
                          'Prefactor': prefactor})
 
     gta.free_source('draco')
-    try: gta.fit()
-    except ValueError: gta.fit()
+    gta.fit()
 
     o = gta.sed('draco', make_plots=True)
 
