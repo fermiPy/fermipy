@@ -5,3 +5,4 @@ astropy
 pyyaml
 healpy
 gammapy
+sphinx_rtd_theme
