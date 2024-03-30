@@ -445,7 +445,7 @@ about using this method see the :ref:`psmap` page.
 .. csv-table:: *psmap* Options
    :header:    Option, Default, Description
    :file: config/psmap.csv
-   :delim: ,
+   :delim: tab
    :widths: 10,10,80
 
 .. _config_tsmap:

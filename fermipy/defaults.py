@@ -437,6 +437,9 @@ sed = {
     'free_radius': common['free_radius'],
     'free_pars': (None, 'Set the parameters of the source of interest that will be freed when performing '
                   'the global fit.  By default all parameters will be freed.', list),
+    'ul_ts_threshold': (4, 'Minimum threshold of TS for displaying flux point '
+                        'below this vlaue an Upper Limit is calculated.', float),
+
     'ul_confidence': (0.95, 'Confidence level for flux upper limit.',
                       float),
     'cov_scale': (3.0, 'Scale factor that sets the strength of the prior on nuisance '

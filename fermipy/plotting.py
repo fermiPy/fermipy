@@ -1368,7 +1368,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         figsize = kwargs.get('figsize', self.config['figsize'])
         p = SEDPlotter(sed)
         fig = plt.figure(figsize=figsize)
-        p.plot()
+        p.plot(**kwargs)
 
         outfile = utils.format_filename(self.config['fileio']['workdir'],
                                         'sed', prefix=[prefix, name],

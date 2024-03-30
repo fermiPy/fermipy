@@ -1,20 +1,20 @@
-``model_name``,  None,    Name of the model file
-``wmap``,    None,    weights 3d map
-``outfile``, psmap.fits,  Name of the output fits file
-``fixedradius``, -1.0,    Fixed radius
-``psfpar0``, 4.0,     PSF parameter p0 (PSF-like selection radius = sqrt(p0^2*(E/p1)^(-2*p2) + p3^2))
-``psfpar1``, 100.0, PSF parameter p1 (PSF-like selection radius = sqrt(p0^2*(E/p1)^(-2*p2) + p3^2))
-``psfpar2``, 0.9, PSF parameter p2 (PSF-like selection radius = sqrt(p0^2*(E/p1)^(-2*p2) + p3^2))
-``psfpar3``, 0.1, PSF parameter p3 (PSF-like selection radius = sqrt(p0^2*(E/p1)^(-2*p2) + p3^2))
-``maxpoissoncount``, 100.0, Maximum number of counts
-``prob_epsilon``, 1e-07, This parameter defines the k-interval over which the Poisson probability of each spectral bin is considered when computing the log-likelihood distribution. The default value 1e-7 provides a 1% precision on PS up to PS=20. prob_epsilon=1e-11 provides a 5% precision up to 250 but that makes the script slower.
-``nbinpdf``, 50, Number of bin of the PSF
-``scaleaxis``, 20.0, Scale axis
-``emin``, 1.0, minimum energy/MeV
-``emax``, 1000000000.0, maximum energy/MeV
-``chatter``, 1, output verbosity
-``ipix``, -1, number of pixel i axis
-``jpix``, -1, number of pixel j axis
-``rebin``, 1, nb of bins merged when rebinning the energy axis
-``make_plots``, False, Make Plots
-``write_fits``, True, Write fits file in output
+``chatter``	1	output verbosity
+``emax``	1000000000.0	maximum energy/MeV
+``emin``	1.0	minimum energy/MeV
+``fixedradius``	-1.0	Fixed radius
+``ipix``	-1	number of pixel i axis
+``jpix``	-1	number of pixel j axis
+``make_plots``	False	Generate diagnostic plots.
+``maxpoissoncount``	100	Maximum number of poisson counts
+``model_name``	None	Model name
+``nbinpdf``	50	Number of bin of the PSF
+``outfile``	psmap.fits	outfile name
+``prob_epsilon``	1e-07	precision parameter
+``psfpar0``	4.0	PSF parameter 0
+``psfpar1``	100	PSF parameter 1
+``psfpar2``	0.9	PSF parameter 2
+``psfpar3``	0.1	PSF parameter 3
+``rebin``	1	Rebin
+``scaleaxis``	20	SCale axis
+``wmap``		weight 3d map
+``write_fits``	True	Write the output to a FITS file.
