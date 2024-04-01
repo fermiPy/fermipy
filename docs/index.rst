@@ -55,6 +55,12 @@ Acknowledging Fermipy
 To acknowledge Fermipy in a publication please cite `Wood et al. 2017
 <https://ui.adsabs.harvard.edu/#abs/2017ICRC...35..824W>`_.
 
+Fermipy Team
+------------
+
+List of present (and past) Fermipy maintainers and developers.
+:ref:`team`
+
 
 Documentation Contents
 ----------------------
