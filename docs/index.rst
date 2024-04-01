@@ -58,9 +58,8 @@ To acknowledge Fermipy in a publication please cite `Wood et al. 2017
 Fermipy Team
 ------------
 
-List of present (and past) Fermipy maintainers and developers.
+*fermipy* is currently supported by a Fermi G. I. proposal (Proposal number 161029, P.I. Omodei)
 :ref:`team`
-
 
 Documentation Contents
 ----------------------
@@ -69,6 +68,7 @@ Documentation Contents
    :includehidden:
    :maxdepth: 3
 
+   team
    install
    quickstart
    config

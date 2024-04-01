@@ -1,38 +1,32 @@
 .. _team:
 
-*fermipy* is currently supported by a Fermi G. I. proposal (161029)
 
-Team
-====
-
-*Fermi GI proposal P.I.:* Nicola Omodei - Stanford University
-
-Fermipy Core developer team member:
-###################################
-* Niccolo' Di Lalla - Stanford University
-* Giacomo Principe - INFN Trieste
-* Leopnardo Di Venere - INFN Bari
+Fermipy Core developers team members:
+#####################################
+* Nicola Omodei  - (PI) - Stanford University
+* Niccolo' Di Lalla (Co I) - Stanford University
+* Giacomo Principe (Co I) - INFN Trieste
+* Leopnardo Di Venere (Co I) - INFN Bari
 
 Diffuse model analysis support:
-###############################
-* Troy Porter - Stanford University
+*******************************
+* Troy Porter (Co I) - Stanford University
 
 Light Curve analysis support:
-#############################
-* Janeth Valverde - NASA Goddard
+*****************************
+* Janeth Valverde (Co I) - NASA Goddard
 
 FSSC support:
-#############
-* Alex Reustle - NASA GSFC
+*************
+Alex Reustle - NASA GSFC
 
 Fermi LAT analysis coordinators:
-################################
-* Miguel Sánchez-Conde
-* Michela Negro
-
+********************************
+* Miguel Sánchez-Conde - Universidad Autónoma de Madrid
+* Michela Negro - NASA GSFC
 
 `Contributors and previous core developers <https://github.com/orgs/fermiPy/teams/developers>`_:
-*****************************************
+************************************************************************************************
 
 * Matt Wood
 * Eric Charles
@@ -48,4 +42,4 @@ Fermi LAT analysis coordinators:
 * James Chiang
 * Andy Smith
 
-`<List of all contributors: <https://github.com/fermiPy/fermipy/graphs/contributors>`_
+`List of all contributors <https://github.com/fermiPy/fermipy/graphs/contributors>`_
