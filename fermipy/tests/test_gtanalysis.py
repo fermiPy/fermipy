@@ -163,6 +163,12 @@ def test_gtanalysis_tsmap(create_diffuse_dir, create_draco_analysis):
     gta.load_roi('fit1')
     gta.tsmap(model={}, make_plots=True)
 
+def test_gtanalysis_psmap(create_diffuse_dir, create_draco_analysis):
+    gta = create_draco_analysis
+    gta.load_roi('fit1')
+    gta.write_model_map(model_name="model01")
+    gta.psmap(model_name='model01', make_plots=True)
+
 
 @requires_git_version('99-00-01')
 def test_gtanalysis_tscube(create_diffuse_dir, create_draco_analysis):

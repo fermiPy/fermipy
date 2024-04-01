@@ -1,0 +1,20 @@
+``chatter``	1	output verbosity
+``emax``	1000000000.0	maximum energy/MeV
+``emin``	1.0	minimum energy/MeV
+``fixedradius``	-1.0	Fixed radius
+``ipix``	-1	number of pixel i axis
+``jpix``	-1	number of pixel j axis
+``make_plots``	False	Generate diagnostic plots.
+``maxpoissoncount``	100	Maximum number of poisson counts
+``model_name``	None	Model name
+``nbinpdf``	50	Number of bin of the PSF
+``outfile``	psmap.fits	outfile name
+``prob_epsilon``	1e-07	precision parameter
+``psfpar0``	4.0	PSF parameter 0
+``psfpar1``	100	PSF parameter 1
+``psfpar2``	0.9	PSF parameter 2
+``psfpar3``	0.1	PSF parameter 3
+``rebin``	1	Rebin
+``scaleaxis``	20	SCale axis
+``wmap``		weight 3d map
+``write_fits``	True	Write the output to a FITS file.

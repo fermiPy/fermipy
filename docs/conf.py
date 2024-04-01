@@ -17,22 +17,21 @@ import os
 #import sphinx_bootstrap_theme
 
 if sys.version_info.major == 2:
-    import mock
-    from mock import Mock as MagicMock
+    from mock import Mock
 else:
-    from unittest import mock
-    from unittest.mock import Mock as MagicMock
+    from unittest.mock import Mock
 
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-        return Mock()
+try:
+    import GtApp # has fermitools, no mock needed
+    MOCK_MODULES = []##'pyLikelihood','pyIrfLoader']
+except:
+    # Mock modules needed
+    MOCK_MODULES = ['pyLikelihood','GtApp',
+                    'BinnedAnalysis','SrcModel','AnalysisBase',
+                    'LikelihoodState','pyIrfLoader',
+                    'SummedLikelihood','FluxDensity']
 
-#MOCK_MODULES = ['pyLikelihood','pyIrfLoader',
-#                'BinnedAnalysis','UnbinnedAnalysis','SrcModel','AnalysisBase',
-#                'SummedLikelihood','FluxDensity','LikelihoodState',
-#                'GtApp']
-MOCK_MODULES = ['pyLikelihood','pyIrfLoader']
+
 
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
@@ -97,7 +96,7 @@ master_doc = 'index'
 # General information about the project.
 project = u'Fermipy'
 author = u'Fermipy Developers'
-copyright = u'2016-2022, ' + author
+copyright = u'2016-2024, ' + author
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -113,7 +112,7 @@ release = fermipy.__version__
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
@@ -156,10 +155,10 @@ todo_include_todos = False
 
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 
-if not on_rtd:  # only import and set the theme if we're building docs locally
-    import sphinx_rtd_theme
-    html_theme = 'sphinx_rtd_theme'
-    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+#if not on_rtd:  # only import and set the theme if we're building docs locally
+import sphinx_rtd_theme
+html_theme = 'sphinx_rtd_theme'
+html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.

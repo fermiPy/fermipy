@@ -27,7 +27,7 @@ performing common analysis tasks:
 
 * Extracting a spectral energy distribution (SED) of a source.
 
-* Generating TS and residual maps for a region of interest.
+* Generating PS/TS and residual maps for a region of interest.
 
 * Finding new source candidates.
 

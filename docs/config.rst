@@ -433,6 +433,21 @@ about using this method see the :ref:`findsources` page.
    :delim: tab
    :widths: 10,10,80
 
+.. _config_psmap:
+
+psmap
+-----
+
+The options in *psmap* control the default behavior of the
+`~fermipy.gtanalysis.GTAnalysis.psmap` method.  For more information
+about using this method see the :ref:`psmap` page.
+
+.. csv-table:: *psmap* Options
+   :header:    Option, Default, Description
+   :file: config/psmap.csv
+   :delim: tab
+   :widths: 10,10,80
+
 .. _config_tsmap:
             
 tsmap

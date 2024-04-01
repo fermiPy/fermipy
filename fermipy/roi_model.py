@@ -944,7 +944,7 @@ class Source(Model):
             return
 
         self['offset_roi_edge'] = float(
-            wcs_utils.distance_to_edge(geom, self.skydir))
+            wcs_utils.distance_to_edge(geom, self.skydir)[0])
 
     def set_spatial_model(self, spatial_model, spatial_pars):
 
