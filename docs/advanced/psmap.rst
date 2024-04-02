@@ -3,8 +3,13 @@
 PS Map
 ======
 
-:py:meth:`~fermipy.gtanalysis.GTAnalysis.psmap` quantifies the 3d data/model agreement by computing the PS at each spatial bin in the ROI according to the algorithm described in
-Bruel P. (2021), A&A, 656, A81. (`doi:10.1051/0004-6361/202141553 <https://arxiv.org/pdf/2109.07443.pdf>`_). For each spatial bin, the algorithm first computes the data and model count spectra integrated over an energy dependent region (following the PSF energy dependence) and then computes the p-value that the data count spectrum is compatible with the model count spectrum (using the likelihood statistics). The absolute value of PS is -log10(p-value) and its sign corresponds to the sign of the sum over the spectrum of the residuals in sigma. The algorithm also provides a PS map in sigma units.
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.psmap` quantifies the 3d data/model agreement by computing the PS
+at each spatial bin in the ROI according to the algorithm described in Bruel P. (2021), A&A, 656, A81.
+(`doi:10.1051/0004-6361/202141553 <https://arxiv.org/pdf/2109.07443.pdf>`_). For each spatial bin, the algorithm first computes
+the data and model count spectra integrated over an energy dependent region (following the PSF energy dependence)
+and then computes the p-value that the data count spectrum is compatible with the model count spectrum (using the likelihood statistics).
+The absolute value of PS is -log10(p-value) and its sign corresponds to the sign of the sum over the spectrum of the residuals in sigma.
+The algorithm also provides a PS map in sigma units.
 
 Caveat: the algorithm is currently not able to run in the context of a joint analysis with several event types.
 
@@ -35,9 +40,13 @@ argument to the method.
 
 If the analysis uses likelihood weights, the user can specify the likelihood weight file with the argument ``wmap``.
 
-The user can set the parameters defining the energy dependent region during the count spectrum integration step. The integration radius is defined by the function sqrt(psfpar0^2*pow(E/psfpar1,-2*psfpar2) + psfpar3^2), with E in MeV. The default parameters (psfpar0=4.0,psfpar1=100,psfpar2=0.9,psfpar3=0.1) are optimized to look for point-source like deviations. When looking for extended deviations (~1deg scale), it is recommended to use (psfpar0=5.0,psfpar1=100,psfpar2=0.8,psfpar3=1.0).
+The user can set the parameters defining the energy dependent region used in the count spectrum integration step.
+The integration radius is defined by the function sqrt(psfpar0^2*pow(E/psfpar1,-2*psfpar2) + psfpar3^2), with E in MeV.
+The default parameters (psfpar0=4.0,psfpar1=100,psfpar2=0.9,psfpar3=0.1) are optimized to look for point-source like deviations.
+When looking for extended deviations (~1deg scale), it is recommended to use (psfpar0=5.0,psfpar1=100,psfpar2=0.8,psfpar3=1.0).
 
-The user can set the energy range with the arguments ``emin`` and ``emax``. Depending on the energy binning, it can be optimal to rebin the count spectra thanks to the argument ``rebin``. For an analysis with 10 bins per decade, it is recommended to set ``rebin`` to 3.
+The user can set the energy range with the arguments ``emin`` and ``emax``. Depending on the energy binning, it can be optimal
+to rebin the count spectra thanks to the argument ``rebin``. For an analysis with 10 bins per decade, it is recommended to set ``rebin`` to 3.
 
 .. csv-table:: *psmap* Options
    :header:    Option, Default, Description
