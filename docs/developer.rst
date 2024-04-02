@@ -77,6 +77,7 @@ The following are steps for creating a new release:
 .. code-block:: bash
 
    $ python setup.py sdist upload -r pypi
+   $ twine upload dist/fermipy-XX.YY.ZZ.tar.gz
 
 6. Create a new release on conda-forge by opening a PR on the
    `fermipy-feedstock

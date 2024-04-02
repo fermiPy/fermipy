@@ -332,6 +332,31 @@ tscube = {
     'init_lambda': (0, 'Initial value of damping parameter for newton step size calculation.   A value of zero disables damping.', float),
 }
 
+# PS map
+psmap = {
+    'model_name':(None, 'Model name',str),
+    'wmap':('', 'weight 3d map',str),
+    'outfile':('psmap.fits', 'outfile name',str),
+    'fixedradius':(-1.0, 'Fixed radius',float),
+    'psfpar0':(4.0, "PSF parameter 0", float),
+    'psfpar1':(100,"PSF parameter 1", float),
+    'psfpar2':(0.9,"PSF parameter 2", float),
+    'psfpar3':(0.1,"PSF parameter 3", float),
+    'maxpoissoncount':(100, "Maximum number of poisson counts", float),
+    'prob_epsilon':(1e-7, 'precision parameter', float),
+    'nbinpdf':(50, "Number of bin of the PSF", int),
+    'scaleaxis':(20,"SCale axis", float),
+    'emin':(1.0, "minimum energy/MeV", float),
+    'emax':(1e9, "maximum energy/MeV", float),
+    'chatter':(1, "output verbosity", int),
+    'ipix':(-1, "number of pixel i axis", int),
+    'jpix':(-1, "number of pixel j axis", int),
+    'rebin':(1, "Rebin", int),
+    'make_plots': common['make_plots'],
+    'write_fits': common['write_fits'],
+}
+
+
 # Options for Source Finder
 sourcefind = {
     'model': common['model'],
@@ -412,6 +437,9 @@ sed = {
     'free_radius': common['free_radius'],
     'free_pars': (None, 'Set the parameters of the source of interest that will be freed when performing '
                   'the global fit.  By default all parameters will be freed.', list),
+    'ul_ts_threshold': (4, 'Minimum threshold of TS for displaying flux point '
+                        'below this vlaue an Upper Limit is calculated.', float),
+
     'ul_confidence': (0.95, 'Confidence level for flux upper limit.',
                       float),
     'cov_scale': (3.0, 'Scale factor that sets the strength of the prior on nuisance '

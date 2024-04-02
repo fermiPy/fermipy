@@ -698,7 +698,7 @@ def find_function_root(fn, x0, xb, delta=0.0, bounds=None):
 
     try:
         return brentq(lambda t: fn(t) + delta, x0, xb, xtol=xtol)
-    except RuntimeError:
+    except (RuntimeError, ValueError):
         raise RuntimeError("Brentq failed ", x0, xb, fn(x0)+delta, fn(xb)+delta, xtol, delta)
 
 
