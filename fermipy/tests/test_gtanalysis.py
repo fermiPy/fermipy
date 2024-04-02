@@ -130,6 +130,7 @@ def test_gtanalysis_optimize(create_diffuse_dir, create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit0')
     gta.optimize()
+    gta.write_roi('test', make_plots=False)
 
 
 def test_gtanalysis_fit(create_diffuse_dir, create_draco_analysis):
