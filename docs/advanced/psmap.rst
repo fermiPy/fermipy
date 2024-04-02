@@ -3,70 +3,16 @@
 PS Map
 ======
 
-:py:meth:`~fermipy.gtanalysis.GTAnalysis.psmap` generates a PS map for an additional source component centered at each
-spatial bin in the ROI.  The PSmap algorithm is described in detail in
-Bruel P. (2021), A&A, 656, A81. (`doi:10.1051/0004-6361/202141553 <https://arxiv.org/pdf/2109.07443.pdf>`_).
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.psmap` quantifies the 3d data/model agreement by computing the PS at each spatial bin in the ROI according to the algorithm described in
+Bruel P. (2021), A&A, 656, A81. (`doi:10.1051/0004-6361/202141553 <https://arxiv.org/pdf/2109.07443.pdf>`_). For each spatial bin, the algorithm first computes the data and model count spectra integrated over an energy dependent region (following the PSF energy dependence) and then computes the p-value that the data count spectrum is compatible with the model count spectrum (using the likelihood statistics). The absolute value of PS is -log10(p-value) and its sign corresponds to the sign of the sum over the spectrum of the residuals in sigma. The algorithm also provides a PS map in sigma units.
 
-For each spatial bin the method calculates the maximum likelihood test
-statistic given by
-
-.. math::
-
-   \mathrm{L} = - \sum_{k}\log P(x_{k} m_{k})
-
-where P is the Poisson probability and :math:`x_{k}` are independent random Poisson
-variables of mean :math:`m_{k}`, the spatially integrated number of model counts in the spectral bin :math:`k`.
-The p-value is the integral of the probability distribution function (pdf) of :math:`L` above
-:math:`L_{data} = − \sum_{k} log P(n_{k} , m_{k})`, the value obtained with the data integrated count spectra :math:`n_{k}`.
-In other words, the p-value is the :math:`L` complementary cumulative distribution function (CCDF) at Ldata.
-For the spectral bins with Gaussian statistics, the Poisson probability of parameter :math:`m_{k}` can be replaced with
-a Gaussian with mean and variance equal to :math:`m_{k}`. Ignoring the constant term, we have:
-
-.. math::
-   L_{Gaus} = \frac{1}{2} \sum_{k} \frac{(x_{k}-m_{k})^{2}}{m_{k}}
-
-As a consequence, the :math:`L_{Gaus}` pdf can be simply derived from the :math:`\chi^2` distribution with a number of
-degrees of freedom equal to the number of spectral bins with Gaussian statistics. In order to compute the :math:`L` pdf,
-we thus start by sorting the counts in decreasing order, then compute the :math:`L_{Gaus}` pdf corresponding to all the
-bins with a number of counts greater than ``maxpoissoncount=100`` and finally perform the iterative computation over the
-remaining bins. We note that this p-value computation provides a simple extension of the :math:`\chi^2`-test to
-histograms with counts in the Poisson regime.
-The PS data/model deviation estimator is defined as:
-
-.. math::
-   \mathrm{|PS|} = - \log_{10} \mathrm{(p-value)}
-
-and give it the sign of the sum of the residuals in sigma units:
-
-.. math::
-   \mathrm{sign(PS)} = \mathrm{sign}\left(\sum_{k} \frac{(x_{k}-m_{k})}{\mathrm{max}(1,\sqrt{m_{k}})}\right)
-
-which allows us to estimate whether the deviation is positive (data>model) or negative (data<model).
-The name PS was chosen because P can stand for both p-value and PSF and also because the output map name, PS map, sounds close to TS map.
-
-Log-likelihood weights have been introduced in the Fermi-LAT general catalog analysis in order to account for
-systematic uncertainties, especially those coming from the modelling of the diffuse emission (Abdollahi et al. 2020).
-The first thing to do is thus to also introduce weights in the definition of the random variable :math:`L` used to compute the
-p-value:
-
-.. math::
-    L_{data} = − \sum_{k} w_{k} \log P(n_{k} , m_{k})
-
-and for bin of the count spectrum that follow Gaussian statistics:
-
-.. math::
-   L_{Gaus} = \frac{1}{2} \sum_{k} \frac{(x_{k}-m_{k})^{2}}{m_{k}/w_{k}}
-
-In the case of weight, PS sign definition is modified as:
-
-.. math::
-   \mathrm{sign(PS)} = \mathrm{sign}\left(\sum_{k} \frac{(x_{k}-m_{k})}{\mathrm{max}(1,\sqrt{m_{k}/w_{k}})}\right)
+Caveat: the algorithm is currently not able to run in the context of a joint analysis with several event types.
 
 
 Examples
 --------
-The basic idea of PS map is to diagnose the quality of the fit comparing the optimized model with the data.
-First the user mist to compute the source model map using the :py:meth:`~fermipy.gtanalysis.GTAnalysis.write_model_map'
+
+In order to run psmap, the user must first compute the source model map using the :py:meth:`~fermipy.gtanalysis.GTAnalysis.write_model_map'
 function specifying the name of the model with the parameter ``model_name``.
 The :py:meth:`~fermipy.gtanalysis.GTAnalysis.psmap` will then be called with the same ``model_name``.
 
@@ -77,6 +23,31 @@ The :py:meth:`~fermipy.gtanalysis.GTAnalysis.psmap` will then be called with the
 
    # Generate the PS map
    psmap = gta.psmap(model_name='model01', make_plots=True)
+
+
+Configuration
+-------------
+
+The default configuration of the method is controlled with the
+:ref:`config_psmap` section of the configuration file.  The default
+configuration can be overriden by passing the option as a *kwargs*
+argument to the method.
+
+If the analysis uses likelihood weights, the user can specify the likelihood weight file with the argument ``wmap``.
+
+The user can set the parameters defining the energy dependent region during the count spectrum integration step. The integration radius is defined by the function sqrt(psfpar0^2*pow(E/psfpar1,-2*psfpar2) + psfpar3^2), with E in MeV. The default parameters (psfpar0=4.0,psfpar1=100,psfpar2=0.9,psfpar3=0.1) are optimized to look for point-source like deviations. When looking for extended deviations (~1deg scale), it is recommended to use (psfpar0=5.0,psfpar1=100,psfpar2=0.8,psfpar3=1.0).
+
+The user can set the energy range with the arguments ``emin`` and ``emax``. Depending on the energy binning, it can be optimal to rebin the count spectra thanks to the argument ``rebin``. For an analysis with 10 bins per decade, it is recommended to set ``rebin`` to 3.
+
+.. csv-table:: *psmap* Options
+   :header:    Option, Default, Description
+   :file: ../config/psmap.csv
+   :delim: ,
+   :widths: 10,10,80
+
+
+Output
+------
 
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.psmap` returns a dictionary containing the following variables:
 
@@ -150,20 +121,6 @@ This will generate the following plots:
    |image_psmap|, |image_pssigma|, |image_ps_hist|
            
 
-Configuration
--------------
-
-The default configuration of the method is controlled with the
-:ref:`config_psmap` section of the configuration file.  The default
-configuration can be overriden by passing the option as a *kwargs*
-argument to the method.
-
-.. csv-table:: *psmap* Options
-   :header:    Option, Default, Description
-   :file: ../config/psmap.csv
-   :delim: ,
-   :widths: 10,10,80
-
 Reference/API
 -------------
 
@@ -171,3 +128,65 @@ Reference/API
    :noindex:
 
 
+
+
+
+
+
+
+
+original text by Nicola:
+For each spatial bin the method calculates the maximum likelihood test
+statistic given by
+
+.. math::
+
+   \mathrm{L} = - \sum_{k}\log P(x_{k} m_{k})
+
+where P is the Poisson probability and :math:`x_{k}` are independent random Poisson
+variables of mean :math:`m_{k}`, the spatially integrated number of model counts in the spectral bin :math:`k`.
+The p-value is the integral of the probability distribution function (pdf) of :math:`L` above
+:math:`L_{data} = − \sum_{k} log P(n_{k} , m_{k})`, the value obtained with the data integrated count spectra :math:`n_{k}`.
+In other words, the p-value is the :math:`L` complementary cumulative distribution function (CCDF) at Ldata.
+For the spectral bins with Gaussian statistics, the Poisson probability of parameter :math:`m_{k}` can be replaced with
+a Gaussian with mean and variance equal to :math:`m_{k}`. Ignoring the constant term, we have:
+
+.. math::
+   L_{Gaus} = \frac{1}{2} \sum_{k} \frac{(x_{k}-m_{k})^{2}}{m_{k}}
+
+As a consequence, the :math:`L_{Gaus}` pdf can be simply derived from the :math:`\chi^2` distribution with a number of
+degrees of freedom equal to the number of spectral bins with Gaussian statistics. In order to compute the :math:`L` pdf,
+we thus start by sorting the counts in decreasing order, then compute the :math:`L_{Gaus}` pdf corresponding to all the
+bins with a number of counts greater than ``maxpoissoncount=100`` and finally perform the iterative computation over the
+remaining bins. We note that this p-value computation provides a simple extension of the :math:`\chi^2`-test to
+histograms with counts in the Poisson regime.
+The PS data/model deviation estimator is defined as:
+
+.. math::
+   \mathrm{|PS|} = - \log_{10} \mathrm{(p-value)}
+
+and give it the sign of the sum of the residuals in sigma units:
+
+.. math::
+   \mathrm{sign(PS)} = \mathrm{sign}\left(\sum_{k} \frac{(x_{k}-m_{k})}{\mathrm{max}(1,\sqrt{m_{k}})}\right)
+
+which allows us to estimate whether the deviation is positive (data>model) or negative (data<model).
+The name PS was chosen because P can stand for both p-value and PSF and also because the output map name, PS map, sounds close to TS map.
+
+Log-likelihood weights have been introduced in the Fermi-LAT general catalog analysis in order to account for
+systematic uncertainties, especially those coming from the modelling of the diffuse emission (Abdollahi et al. 2020).
+The first thing to do is thus to also introduce weights in the definition of the random variable :math:`L` used to compute the
+p-value:
+
+.. math::
+    L_{data} = − \sum_{k} w_{k} \log P(n_{k} , m_{k})
+
+and for bin of the count spectrum that follow Gaussian statistics:
+
+.. math::
+   L_{Gaus} = \frac{1}{2} \sum_{k} \frac{(x_{k}-m_{k})^{2}}{m_{k}/w_{k}}
+
+In the case of weight, PS sign definition is modified as:
+
+.. math::
+   \mathrm{sign(PS)} = \mathrm{sign}\left(\sum_{k} \frac{(x_{k}-m_{k})}{\mathrm{max}(1,\sqrt{m_{k}/w_{k}})}\right)
