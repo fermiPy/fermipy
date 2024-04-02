@@ -51,7 +51,7 @@ to rebin the count spectra thanks to the argument ``rebin``. For an analysis wit
 .. csv-table:: *psmap* Options
    :header:    Option, Default, Description
    :file: ../config/psmap.csv
-   :delim: ,
+   :delim: tab
    :widths: 10,10,80
 
 
