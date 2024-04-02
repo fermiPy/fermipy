@@ -42,8 +42,8 @@ If the analysis uses likelihood weights, the user can specify the likelihood wei
 
 The user can set the parameters defining the energy dependent region used in the count spectrum integration step.
 The integration radius is defined by the function sqrt(psfpar0^2*pow(E/psfpar1,-2*psfpar2) + psfpar3^2), with E in MeV.
-The default parameters (psfpar0=4.0,psfpar1=100,psfpar2=0.9,psfpar3=0.1) are optimized to look for point-source like deviations.
-When looking for extended deviations (~1deg scale), it is recommended to use (psfpar0=5.0,psfpar1=100,psfpar2=0.8,psfpar3=1.0).
+The default parameters (``psfpar0``=4.0,``psfpar1``=100,``psfpar2``=0.9,``psfpar3``=0.1) are optimized to look for point-source like deviations.
+When looking for extended deviations (~1deg scale), it is recommended to use (``psfpar0``=5.0,``psfpar1``=100,``psfpar2``=0.8,``psfpar3``=1.0).
 
 The user can set the energy range with the arguments ``emin`` and ``emax``. Depending on the energy binning, it can be optimal
 to rebin the count spectra thanks to the argument ``rebin``. For an analysis with 10 bins per decade, it is recommended to set ``rebin`` to 3.
@@ -135,67 +135,3 @@ Reference/API
 
 .. automethod:: fermipy.gtanalysis.GTAnalysis.psmap
    :noindex:
-
-
-
-
-
-
-
-
-
-original text by Nicola:
-For each spatial bin the method calculates the maximum likelihood test
-statistic given by
-
-.. math::
-
-   \mathrm{L} = - \sum_{k}\log P(x_{k} m_{k})
-
-where P is the Poisson probability and :math:`x_{k}` are independent random Poisson
-variables of mean :math:`m_{k}`, the spatially integrated number of model counts in the spectral bin :math:`k`.
-The p-value is the integral of the probability distribution function (pdf) of :math:`L` above
-:math:`L_{data} = − \sum_{k} log P(n_{k} , m_{k})`, the value obtained with the data integrated count spectra :math:`n_{k}`.
-In other words, the p-value is the :math:`L` complementary cumulative distribution function (CCDF) at Ldata.
-For the spectral bins with Gaussian statistics, the Poisson probability of parameter :math:`m_{k}` can be replaced with
-a Gaussian with mean and variance equal to :math:`m_{k}`. Ignoring the constant term, we have:
-
-.. math::
-   L_{Gaus} = \frac{1}{2} \sum_{k} \frac{(x_{k}-m_{k})^{2}}{m_{k}}
-
-As a consequence, the :math:`L_{Gaus}` pdf can be simply derived from the :math:`\chi^2` distribution with a number of
-degrees of freedom equal to the number of spectral bins with Gaussian statistics. In order to compute the :math:`L` pdf,
-we thus start by sorting the counts in decreasing order, then compute the :math:`L_{Gaus}` pdf corresponding to all the
-bins with a number of counts greater than ``maxpoissoncount=100`` and finally perform the iterative computation over the
-remaining bins. We note that this p-value computation provides a simple extension of the :math:`\chi^2`-test to
-histograms with counts in the Poisson regime.
-The PS data/model deviation estimator is defined as:
-
-.. math::
-   \mathrm{|PS|} = - \log_{10} \mathrm{(p-value)}
-
-and give it the sign of the sum of the residuals in sigma units:
-
-.. math::
-   \mathrm{sign(PS)} = \mathrm{sign}\left(\sum_{k} \frac{(x_{k}-m_{k})}{\mathrm{max}(1,\sqrt{m_{k}})}\right)
-
-which allows us to estimate whether the deviation is positive (data>model) or negative (data<model).
-The name PS was chosen because P can stand for both p-value and PSF and also because the output map name, PS map, sounds close to TS map.
-
-Log-likelihood weights have been introduced in the Fermi-LAT general catalog analysis in order to account for
-systematic uncertainties, especially those coming from the modelling of the diffuse emission (Abdollahi et al. 2020).
-The first thing to do is thus to also introduce weights in the definition of the random variable :math:`L` used to compute the
-p-value:
-
-.. math::
-    L_{data} = − \sum_{k} w_{k} \log P(n_{k} , m_{k})
-
-and for bin of the count spectrum that follow Gaussian statistics:
-
-.. math::
-   L_{Gaus} = \frac{1}{2} \sum_{k} \frac{(x_{k}-m_{k})^{2}}{m_{k}/w_{k}}
-
-In the case of weight, PS sign definition is modified as:
-
-.. math::
-   \mathrm{sign(PS)} = \mathrm{sign}\left(\sum_{k} \frac{(x_{k}-m_{k})}{\mathrm{max}(1,\sqrt{m_{k}/w_{k}})}\right)
