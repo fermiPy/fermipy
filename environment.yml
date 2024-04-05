@@ -11,5 +11,5 @@ dependencies:
   - matplotlib>=3.3
   - healpy
   - astropy-healpix
-  - gammapy>=0.18
+  - gammapy=1.2
   - fermitools>=2.2.0
