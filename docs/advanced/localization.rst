@@ -66,7 +66,7 @@ overriden by supplying one or more *kwargs*:
    
    # Localize the source and update its properties in the model
    # with the localized position
-   >>> o = gta.extension('3FGL J1722.7+6104', update=True)
+   >>> o = gta.localize('3FGL J1722.7+6104', update=True)
 
 By default all background parameters will be fixed when the positional
 fit is performed.  One can choose to free background parameters with
