@@ -1178,8 +1178,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
     def make_psmap_plots(self, psmaps, roi=None, **kwargs):
         """Make plots from the output of
         `~fermipy.gtanalysis.GTAnalysis.psmap`
-        This method generates a 2D sky map for the best-fit test source in
-        PS and sqrt(PS).
+        This method generates 2D PS maps (one in PS units, one in sigma units).  
 
         Parameters
         ----------
@@ -1205,8 +1204,11 @@ class AnalysisPlotter(fermipy.config.Configurable):
         workdir = kwargs.pop('workdir', self.config['fileio']['workdir'])
         suffix = kwargs.pop('suffix', 'psmap')
         zoom = kwargs.pop('zoom', None)
+        cmap_resid = kwargs.pop('cmap_resid', self.config['cmap_resid'])
 
         prefix=psmaps['name']
+
+        load_bluered_cmap()
 
         fig = plt.figure(figsize=figsize)
 
@@ -1214,13 +1216,12 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         ps_levels = [ 2.57, 4.20, 6.24]
 
-        p.plot(vmin=-5, vmax=5,
+        p.plot(vmin=-6.24, vmax=6.24,
                levels=ps_levels,
                cb_label='PSMAP', interpolation='bicubic',
-               zoom=zoom)
+               cmap=cmap_resid, zoom=zoom)
         plt.savefig(utils.format_filename(workdir,
-                                          '%s_psmap' % suffix,
-                                          prefix=[prefix],
+                                          '%s_psmap' % prefix,
                                           extension=fmt))
         plt.close(fig)
 
@@ -1231,10 +1232,9 @@ class AnalysisPlotter(fermipy.config.Configurable):
         p.plot(vmin=-5, vmax=5,
                levels=sigma_levels,
                cb_label='PSMAP [SIGMA]', interpolation='bicubic',
-               zoom=zoom)
+               cmap=cmap_resid, zoom=zoom)
         plt.savefig(utils.format_filename(workdir,
-                                          '%s_pssigma' % suffix,
-                                          prefix=[prefix],
+                                          '%s_pssigma' % prefix,
                                           extension=fmt))
         plt.close(fig)
 
@@ -1261,8 +1261,53 @@ class AnalysisPlotter(fermipy.config.Configurable):
         ax.set_xlabel('PSMAP [SIGMA]')
         ax.set_ylabel('Probability')
         plt.savefig(utils.format_filename(workdir,
-                                          '%s_ps_hist' % suffix,
-                                          prefix=[prefix],
+                                          '%s_ps_hist' % prefix,
+                                          extension=fmt))
+        plt.close(fig)
+
+        # make and draw count spectrum
+        fig = plt.figure(figsize=figsize)
+
+        logener = psmaps['hlogebin']
+        gs = gridspec.GridSpec(2, 1, height_ratios=[1.4, 1])
+        ax0 = fig.add_subplot(gs[0, 0])
+        ax1 = fig.add_subplot(gs[1, 0], sharex=ax0)
+
+        mytitle = 'PS=%.2f sigma at (%s,%s) = (%.2f,%.2f)' %(psmaps['psmaxsigma'],psmaps['coordname1'],psmaps['coordname2'],float(psmaps['coordx']),float(psmaps['coordy']))
+        ax0.set_title(mytitle)
+
+        x = 0.5 * (logener[1:] + logener[:-1])
+        xerr = 0.5 * (logener[1:] - logener[:-1])
+
+        y = psmaps['datcounts']
+        ym = psmaps['modcounts']
+
+        ax0.errorbar(x, y, yerr=np.sqrt(y), xerr=xerr, color='k',
+                     linestyle='None', marker='s',
+                     label='Data')
+
+        ax0.errorbar(x, ym, color='red', linestyle='-', marker='None',
+                     label='Total')
+
+        ax0.set_yscale('log')
+        ax0.set_ylim(0.1, None)
+        ax0.set_xlim(logener[0], logener[-1])
+        ax0.set_ylabel('Counts')
+        ax0.legend(frameon=False, loc='best', prop={'size': 8}, ncol=2)
+
+        ax1.errorbar(x, (y - ym) / ym, xerr=xerr, yerr=np.sqrt(y) / ym,
+                     color='k', linestyle='None', marker='s',
+                     label='Data')
+
+        ax1.set_xlabel('Energy [log$_{10}$(E/MeV)]')
+        ax1.set_ylabel('Fractional Residual')
+
+        ax1.set_ylim(-1, 5)
+        ax1.set_xlim(logener[0], logener[-1])
+        ax1.axhline(0.0, color='k')
+
+        plt.savefig(utils.format_filename(workdir,
+                                          '%s_countspectrum' % prefix,
                                           extension=fmt))
         plt.close(fig)
 

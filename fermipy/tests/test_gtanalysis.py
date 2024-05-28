@@ -167,7 +167,10 @@ def test_gtanalysis_psmap(create_diffuse_dir, create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
     gta.write_model_map(model_name="model01")
-    gta.psmap(model_name='model01', make_plots=True)
+    mycmap = os.path.join(gta.workdir, 'ccube_00.fits')
+    mymmap = os.path.join(gta.workdir, 'mcube_model01_00.fits')
+    print('cmap and mmap %s %s' %(mycmap,mymmap))
+    gta.psmap(cmap=mycmap,mmap=mymmap,make_plots=True,emin=100,emax=100000,nbinloge=15,outfile='testpsmap')
 
 
 @requires_git_version('99-00-01')
