@@ -37,6 +37,8 @@
 # The other (optional) parameters of the python script are:
 # --psfpar0 <PSF-like par0; 4.0 deg> --psfpar1 <PSF-like par1; 100 MeV>  --psfpar2 <PSF-like par2; 0.9>  --psfpar3 <PSF-like par3; 0.1deg>
 #   these parameters define the PSF-like integration radius = sqrt(p0^2*pow(E/p1,-2*p2) + p3^2)
+#   The default values (4.0,100,0.9,0.1) are optimal for a point-like deviation. For potential extended deviations,
+#   it is advised to set psfpar3 to about the size of the extension (e.g. 0.5 or 1 deg).
 # --psfpar0lst: in the case of multiple components, the user can set psfpar0 independently for each component, e.g. --psfpar0lst 2.0:3.0:4.0:5.0
 # --chatter <output verbosity; 1>
 # --prob_epsilon <precision parameter; 1e-7>
@@ -58,8 +60,6 @@ from scipy.stats import poisson
 from scipy.special import gammainc
 from scipy.special import gammaincc
 from scipy.special import erfcinv
-
-#from gammapy.maps import WcsNDMap, WcsGeom
 
 def getDeviationProbability(datcts, modcts, weights, maxpoissoncount, prob_epsilon, nbinpdf, scaleaxis):
     # datcts = array of data counts

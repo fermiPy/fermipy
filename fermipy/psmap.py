@@ -58,7 +58,6 @@ class PSMapGenerator(object):
         map_geom = self._geom.to_image()
 
         mydatcounts = o['datcounts']
-        print(mydatcounts)
 
         ps_map      = WcsNDMap(map_geom, o['psmap'])
         pssigma_map = WcsNDMap(map_geom, o['psmapsigma'])
@@ -70,7 +69,6 @@ class PSMapGenerator(object):
 
         outfile = config.get('outfile', None)
         if outfile != '':
-            print('oname %s' %(os.path.splitext(outfile)[0]))
             o['name']  = os.path.splitext(outfile)[0]
 
         o['file'] = None
