@@ -116,27 +116,33 @@ This will generate the following plots:
   5 sigma with isocontours at 2.57,4.20,6.24 (corresponding to 3,4,5 sigma) indicating values
   above this threshold.
 
-* ``image_pssigma`` : Map of PS values converted in sigma. The color map is truncated at
+* ``image_psmap_sigma`` : Map of PS values converted in sigma. The color map is truncated at
   5 sigma with isocontours at 3,4,5 indicating values
   above this threshold.
   
-* ``image_ps_hist`` : Histogram of PS values (in sigma) for all points in the
-  map. Overplotted is the reference distribution for a gaussian with mean 0 and sigma=1.
+* ``image_ps_hist`` : Left: Histogram of PS (in sigma) for all points in the
+  map. Superimposed is the reference distribution for a gaussian with mean 0 and sigma=1.
+  Right: Histogram of the absolute value of PS (in sigma) for all points in the
+  map. Superimposed is the reference distribution for the absolute value of a gaussian with mean 0 and sigma=1.
+  It must be noted that, because the PS computation parameters are set to provide a good precision for low probability
+  deviations and because of the sign assignment method, the central part of the PS distribution likely has a notch
+  around zero. This notch is much less visible in the distribution of the absolute value of PS. What is
+  really interesting in terms of significant deviation is the distribution for PS above 2 sigma.
    
-.. |image_psmap| image:: model01_psmap_psmap.png
+.. |image_psmap| image:: testpsmap_psmap.png
    :width: 100%
    
-.. |image_pssigma| image:: model01_psmap_pssigma.png
+.. |image_psmap_sigma| image:: testpsmap_psmap_sigma.png
    :width: 100%
 
-.. |image_ps_hist| image:: model01_psmap_ps_hist.png
+.. |image_ps_hist_sigma| image:: testpsmap_ps_hist_sigma.png
    :width: 100%
 
 .. csv-table::
-   :header: PS Map, Sigma (PS) Map, PS Histogram
+   :header: PS Map, PS [Sigma] Map, PS [Sigma] Histogram
    :widths: 33, 33, 33
 
-   |image_psmap|, |image_pssigma|, |image_ps_hist|
+   |image_psmap|, |image_pssigma|, |image_ps_hist_sigma|
            
 
 Reference/API
