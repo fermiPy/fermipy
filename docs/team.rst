@@ -7,7 +7,7 @@ This page describes the *fermipy* project organisation and the main roles and re
 This structure was set in place in July 2024, but we expect this structure to evolve over the coming years,
 adapting to the size and composition of the *fermipy* development team, and the requirements and needs of scientists and
 projects using *fermipy*.
-If you would like to become part of the *fermipy* team, please get in contact. Help is always welcome!
+If you would like to become part of the *fermipy* team, please get in contact. **Help is always welcome!**
 
 
 Overview
@@ -95,9 +95,9 @@ Responsibilities include:
 =========================
 
 - Organize and drive all technical aspects of the project on a day-to-day basis. Keep the overview of ongoing activities, schedules and action items and follow up to make sure all important things get done.
-- evaluating new pull requests for quality, API consistency and *fermipy* coding standards,
-- supporting developers on tasks associated to the sub-package(s),
-- taking care of the global design of the sub-package(s) in the context of the global *fermipy* architecture, participating to the User Support for questions related to the sub-package(s).
+- Evaluating new pull requests for quality, API consistency and *fermipy* coding standards,
+- Supporting developers on tasks associated to the sub-package(s),
+- Taking care of the global design of the sub-package(s) in the context of the global *fermipy* architecture, participating to the User Support for questions related to the sub-package(s).
 - Solve, comment, or re-assign issues and pull requests.
 
 **Current fermipy lead developers:**
@@ -122,11 +122,12 @@ Responsibilities include:
 
 **List of sub-package (with assigned maintainers):**
 
-* catalogs (data, format) -
-* diffuse (GalProp, MapCube) - Troy Porter - Stanford University
+* Catalogs (data, format) -
+* Diffuse (GalProp, MapCube) - Troy Porter - Stanford University
 * SED -
-* lighcurve - Janeth Valverde - NASA GSFC
-* jobs (managing pipelines) - Nicola Omodei - Stanford University
+* Localization - Niccolo' Di Lalla - Stanford University
+* Lighcurve - Janeth Valverde - NASA GSFC
+* Jobs (managing pipelines) - Nicola Omodei, Niccolo' Di Lalla - Stanford University
 
 Contributors and previous core developers
 ***********************************************
