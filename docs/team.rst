@@ -62,7 +62,7 @@ Responsibilities include:
 * Nicola Omodei  (PI, Core Developer) - Stanford University
 * Giacomo Principe (Core Developer) - INFN Trieste
 * Miguel Sánchez-Conde (Fermi-LAT Analysis Coordinator) - Universidad Autónoma de Madrid
-* Alex Reustle (FSSC) - NASA Goddard Space Flight Center
+* Alex Reustle (FSSC) - NASA GSFC
 * Marcos Santander (FUG) - University of Alabama
 
 
@@ -119,11 +119,11 @@ Responsibilities include:
 - participating to the User Support for questions related to the sub-package(s).
 
 **List of sub-package (with assigned maintainers):**
-* catalogs (data, format)
-* diffuse (GalProp, MapCube) - Troy Porter (Co I) - Stanford University
-* SED
-* lighcurve - Janeth Valverde (Co I) - NASA Goddard
-* jobs (managing pipelines)
+* catalogs (data, format) -
+* diffuse (GalProp, MapCube) - Troy Porter - Stanford University
+* SED -
+* lighcurve - Janeth Valverde - NASA GSFC
+* jobs (managing pipelines) - Nicola Omodei - Stanford University
 
 Contributors and previous core developers
 ***********************************************
