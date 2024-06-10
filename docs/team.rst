@@ -81,7 +81,7 @@ Responsibilities include:
 - Organise *fermipy* user calls and training events via *fermipy*-meetings
 - Review the documents are properly reviewed and eventually decisions made by the CC.
 
-**Current *fermipy* PI:**
+**Current fermipy PI:**
 * Nicola Omodei  (PI, Core Developer) - Stanford University
 
 Lead developers
@@ -99,7 +99,7 @@ Responsibilities include:
 - taking care of the global design of the sub-package(s) in the context of the global *fermipy* architecture, participating to the User Support for questions related to the sub-package(s).
 - Solve, comment, or re-assign issues and pull requests.
 
-**Current *fermipy* lead developers:**
+**Current fermipy lead developers:**
 * Niccolo' Di Lalla (Core Developer) - Stanford University
 * Leonardo Di Venere (Core Developer) - INFN Bari
 * Nicola Omodei  (PI, Core Developer) - Stanford University
