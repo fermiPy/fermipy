@@ -82,6 +82,7 @@ Responsibilities include:
 - Review the documents are properly reviewed and eventually decisions made by the CC.
 
 **Current fermipy PI:**
+
 * Nicola Omodei  (PI, Core Developer) - Stanford University
 
 Lead developers
@@ -100,6 +101,7 @@ Responsibilities include:
 - Solve, comment, or re-assign issues and pull requests.
 
 **Current fermipy lead developers:**
+
 * Niccolo' Di Lalla (Core Developer) - Stanford University
 * Leonardo Di Venere (Core Developer) - INFN Bari
 * Nicola Omodei  (PI, Core Developer) - Stanford University
@@ -119,6 +121,7 @@ Responsibilities include:
 - participating to the User Support for questions related to the sub-package(s).
 
 **List of sub-package (with assigned maintainers):**
+
 * catalogs (data, format) -
 * diffuse (GalProp, MapCube) - Troy Porter - Stanford University
 * SED -
@@ -159,5 +162,6 @@ We acknowledge them for their daily support.
 Grants
 ********
 Grants that are supporting the development of *fermipy*:
+
 * Fermi GI cycle 16 (Large project): proposal n. 161029. P.I.: Nicola Omodei (Stanford University)
 
