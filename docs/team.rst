@@ -58,7 +58,7 @@ Responsibilities include:
 
 * Niccolo' Di Lalla (Core Developer) - Stanford University
 * Leonardo Di Venere (Core Developer) - INFN Bari
-* Michela Negro (Fermi-LAT Analysis Deputy Coordinator) - NASA GSFC
+* Michela Negro (Fermi-LAT Analysis Deputy Coordinator) - Louisiana State University
 * Nicola Omodei  (PI, Core Developer) - Stanford University
 * Giacomo Principe (Core Developer) - INFN Trieste
 * Miguel Sánchez-Conde (Fermi-LAT Analysis Coordinator) - Universidad Autónoma de Madrid
