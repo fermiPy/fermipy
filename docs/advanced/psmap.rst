@@ -142,7 +142,7 @@ This will generate the following plots:
    :header: PS Map, PS [Sigma] Map, PS [Sigma] Histogram
    :widths: 33, 33, 33
 
-   |image_psmap|, |image_pssigma|, |image_ps_hist_sigma|
+   |image_psmap|, |image_psmap_sigma|, |image_ps_hist_sigma|
            
 
 Reference/API
