@@ -148,8 +148,6 @@ Nonetheless we want to acknowledge their original involvement and vision in crea
 * James Chiang
 * Andy Smith
 
-`developers team <https://github.com/orgs/fermiPy/teams/developers>`_
-
 `List of all contributors <https://github.com/fermiPy/fermipy/graphs/contributors>`_
 
 
