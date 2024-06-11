@@ -62,8 +62,8 @@ Responsibilities include:
 * Nicola Omodei  (PI, Core Developer) - Stanford University
 * Giacomo Principe (Core Developer) - INFN Trieste
 * Miguel Sánchez-Conde (Fermi-LAT Analysis Coordinator) - Universidad Autónoma de Madrid
-* Alex Reustle (FSSC) - NASA GSFC
 * Marcos Santander (FUG) - University of Alabama
+* Alex Reustle (FSSC) - NASA GSFC
 
 
 Principal Investigator
