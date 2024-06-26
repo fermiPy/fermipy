@@ -25,7 +25,7 @@ Fermi-LAT Python Analysis Framework
     :target: https://hub.docker.com/r/fermipy/fermipy/
     :alt: Automated Docker Image
 
-.. image:: https://readthedocs.org/projects/fermipy/badge/?version=latest
+.. image:: https://readthedocs.org/projects/fermipy/badge/?version=latest.
     :target: https://readthedocs.org/projects/fermipy/?badge=latest
     :alt: Documentation Status
 
