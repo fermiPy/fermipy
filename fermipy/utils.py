@@ -16,6 +16,7 @@ from scipy.optimize import brentq
 from scipy.ndimage import label
 import scipy.special as special
 from numpy.core import defchararray
+from numpy.polynomial.polynomial import polyfit
 try:
     from astropy.extern import six
 except ImportError:
@@ -850,6 +851,7 @@ def get_parameter_limits(xval, loglike, cl_limit=0.95, cl_err=0.68269, tol=1E-2,
 
 
 def poly_to_parabola(coeff):
+    coeff = np.flip(coeff)
     sigma = np.sqrt(1. / np.abs(2.0 * coeff[0]))
     x0 = -coeff[1] / (2 * coeff[0])
     y0 = (1. - (coeff[1] ** 2 - 4 * coeff[0] * coeff[2])) / (4 * coeff[0])
@@ -988,10 +990,10 @@ def fit_parabola(z, ix, iy, dpix=3, zmin=None):
     sx = get_bounded_slice(ix, dpix, z.shape[0])
     sy = get_bounded_slice(iy, dpix, z.shape[1])
 
-    coeffx = poly_to_parabola(np.polyfit(x[sx, iy], z[sx, iy], 2))
-    coeffy = poly_to_parabola(np.polyfit(y[ix, sy], z[ix, sy], 2))
-    #p0 = [coeffx[2], coeffx[0], coeffy[0], coeffx[1], coeffy[1], 0.0]
-    p0 = [coeffx[2], float(ix), float(iy), coeffx[1], coeffy[1], 0.0]
+    coeffx = poly_to_parabola(polyfit(x[sx, iy], z[sx, iy], 2))
+    coeffy = poly_to_parabola(polyfit(y[ix, sy], z[ix, sy], 2))
+    p0 = [coeffx[2], coeffx[0], coeffy[0], coeffx[1], coeffy[1], 0.0]
+    # p0 = [coeffx[2], float(ix), float(iy), coeffx[1], coeffy[1], 0.0]
 
     o = {'fit_success': True, 'p0': p0}
 
@@ -999,15 +1001,25 @@ def fit_parabola(z, ix, iy, dpix=3, zmin=None):
         return np.ravel(parabola(*args))
 
     try:
-        bounds = (-np.inf * np.ones(6), np.inf * np.ones(6))
+        bounds = (np.ones(6), np.ones(6))
+        bounds[0][0] = 0
         bounds[0][1] = -0.5
         bounds[0][2] = -0.5
+        bounds[0][3] = 0
+        bounds[0][4] = 0
+        bounds[0][5] = -2 * np.pi #radians
+        bounds[1][0] = 5 * coeffx[2]
         bounds[1][1] = z.shape[0] - 0.5
         bounds[1][2] = z.shape[1] - 0.5
+        bounds[1][3] = 5 * coeffx[1]
+        bounds[1][4] = 5 * coeffy[1]
+        bounds[1][5] = 2 * np.pi #radians
         popt, pcov = scipy.optimize.curve_fit(curve_fit_fn,
                                               (np.ravel(x[m]), np.ravel(y[m])),
-                                              np.ravel(z[m]), p0, bounds=bounds)
-    except Exception:
+                                              np.ravel(z[m]), p0, bounds=bounds,
+                                              maxfev=5000, method='trf')
+    except Exception as e:
+        print(e)
         popt = copy.deepcopy(p0)
         o['fit_success'] = False
 

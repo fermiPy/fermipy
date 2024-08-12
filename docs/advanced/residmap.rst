@@ -14,12 +14,14 @@ data/model residual at map position (*i*, *j*) is given by
 .. math::
 
    \sigma_{ij}^2 = 2 \mathrm{sgn}(\tilde{n}_{ij} - \tilde{m}_{ij}) 
-   \left(\ln L_{P}(\tilde{n}_{ij},\tilde{n}_{ij}) - \ln L_{P}(\tilde{n}_{ij},\tilde{m}_{ij})\right)
+   \left(\ln L_{P}(\tilde{n}_{ij},\tilde{n}_{ij}) - \ln L_{P}(\tilde{n}_{ij},\tilde{m}_{ij})\right) \left( \tilde{M}_{ij}/\tilde{m}_{ij} \right)
 
 .. math::
    
    \mathrm{with} \quad
-   \tilde{m}_{ij} = \sum_{k} (m_{k} \ast f_{k})_{ij} \quad \tilde{n}_{ij} = \sum_{k}(n_{k} \ast f_{k})_{ij}
+   \tilde{m}_{ij} = \sum_{k} (m_{k} \ast f_{k})_{ij} \quad
+   \tilde{M}_{ij} = \sum_{k} (m_{k} \ast f_{k}^{2})_{ij} \quad
+   \tilde{n}_{ij} = \sum_{k}(n_{k} \ast f_{k})_{ij}
    \quad \ln L_{P}(n,m) = n\ln(m) - m
 
 where *n*\ :sub:`k` and *m*\ :sub:`k` are the data and model maps at
@@ -32,6 +34,7 @@ given pixel and normalized such that
    f_{ijk} = s_{ijk} \left(\sum_{ijk} s_{ijk}^{2}\right)^{-1}
    
 where *s* is the expectation counts cube for a pure signal normalized to one.
+
 
 Examples
 --------

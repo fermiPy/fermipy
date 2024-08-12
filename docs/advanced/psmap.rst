@@ -3,72 +3,22 @@
 PS Map
 ======
 
-:py:meth:`~fermipy.gtanalysis.GTAnalysis.psmap` generates a PS map for an additional source component centered at each
-spatial bin in the ROI.  The PSmap algorithm is described in detail in
-Bruel P. (2021), A&A, 656, A81. (`doi:10.1051/0004-6361/202141553 <https://arxiv.org/pdf/2109.07443.pdf>`_).
-
-For each spatial bin the method calculates the maximum likelihood test
-statistic given by
-
-.. math::
-
-   \mathrm{L} = - \sum_{k}\log P(x_{k} m_{k})
-
-where P is the Poisson probability and :math:`x_{k}` are independent random Poisson
-variables of mean :math:`m_{k}`, the spatially integrated number of model counts in the spectral bin :math:`k`.
-The p-value is the integral of the probability distribution function (pdf) of :math:`L` above
-:math:`L_{data} = − \sum_{k} log P(n_{k} , m_{k})`, the value obtained with the data integrated count spectra :math:`n_{k}`.
-In other words, the p-value is the :math:`L` complementary cumulative distribution function (CCDF) at Ldata.
-For the spectral bins with Gaussian statistics, the Poisson probability of parameter :math:`m_{k}` can be replaced with
-a Gaussian with mean and variance equal to :math:`m_{k}`. Ignoring the constant term, we have:
-
-.. math::
-   L_{Gaus} = \frac{1}{2} \sum_{k} \frac{(x_{k}-m_{k})^{2}}{m_{k}}
-
-As a consequence, the :math:`L_{Gaus}` pdf can be simply derived from the :math:`\chi^2` distribution with a number of
-degrees of freedom equal to the number of spectral bins with Gaussian statistics. In order to compute the :math:`L` pdf,
-we thus start by sorting the counts in decreasing order, then compute the :math:`L_{Gaus}` pdf corresponding to all the
-bins with a number of counts greater than ``maxpoissoncount=100`` and finally perform the iterative computation over the
-remaining bins. We note that this p-value computation provides a simple extension of the :math:`\chi^2`-test to
-histograms with counts in the Poisson regime.
-The PS data/model deviation estimator is defined as:
-
-.. math::
-   \mathrm{|PS|} = - \log_{10} \mathrm{(p-value)}
-
-and give it the sign of the sum of the residuals in sigma units:
-
-.. math::
-   \mathrm{sign(PS)} = \mathrm{sign}\left(\sum_{k} \frac{(x_{k}-m_{k})}{\mathrm{max}(1,\sqrt{m_{k}})}\right)
-
-which allows us to estimate whether the deviation is positive (data>model) or negative (data<model).
-The name PS was chosen because P can stand for both p-value and PSF and also because the output map name, PS map, sounds close to TS map.
-
-Log-likelihood weights have been introduced in the Fermi-LAT general catalog analysis in order to account for
-systematic uncertainties, especially those coming from the modelling of the diffuse emission (Abdollahi et al. 2020).
-The first thing to do is thus to also introduce weights in the definition of the random variable :math:`L` used to compute the
-p-value:
-
-.. math::
-    L_{data} = − \sum_{k} w_{k} \log P(n_{k} , m_{k})
-
-and for bin of the count spectrum that follow Gaussian statistics:
-
-.. math::
-   L_{Gaus} = \frac{1}{2} \sum_{k} \frac{(x_{k}-m_{k})^{2}}{m_{k}/w_{k}}
-
-In the case of weight, PS sign definition is modified as:
-
-.. math::
-   \mathrm{sign(PS)} = \mathrm{sign}\left(\sum_{k} \frac{(x_{k}-m_{k})}{\mathrm{max}(1,\sqrt{m_{k}/w_{k}})}\right)
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.psmap` quantifies the 3d data/model agreement by computing the PS
+at each spatial bin in the ROI according to the algorithm described in Bruel P. (2021), A&A, 656, A81.
+(`doi:10.1051/0004-6361/202141553 <https://arxiv.org/pdf/2109.07443.pdf>`_). For each spatial bin, the algorithm first computes
+the data and model count spectra integrated over an energy dependent region (following the PSF energy dependence)
+and then computes the p-value that the data count spectrum is compatible with the model count spectrum (using the likelihood statistics).
+The absolute value of PS is -log10(p-value) and its sign corresponds to the sign of the sum over the spectrum of the residuals in sigma.
+The algorithm also provides a PS map in sigma units.
 
 
 Examples
 --------
-The basic idea of PS map is to diagnose the quality of the fit comparing the optimized model with the data.
-First the user mist to compute the source model map using the :py:meth:`~fermipy.gtanalysis.GTAnalysis.write_model_map'
+
+In order to run psmap, the user must first compute the source model map using the :py:meth:`~fermipy.gtanalysis.GTAnalysis.write_model_map'
 function specifying the name of the model with the parameter ``model_name``.
-The :py:meth:`~fermipy.gtanalysis.GTAnalysis.psmap` will then be called with the same ``model_name``.
+The :py:meth:`~fermipy.gtanalysis.GTAnalysis.psmap` will then be called, specifying the data and model 3d map files, as well as the energy binning
+(with the arguments ``emin``, ``emax`` and ``nbinloge``). It is recommended to set ``nbinloge`` so that the logE bin width is between 0.2 and 0.3.
 
 .. code-block:: python
    
@@ -76,7 +26,44 @@ The :py:meth:`~fermipy.gtanalysis.GTAnalysis.psmap` will then be called with the
    gta.write_model_map(model_name="model01")
 
    # Generate the PS map
-   psmap = gta.psmap(model_name='model01', make_plots=True)
+   psmap = gta.psmap(ccmap='ccube_00.fits',mmap='mcube_model01_00.fits', make_plots=True, emin=100, emax=100000, nbinloge=15)
+
+In the case of an analysis with multiple components, the user has to provide the list of data and model files (separated by colons) corresponding to the components that the user wants to include in the PS computation:
+
+.. code-block:: python
+   
+   # Write the source model map (after performing the fit)
+   gta.write_model_map(model_name="model01")
+
+   # Generate the PS map using the first three components
+   psmap = gta.psmap(ccmap='ccube_00.fits:ccube_01.fits:ccube_02.fits',mmap='mcube_model01_00.fits:mcube_model01_01.fits:mcube_model01_02.fits', make_plots=True, emin=100, emax=100000, nbinloge=15)
+
+
+Configuration
+-------------
+
+The default configuration of the method is controlled with the
+:ref:`config_psmap` section of the configuration file.  The default
+configuration can be overriden by passing the option as a *kwargs*
+argument to the method.
+
+If the analysis uses likelihood weights, the user can specify the likelihood weight file with the argument ``wmap``.
+
+The user can set the parameters defining the energy dependent region used in the count spectrum integration step.
+The integration radius is defined by the function sqrt(psfpar0^2*pow(E/psfpar1,-2*psfpar2) + psfpar3^2), with E in MeV.
+The default parameters (``psfpar0``=4.0,``psfpar1``=100,``psfpar2``=0.9,``psfpar3``=0.1) are optimized to look for point-source like deviations.
+When looking for extended deviations (~1deg scale), it is recommended to use (``psfpar0``=5.0,``psfpar1``=100,``psfpar2``=0.8,``psfpar3``=1.0).
+In the case of a multiple component analysis, it is possible to use the argument ``psfpar0lst`` to provide the list of psfpar0 of each component (separated by colons).
+
+.. csv-table:: *psmap* Options
+   :header:    Option, Default, Description
+   :file: ../config/psmap.csv
+   :delim: tab
+   :widths: 10,10,80
+
+
+Output
+------
 
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.psmap` returns a dictionary containing the following variables:
 
@@ -84,6 +71,7 @@ The :py:meth:`~fermipy.gtanalysis.GTAnalysis.psmap` will then be called with the
 Key           Type                   Description
 ============= ====================== =================================================================
 psmax         float                  maximum of the ps map
+psmaxsigma    float                  maximum of the ps map in sigma units
 coordname1    str                    Name of the coordinate of the ps maximum
 coordname2    str                    Name of the coordinaste of the ps maximum
 coordx        float                  Value of the X coordinate of the ps maximum
@@ -106,68 +94,59 @@ can be retrieved from the output dictionary:
 
 .. code-block:: python
 
-   print('PS maximum value=%.2f, at %s=%.2f, %s=%.2f' %(psmap['psmax'],
+   print('PS maximum value=%.2f sigma, at %s=%.2f, %s=%.2f' %(psmap['psmaxsigma'],
                                                      psmap['coordname1'],float(psmap['coordx']),
                                                      psmap['coordname2'],float(psmap['coordy'])))
 
-   PS maximum value=3.85, at GLON-AIT=86.75, GLAT-AIT=38.62
+   Maximum PSvalue=3.80 sigma, at GLON-AIT=86.75, GLAT-AIT=38.62
 
 Diagnostic plots can be generated by setting ``make_plots=True`` or by
 passing the output dictionary to `~fermipy.plotting.AnalysisPlotter.make_psmap_plots`:
 
 .. code-block:: python
-   
-   psmap = gta.psmap(model_name='model01', make_plots=True)
+
+   gta.write_model_map(model_name="model01")
+   psmap = gta.psmap(cmap='ccube_00.fits',mmap='mcube_model01_00.fits', make_plots=True)
    //equivalent to:
    gta.plotter.make_tsmap_plots(psmap, roi=gta.roi)
 
 This will generate the following plots:
 
 * ``image_psmap`` : Map of PS values.  The color map is truncated at
-  5 sigma with isocontours at 3,4,5 PS intervals indicating values
+  5 sigma with isocontours at 2.57,4.20,6.24 (corresponding to 3,4,5 sigma) indicating values
   above this threshold.
 
-* ``image_pssigma`` : Map of PS values converted in sigma. The color map is truncated at
-  5 sigma with isocontours at 3,4,5 PS intervals indicating values
+* ``image_psmap_sigma`` : Map of PS values converted in sigma. The color map is truncated at
+  5 sigma with isocontours at 3,4,5 indicating values
   above this threshold.
   
-* ``image_ps_hist`` : Histogram of PS values for all points in the
-  map. Overplotted is the reference distribution for a gaussian with mean 0 and sigma=1.
+* ``image_ps_hist`` : Left: Histogram of PS (in sigma) for all points in the
+  map. Superimposed is the reference distribution for a gaussian with mean 0 and sigma=1.
+  Right: Histogram of the absolute value of PS (in sigma) for all points in the
+  map. Superimposed is the reference distribution for the absolute value of a gaussian with mean 0 and sigma=1.
+  It must be noted that, because the PS computation parameters are set to provide a good precision for low probability
+  deviations and because of the sign assignment method, the central part of the PS distribution likely has a notch
+  around zero. This notch is much less visible in the distribution of the absolute value of PS. What is
+  really interesting in terms of significant deviation is the distribution for PS above 2 sigma.
    
-.. |image_psmap| image:: model01_psmap_psmap.png
+.. |image_psmap| image:: testpsmap_psmap.png
    :width: 100%
    
-.. |image_pssigma| image:: model01_psmap_pssigma.png
+.. |image_psmap_sigma| image:: testpsmap_psmap_sigma.png
    :width: 100%
 
-.. |image_ps_hist| image:: model01_psmap_ps_hist.png
+.. |image_ps_hist_sigma| image:: testpsmap_ps_hist_sigma.png
    :width: 100%
 
 .. csv-table::
-   :header: PS Map, Sigma (PS) Map, PS Histogram
+   :header: PS Map, PS [Sigma] Map, PS [Sigma] Histogram
    :widths: 33, 33, 33
 
-   |image_psmap|, |image_pssigma|, |image_ps_hist|
+   |image_psmap|, |image_psmap_sigma|, |image_ps_hist_sigma|
            
-
-Configuration
--------------
-
-The default configuration of the method is controlled with the
-:ref:`config_psmap` section of the configuration file.  The default
-configuration can be overriden by passing the option as a *kwargs*
-argument to the method.
-
-.. csv-table:: *psmap* Options
-   :header:    Option, Default, Description
-   :file: ../config/psmap.csv
-   :delim: ,
-   :widths: 10,10,80
 
 Reference/API
 -------------
 
 .. automethod:: fermipy.gtanalysis.GTAnalysis.psmap
    :noindex:
-
-

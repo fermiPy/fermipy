@@ -33,7 +33,7 @@ def poisson_lnl(nc, mu):
     return lnl
 
 
-def convolve_map(m, k, cpix, threshold=0.001, imin=0, imax=None, wmap=None):
+def convolve_map(m, k, cpix, threshold=0.001, imin=0, imax=None, wmap=None, optpower2=False):
     """
     Perform an energy-dependent convolution on a sequence of 2-D spatial maps.
 
@@ -64,6 +64,9 @@ def convolve_map(m, k, cpix, threshold=0.001, imin=0, imax=None, wmap=None):
        3-D map containing a sequence of 2-D spatial maps of weights.  First
        dimension should be energy. This map should have the same dimension as m.
 
+    optpower2 : bool
+       if set, the convolution is done with the kernel square
+
     """
     islice = slice(imin, imax)
 
@@ -71,10 +74,16 @@ def convolve_map(m, k, cpix, threshold=0.001, imin=0, imax=None, wmap=None):
     ix = int(cpix[1])
     iy = int(cpix[0])
 
+    # kernel actually used in convolution
+    kk = k
+    if optpower2: # needed to compute the calibration correction factor derived by Stephen Fegan
+        kk = k*k
+
     # Loop over energy
     for i in range(m[islice, ...].shape[0]):
 
         ks = k[islice, ...][i, ...]
+        kks = kk[islice, ...][i, ...]
         ms = m[islice, ...][i, ...]
 
         mx = ks[ix, :] > ks[ix, iy] * threshold
@@ -93,20 +102,19 @@ def convolve_map(m, k, cpix, threshold=0.001, imin=0, imax=None, wmap=None):
         sx = slice(ix - nx, ix + nx + 1)
         sy = slice(iy - ny, iy + ny + 1)
 
-        ks = ks[sx, sy]
+        kks = kks[sx, sy]
 
 #        origin = [0, 0]
-#        if ks.shape[0] % 2 == 0: origin[0] += 1
-#        if ks.shape[1] % 2 == 0: origin[1] += 1
-#        o[i,...] = ndimage.convolve(ms, ks, mode='constant',
+#        if kks.shape[0] % 2 == 0: origin[0] += 1
+#        if kks.shape[1] % 2 == 0: origin[1] += 1
+#        o[i,...] = ndimage.convolve(ms, kks, mode='constant',
 #                                     origin=origin, cval=0.0)
 
-        o[i, ...] = scipy.signal.fftconvolve(ms, ks, mode='same')
+        o[i, ...] = scipy.signal.fftconvolve(ms, kks, mode='same')
         if wmap is not None:
             o[i, ...] *= wmap[islice, ...][i, ...]
 
     return o
-
 
 def convolve_map_hpx(m, k, cpix, threshold=0.001, imin=0, imax=None, wmap=None):
     """
@@ -367,6 +375,7 @@ class ResidMapGenerator(object):
         mmst = np.zeros(self.npix[::-1])
         cmst = np.zeros(self.npix[::-1])
         emst = np.zeros(self.npix[::-1])
+        mmst2 = np.zeros(self.npix[::-1])
 
         sm = get_source_kernel(self, 'residmap_testsource', kernel)
         ts = np.zeros(self.npix[::-1])
@@ -397,19 +406,26 @@ class ResidMapGenerator(object):
                 mc, sm[i], cpix, imin=imin, imax=imax, wmap=wmap)
             ecs = convolve_map(
                 ec, sm[i], cpix, imin=imin, imax=imax, wmap=wmap)
+            mcs2 = convolve_map(
+                mc, sm[i], cpix, imin=imin, imax=imax, wmap=wmap, optpower2=True)
 
             cms = np.sum(ccs, axis=0)
             mms = np.sum(mcs, axis=0)
             ems = np.sum(ecs, axis=0)
+            mms2 = np.sum(mcs2, axis=0)
 
             cmst += cms
             mmst += mms
             emst += ems
+            mmst2 += mms2
 
             # cts = 2.0 * (poisson_lnl(cms, cms) - poisson_lnl(cms, mms))
             excess += cms - mms
 
         ts = 2.0 * (poisson_lnl(cmst, cmst) - poisson_lnl(cmst, mmst))
+        # calibration correction factor derived by Stephen Fegan
+        calib = mmst2/mmst
+        ts = ts/calib
         sigma = np.sqrt(ts)
         sigma[excess < 0] *= -1
         emst /= np.max(emst)

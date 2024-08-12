@@ -2466,7 +2466,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                     xhi = np.linspace(lims['x0'], lims['ul'], npts - npts // 2)
                     xlo = np.linspace(lims['ll'], lims['x0'], npts // 2)
                     xvals = np.concatenate((xlo[:-1], xhi))
-                    #NO xvals = np.insert(xvals, 0, 0.0)
+                    xvals = np.insert(xvals, 0, lims['ll']/npts)
                 elif np.abs(lnlp['dloglike'][0] - lims['lnlmax']) > 0.1:
                     lims['ll'] = lims['x0']/npts #NO 0.0
                     xhi = np.linspace(lims['x0'], lims['ul'],
@@ -2476,6 +2476,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 else:
                     lims['ll'] = lims['ul'] / npts # This was 0
                     xvals = np.linspace(lims['ll'], lims['ul'], npts)
+
+        self.logger.debug('xvals dimension: %s , npts=%d' %(xvals.shape,npts))
 
         o = self.profile(name, parName,
                          reoptimize=reoptimize, xvals=xvals,
