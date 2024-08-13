@@ -56,7 +56,7 @@ Responsibilities include:
 
 **Current CC members (alphabetical order):**
 
-* Niccolo' Di Lalla (Core Developer) - Stanford University
+* Niccolò Di Lalla (Core Developer) - Stanford University
 * Leonardo Di Venere (Core Developer) - INFN Bari
 * Michela Negro (Fermi-LAT Analysis Deputy Coordinator) - Louisiana State University
 * Nicola Omodei  (PI, Core Developer) - Stanford University
@@ -102,7 +102,7 @@ Responsibilities include:
 
 **Current fermipy lead developers:**
 
-* Niccolo' Di Lalla (Core Developer) - Stanford University
+* Niccolò Di Lalla (Core Developer) - Stanford University
 * Leonardo Di Venere (Core Developer) - INFN Bari
 * Nicola Omodei  (PI, Core Developer) - Stanford University
 * Giacomo Principe (Core Developer) - INFN Trieste
@@ -125,9 +125,9 @@ Responsibilities include:
 * Catalogs (data, format) -
 * Diffuse (GalProp, MapCube) - Troy Porter - Stanford University
 * SED -
-* Localization - Niccolo' Di Lalla - Stanford University
-* Lighcurve - Janeth Valverde - NASA GSFC
-* Jobs (managing pipelines) - Nicola Omodei, Niccolo' Di Lalla - Stanford University
+* Localization - Niccolò Di Lalla - Stanford University
+* Lightcurve - Janeth Valverde - NASA GSFC
+* Jobs (managing pipelines) - Nicola Omodei, Niccolò Di Lalla - Stanford University
 
 Contributors and previous core developers
 ***********************************************
