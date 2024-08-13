@@ -10,6 +10,7 @@ from matplotlib.patches import Circle, Ellipse, Rectangle
 from matplotlib.colors import LogNorm, Normalize, PowerNorm
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.lines import Line2D
+from matplotlib import colormaps
 import matplotlib.mlab as mlab
 
 from astropy.io import fits
@@ -145,12 +146,12 @@ def load_ds9_cmap():
     }
 
     try:
-        plt.cm.ds9_b = plt.cm.get_cmap('ds9_b')
+        plt.cm.ds9_b = plt.get_cmap('ds9_b')
 
     except ValueError:
         ds9_cmap=LinearSegmentedColormap(name = 'ds9_b', segmentdata = ds9_b )
-        plt.register_cmap(cmap = ds9_cmap)
-        plt.cm.ds9_b = plt.cm.get_cmap('ds9_b')
+        plt.colormaps.register(cmap = ds9_cmap)
+        plt.cm.ds9_b = plt.get_cmap('ds9_b')
 
     return plt.cm.ds9_b
 
@@ -169,12 +170,12 @@ def load_bluered_cmap():
                }
 
     try:
-        plt.cm.bluered = plt.cm.get_cmap('bluered')
+        plt.cm.bluered = plt.get_cmap('bluered')
 
     except ValueError:
         bluered_cmap=LinearSegmentedColormap(name = 'bluered', segmentdata = bluered )
-        plt.register_cmap(cmap = bluered_cmap)
-        plt.cm.bluered = plt.cm.get_cmap('bluered')
+        plt.colormaps.register(cmap = bluered_cmap)
+        plt.cm.bluered = plt.get_cmap('bluered')
     
     return plt.cm.bluered
 
@@ -310,9 +311,9 @@ class ImagePlotter(object):
 
         load_ds9_cmap()
         try:
-            colormap = plt.cm.get_cmap(cmap).copy()
+            colormap = plt.get_cmap(cmap).copy()
         except:
-            colormap = plt.cm.get_cmap('ds9_b').copy()
+            colormap = plt.get_cmap('ds9_b').copy()
 
         colormap.set_under(colormap(0))
 
@@ -1267,7 +1268,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         ax0.legend(loc='upper right', frameon=False)
 
         # labels and such
-        ax0.set_xlabel('$PS \, [\sigma]$')
+        ax0.set_xlabel(r'$PS \, [\sigma]$')
         ax0.set_ylabel('Probability')
 
         # |PS sigma| histogram
@@ -1292,7 +1293,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         ax1.legend(loc='upper right', frameon=False)
 
         # labels and such
-        ax1.set_xlabel('$|PS| \, [\sigma]$')
+        ax1.set_xlabel(r'$|PS| \, [\sigma]$')
         ax1.set_ylabel('Probability')
 
         plt.savefig(utils.format_filename(workdir,
@@ -1711,7 +1712,6 @@ class AnalysisPlotter(fermipy.config.Configurable):
                 logli = np.interp(widthCenters, width, logl)
             llhMatrix[i, :] = logli
 
-        #cmap = copy.deepcopy(plt.cm.get_cmap(cmap))
         cmap = copy.deepcopy(matplotlib.colormaps.get_cmap(cmap))
         # cmap.set_under('w')
 
