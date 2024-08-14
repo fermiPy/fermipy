@@ -12,10 +12,10 @@ jobs:
           persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
           fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.9
+      #- name: Set up Python
+      #  uses: actions/setup-python@v5
+      #  with:
+      #    python-version: 3.9
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -31,8 +31,8 @@ jobs:
           auto-activate-base: false
       - name: Install additional packages
         run: |
-          mamba activate fermipy
-          mamba install -c conda-forge jupytext
+          conda activate fermipy
+          mamba install -n fermipy -c conda-forge jupytext
           pip install -e .
       - name: Execute the notebooks
         run: |
