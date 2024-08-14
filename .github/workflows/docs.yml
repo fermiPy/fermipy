@@ -30,16 +30,13 @@ jobs:
           python-version: 3.9
           auto-activate-base: false
       - name: Install additional packages
-        shell: bash -l {0}
         run: |
           mamba install -c conda-forge jupytext
           pip install -e .
       - name: Execute the notebooks
-        #shell: bash -l {0}
         run: |
           # Make sure we fail in case of error
           set -e
-          ls
           ls fermipy-extra/notebooks
           jupytext --execute fermipy-extra/notebooks/file_function_examples.ipynb
           mkdir docs/notebooks
