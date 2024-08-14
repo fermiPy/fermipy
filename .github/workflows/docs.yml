@@ -24,7 +24,7 @@ jobs:
       - name: Setup environment
         uses: conda-incubator/setup-miniconda@v2
         with:
-          miniforge-variant: latest
+          miniforge-variant: Mambaforge
           activate-environment: fermipy
           environment-file: environment.yml
           python-version: 3.9
