@@ -32,12 +32,13 @@ jobs:
       - name: Install additional packages
         shell: bash -l {0}
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install jupytext jupyterthemes jupyter_latex_envs
+          mamba install -c conda-forge jupytext
           pip install -e .
       - name: Execute the notebooks
         #shell: bash -l {0}
         run: |
+          # Make sure we fail in case of error
+          set -e
           ls
           ls fermipy-extra/notebooks
           jupytext --execute fermipy-extra/notebooks/file_function_examples.ipynb
