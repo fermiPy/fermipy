@@ -33,7 +33,7 @@ jobs:
       - name: Install additional packages
         shell: bash -l {0}
         run: |
-          mamba install -n fermipy -c conda-forge jupytext
+          mamba install -n fermipy -c conda-forge jupytext nbconvert jupyterthemes jupyter_latex_envs notebook ipykernel
           pip install -e .
       - name: Execute the notebooks
         shell: bash -l {0}
