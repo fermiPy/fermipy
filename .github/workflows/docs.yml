@@ -41,9 +41,9 @@ jobs:
           # Make sure we fail in case of error
           set -e
           ls fermipy-extra/notebooks
-          jupytext --execute fermipy-extra/notebooks/file_function_examples.ipynb
+          jupytext --execute fermipy-extra/notebooks/SMC.ipynb
           mkdir docs/notebooks
-          mv fermipy-extra/notebooks/file_function_examples.ipynb docs/notebooks/
+          mv fermipy-extra/notebooks/SMC.ipynb docs/notebooks/
           ls docs/notebooks
       # - name: Create function gallery
       #   #shell: bash -l {0}
