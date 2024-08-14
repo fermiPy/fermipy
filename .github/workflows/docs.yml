@@ -24,13 +24,14 @@ jobs:
       - name: Setup environment
         uses: conda-incubator/setup-miniconda@v2
         with:
-          miniforge-variant: Mambaforge
+          miniforge-variant: latest
           activate-environment: fermipy
           environment-file: environment.yml
           python-version: 3.9
           auto-activate-base: false
       - name: Install additional packages
         run: |
+          mamba activate fermipy
           mamba install -c conda-forge jupytext
           pip install -e .
       - name: Execute the notebooks
