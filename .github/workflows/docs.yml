@@ -25,11 +25,11 @@ jobs:
         uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: fermipy
+          auto-activate-base: false
           architecture: "x64"
-          miniforge-variant: latest
+          miniforge-version: latest
           python-version: 3.9
           environment-file: environment.yml
-          auto-activate-base: false
       - name: Install additional packages
         shell: bash -l {0}
         run: |
