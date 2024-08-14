@@ -22,19 +22,21 @@ jobs:
           repository: fermiPy/fermipy-extra
           path: fermipy-extra
       - name: Setup environment
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
-          miniforge-variant: Mambaforge
           activate-environment: fermipy
-          environment-file: environment.yml
+          architecture: "x64"
+          miniforge-variant: latest
           python-version: 3.9
+          environment-file: environment.yml
           auto-activate-base: false
       - name: Install additional packages
+        shell: bash -l {0}
         run: |
-          conda activate fermipy
           mamba install -n fermipy -c conda-forge jupytext
           pip install -e .
       - name: Execute the notebooks
+        shell: bash -l {0}
         run: |
           # Make sure we fail in case of error
           set -e
