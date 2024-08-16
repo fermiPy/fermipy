@@ -11,7 +11,6 @@ jobs:
         with:
           persist-credentials: false # otherwise, the token used is the GITHUB_TOKEN, instead of your personal token
           fetch-depth: 0 # otherwise, you will failed to push refs to dest repo
-
       #- name: Set up Python
       #  uses: actions/setup-python@v5
       #  with:
@@ -41,23 +40,20 @@ jobs:
           # Make sure we fail in case of error
           set -e
           ls fermipy-extra/notebooks
-          jupytext --execute fermipy-extra/notebooks/SMC.ipynb
-          mv fermipy-extra/notebooks/SMC.ipynb docs/notebooks/
+          rm fermipy-extra/notebooks/index.ipynb
+          rm fermipy-extra/notebooks/dSphs.ipynb
+          jupytext --execute fermipy-extra/notebooks/*.ipynb
+          mv fermipy-extra/notebooks/*.ipynb docs/notebooks/
           ls docs/notebooks
       # - name: Create function gallery
       #   #shell: bash -l {0}
       #   run: |
       #     # move to the scripts directory
       #     cd scripts
-
-
       #     # now generate the function docs
       #     python generate_func_docs.py
-
       #     cd ..
-
       #     ls docs/notebooks
-          
       - uses: actions/upload-artifact@v4
         with:
           name: notebooks-for-${{ github.sha }}
@@ -66,7 +62,6 @@ jobs:
         uses: juliangruber/sleep-action@v1
         with:
           time: 5m
-
       - name: Trigger RTDs build
         uses: dfm/rtds-action@main
         with:
