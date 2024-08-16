@@ -46,7 +46,6 @@ After launching the notebook server, paste the URL that appears into
 your web browser and navigate to the *notebooks* directory.
 
 .. toctree::
-   :includehidden:
-   :maxdepth: 3
-
+   :titlesonly:
+   
    notebooks/SMC.ipynb
