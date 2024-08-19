@@ -111,6 +111,13 @@ The following are steps for creating a new release:
    Username: __token__
    Password: [secret token from pypi.org]
 
+Or alternatively:
+
+.. code-block:: bash
+
+   $ python setup.py sdist upload -r pypi
+   $ twine upload dist/fermipy-XX.YY.ZZ.tar.gz
+
 6. Create a new release on conda-forge by opening a PR on the
    `fermipy-feedstock
    <https://github.com/conda-forge/fermipy-feedstock>`_ repo.  There

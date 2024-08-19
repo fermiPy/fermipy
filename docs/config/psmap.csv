@@ -1,0 +1,23 @@
+``chatter``	1	Output verbosity.
+``cmap``		Data 3d map file or list of files (separated by colons).
+``dpix``	-1	PS computation: sub-ROI half-width in pixel (ignoring central pixel; dpix=0 corresponds to the central pixel only).
+``emax``	1000000.0	PS computation: maximum energy/MeV.
+``emin``	100	PS computation: minimum energy/MeV.
+``fixedradius``	-1.0	Spatial integration: fixed radius (deg). If negative (default), the PSF-like parameters are used.
+``ipix``	-1	PS computation: sub-ROI central pixel i-axis position.
+``jpix``	-1	PS computation: sub-ROI central pixel j-axis position.
+``make_plots``	False	Generate diagnostic plots.
+``maxpoissoncount``	100	LL computation: number of counts up to which Poisson statistics is considered.
+``mmap``		Model 3d map file or list of files (separated by colons).
+``nbinloge``	20	PS computation: number of log10 energy bins. It is recommended to set nbinloge so that the log10(E) bin width is between 0.2 and 0.3.
+``nbinpdf``	50	LL computation: number of bins.
+``outfile``		Output fits file, which contains the PS map (hdu0: -log10(deviation probability), hdu1: in sigma units).
+``prob_epsilon``	1e-07	LL computation: precision parameter.
+``psfpar0``	4.0	Spatial integration: PSF-like parameter 0 (deg) of the parameterization sqrt(p0^2*pow(E/p1,-2*p2) + p3^2).
+``psfpar0lst``		Spatial integration: list of the PSF-like parameters 0 of all components (separated by colons). By default, psfpar0 is used for all components.
+``psfpar1``	100	Spatial integration: PSF-like parameter 1 (MeV) of the parameterization sqrt(p0^2*pow(E/p1,-2*p2) + p3^2).
+``psfpar2``	0.9	Spatial integration: PSF-like parameter 2 of the parameterization sqrt(p0^2*pow(E/p1,-2*p2) + p3^2).
+``psfpar3``	0.1	Spatial integration: PSF-like parameter 3 (deg) of the parameterization sqrt(p0^2*pow(E/p1,-2*p2) + p3^2).
+``scaleaxis``	20	LL computation: scale axis.
+``wmap``		Weight 3d map file or list of files (separated by colons).
+``write_fits``	True	Write the output to a FITS file.

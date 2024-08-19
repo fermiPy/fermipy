@@ -130,6 +130,7 @@ def test_gtanalysis_optimize(create_diffuse_dir, create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit0')
     gta.optimize()
+    gta.write_roi('test', make_plots=False)
 
 
 def test_gtanalysis_fit(create_diffuse_dir, create_draco_analysis):
@@ -162,6 +163,15 @@ def test_gtanalysis_tsmap(create_diffuse_dir, create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
     gta.tsmap(model={}, make_plots=True)
+
+def test_gtanalysis_psmap(create_diffuse_dir, create_draco_analysis):
+    gta = create_draco_analysis
+    gta.load_roi('fit1')
+    gta.write_model_map(model_name="model01")
+    mycmap = os.path.join(gta.workdir, 'ccube_00.fits')
+    mymmap = os.path.join(gta.workdir, 'mcube_model01_00.fits')
+    print('cmap and mmap %s %s' %(mycmap,mymmap))
+    gta.psmap(cmap=mycmap,mmap=mymmap,make_plots=True,emin=1000,emax=10000,nbinloge=4,outfile='testpsmap',chatter=3)
 
 
 @requires_git_version('99-00-01')

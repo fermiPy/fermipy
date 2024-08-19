@@ -5,6 +5,7 @@
 ``free_radius``	None	Free normalizations of background sources within this angular distance in degrees from the source of interest.  If None then no sources will be freed.
 ``make_plots``	False	Generate diagnostic plots.
 ``ul_confidence``	0.95	Confidence level for flux upper limit.
+``ul_ts_threshold``	4	Minimum threshold of TS for displaying flux point below this vlaue an Upper Limit is calculated.
 ``use_local_index``	False	Use a power-law approximation to the shape of the global spectrum in each bin.  If this is false then a constant index set to `bin_index` will be used.
 ``write_fits``	True	Write the output to a FITS file.
 ``write_npy``	True	Write the output dictionary to a numpy file.

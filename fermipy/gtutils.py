@@ -9,12 +9,16 @@ from AnalysisBase import AnalysisBase
 from LikelihoodState import LikelihoodState
 import pyIrfLoader
 
+import SummedLikelihood as sl
+import BinnedAnalysis as ba
+
+
 pyIrfLoader.Loader_go()
 
 _funcFactory = pyLike.SourceFactory_funcFactory()
 
-import BinnedAnalysis as ba
-import SummedLikelihood
+
+
 
 from fermipy import utils
 from fermipy import model_utils
@@ -485,7 +489,7 @@ class SourceMapState(object):
                                             self._srcmaps[name][i])
 
 
-class SummedLikelihood(SummedLikelihood.SummedLikelihood):
+class SummedLikelihood(sl.SummedLikelihood):
 
     def nFreeParams(self):
         """Count the number of free parameters in the active model."""

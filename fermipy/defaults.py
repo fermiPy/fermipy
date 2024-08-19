@@ -332,6 +332,33 @@ tscube = {
     'init_lambda': (0, 'Initial value of damping parameter for newton step size calculation.   A value of zero disables damping.', float),
 }
 
+# PS map
+psmap = {
+    'cmap':('', 'Data 3d map file or list of files (separated by colons).',str),
+    'mmap':('', 'Model 3d map file or list of files (separated by colons).',str),
+    'wmap':('', 'Weight 3d map file or list of files (separated by colons).',str),
+    'emin':(100, 'PS computation: minimum energy/MeV.', float),
+    'emax':(1e6, 'PS computation: maximum energy/MeV.', float),
+    'nbinloge':(20, 'PS computation: number of log10 energy bins. It is recommended to set nbinloge so that the log10(E) bin width is between 0.2 and 0.3.', int),
+    'outfile':('', 'Output fits file, which contains the PS map (hdu0: -log10(deviation probability), hdu1: in sigma units).',str),
+    'fixedradius':(-1.0, 'Spatial integration: fixed radius (deg). If negative (default), the PSF-like parameters are used.',float),
+    'psfpar0':(4.0,'Spatial integration: PSF-like parameter 0 (deg) of the parameterization sqrt(p0^2*pow(E/p1,-2*p2) + p3^2).', float),
+    'psfpar1':(100,'Spatial integration: PSF-like parameter 1 (MeV) of the parameterization sqrt(p0^2*pow(E/p1,-2*p2) + p3^2).', float),
+    'psfpar2':(0.9,'Spatial integration: PSF-like parameter 2 of the parameterization sqrt(p0^2*pow(E/p1,-2*p2) + p3^2).', float),
+    'psfpar3':(0.1,'Spatial integration: PSF-like parameter 3 (deg) of the parameterization sqrt(p0^2*pow(E/p1,-2*p2) + p3^2).', float),
+    'psfpar0lst':('', 'Spatial integration: list of the PSF-like parameters 0 of all components (separated by colons). By default, psfpar0 is used for all components.',str),
+    'chatter':(1, 'Output verbosity.', int),
+    'ipix':(-1, 'PS computation: sub-ROI central pixel i-axis position.', int),
+    'jpix':(-1, 'PS computation: sub-ROI central pixel j-axis position.', int),
+    'dpix':(-1, 'PS computation: sub-ROI half-width in pixel (ignoring central pixel; dpix=0 corresponds to the central pixel only).', int),
+    'maxpoissoncount':(100, 'LL computation: number of counts up to which Poisson statistics is considered.', float),
+    'prob_epsilon':(1e-7, 'LL computation: precision parameter.', float),
+    'nbinpdf':(50, 'LL computation: number of bins.', int),
+    'scaleaxis':(20,'LL computation: scale axis.', float),
+    'make_plots': common['make_plots'],
+    'write_fits': common['write_fits'],
+}
+
 # Options for Source Finder
 sourcefind = {
     'model': common['model'],
@@ -412,6 +439,9 @@ sed = {
     'free_radius': common['free_radius'],
     'free_pars': (None, 'Set the parameters of the source of interest that will be freed when performing '
                   'the global fit.  By default all parameters will be freed.', list),
+    'ul_ts_threshold': (4, 'Minimum threshold of TS for displaying flux point '
+                        'below this vlaue an Upper Limit is calculated.', float),
+
     'ul_confidence': (0.95, 'Confidence level for flux upper limit.',
                       float),
     'cov_scale': (3.0, 'Scale factor that sets the strength of the prior on nuisance '

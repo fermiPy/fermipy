@@ -1,6 +1,6 @@
 SED	``e_min``	Lower edges of SED energy bins (MeV).
-SED	``e_ref``	Upper edges of SED energy bins (MeV).
-SED	``e_max``	Centers of SED energy bins (MeV).
+SED	``e_max``	Upper edges of SED energy bins (MeV).
+SED	``e_ref``	Centers of SED energy bins (MeV).
 SED	``ref_dnde_e_min``	Differential flux of the reference model evaluated at the lower bin edge (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`)
 SED	``ref_dnde_e_max``	Differential flux of the reference model evaluated at the upper bin edge (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}~\mathrm{MeV}^{-1}`)
 SED	``ref_flux``	Flux of the reference model in each bin (:math:`\mathrm{cm}^{-2}~\mathrm{s}^{-1}`).

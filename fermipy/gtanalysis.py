@@ -27,6 +27,7 @@ import fermipy.sed as sed
 import fermipy.lightcurve as lightcurve
 from fermipy.residmap import ResidMapGenerator
 from fermipy.tsmap import TSMapGenerator, TSCubeGenerator
+from fermipy.psmap import PSMapGenerator
 from fermipy.sourcefind import SourceFind
 from fermipy.extension import ExtensionFit
 from fermipy.utils import merge_dict
@@ -234,6 +235,7 @@ def filter_dict(d, val):
 
 class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                  ResidMapGenerator, TSMapGenerator, TSCubeGenerator,
+                 PSMapGenerator,
                  SourceFind, ExtensionFit, lightcurve.LightCurve):
     """High-level analysis interface that manages a set of analysis
     component objects.  Most of the functionality of the Fermipy
@@ -250,6 +252,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         'sed': defaults.sed,
         'localize': defaults.localize,
         'tsmap': defaults.tsmap,
+        'psmap': defaults.psmap,
         'residmap': defaults.residmap,
         'lightcurve': defaults.lightcurve,
         'find_sources': defaults.sourcefind,
@@ -268,6 +271,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 'mc': defaults.mc,
                 'residmap': defaults.residmap,
                 'tsmap': defaults.tsmap,
+                'psmap': defaults.psmap,
                 'tscube': defaults.tscube,
                 'sourcefind': defaults.sourcefind,
                 'sed': defaults.sed,
@@ -2407,7 +2411,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             in the profile likelihood scan.
 
         """
-
         self.logger.debug('Profiling %s', name)
 
         if savestate:
@@ -2426,7 +2429,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         loge_bounds = self.loge_bounds
         if logemin is not None or logemax is not None:
             self.set_energy_range(logemin, logemax)
-
         # Find a sequence of values for the normalization scan
         if xvals is None:
             if reoptimize:
@@ -2434,6 +2436,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                                   **kwargs)
             else:
                 xvals = self._find_scan_pts(name, npts=9)
+
                 lnlp = self.profile(name, parName,
                                     reoptimize=False, xvals=xvals)
                 lims = utils.get_parameter_limits(lnlp['xvals'],
@@ -2448,26 +2451,33 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                                         'Refitting normalization.')
                     self.like.optimize(0)
                     xvals = self._find_scan_pts(name, npts=npts)
+
                     lnlp = self.profile(name, parName,
                                         reoptimize=False,
                                         xvals=xvals)
+
+
                     lims = utils.get_parameter_limits(lnlp['xvals'],
                                                       lnlp['dloglike'],
                                                       cl_limit=0.99)
 
+                self.logger.debug(' ======> %s %s %s %s' %(xvals[0], lims['ll'], lims['x0'], lims['ul']))
                 if np.isfinite(lims['ll']):
                     xhi = np.linspace(lims['x0'], lims['ul'], npts - npts // 2)
                     xlo = np.linspace(lims['ll'], lims['x0'], npts // 2)
                     xvals = np.concatenate((xlo[:-1], xhi))
-                    xvals = np.insert(xvals, 0, 0.0)
+                    xvals = np.insert(xvals, 0, lims['ll']/npts)
                 elif np.abs(lnlp['dloglike'][0] - lims['lnlmax']) > 0.1:
-                    lims['ll'] = 0.0
+                    lims['ll'] = lims['x0']/npts #NO 0.0
                     xhi = np.linspace(lims['x0'], lims['ul'],
                                       (npts + 1) - (npts + 1) // 2)
                     xlo = np.linspace(lims['ll'], lims['x0'], (npts + 1) // 2)
                     xvals = np.concatenate((xlo[:-1], xhi))
                 else:
-                    xvals = np.linspace(0, lims['ul'], npts)
+                    lims['ll'] = lims['ul'] / npts # This was 0
+                    xvals = np.linspace(lims['ll'], lims['ul'], npts)
+
+        self.logger.debug('xvals dimension: %s , npts=%d' %(xvals.shape,npts))
 
         o = self.profile(name, parName,
                          reoptimize=reoptimize, xvals=xvals,
@@ -2514,8 +2524,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         if npred < 10:
             val *= 1. / max(1e-16, npred)
-            xvals = val * 10 ** np.linspace(-1.0, 3.0, npts - 1)
-            xvals = np.insert(xvals, 0, 0.0)
+            xvals = val * 10 ** np.linspace(-1.0, 3.0, npts)
+            #xvals = val * 10 ** np.linspace(-1.0, 3.0, npts - 1)
+            # NO xvals = np.insert(xvals, 0, 0.0)
         else:
 
             npts_lo = npts // 2
@@ -2523,7 +2534,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             xhi = np.linspace(0, 1, npts_hi)
             xlo = np.linspace(-1, 0, npts_lo)
             xvals = val * 10 ** np.concatenate((xlo[:-1], xhi))
-            xvals = np.insert(xvals, 0, 0.0)
+            #xvals = np.insert(xvals, 0, 0.0)
 
         return xvals
 
@@ -2555,6 +2566,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                               lims0['x0'] - lims0['err_lo'], lims0['x0'],
                               lims0['x0'] + lims0['err_hi'], lims0['ul']])
             xvals = xvals[np.isfinite(xvals)]
+
 
         # Generate likelihood profile w/ free nuisance pars
         if np.isnan(xvals).any():

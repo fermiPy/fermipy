@@ -10,6 +10,7 @@ from matplotlib.patches import Circle, Ellipse, Rectangle
 from matplotlib.colors import LogNorm, Normalize, PowerNorm
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.lines import Line2D
+from matplotlib import colormaps
 import matplotlib.mlab as mlab
 
 from astropy.io import fits
@@ -18,6 +19,7 @@ from astropy.coordinates import SkyCoord
 import numpy as np
 from scipy.stats import norm
 from scipy.stats import chi2
+from scipy.integrate import quad
 from scipy import interpolate
 from gammapy.maps import WcsNDMap, HpxNDMap, MapCoord
 
@@ -144,12 +146,12 @@ def load_ds9_cmap():
     }
 
     try:
-        plt.cm.ds9_b = plt.cm.get_cmap('ds9_b')
+        plt.cm.ds9_b = plt.get_cmap('ds9_b')
 
     except ValueError:
         ds9_cmap=LinearSegmentedColormap(name = 'ds9_b', segmentdata = ds9_b )
-        plt.register_cmap(cmap = ds9_cmap)
-        plt.cm.ds9_b = plt.cm.get_cmap('ds9_b')
+        plt.colormaps.register(cmap = ds9_cmap)
+        plt.cm.ds9_b = plt.get_cmap('ds9_b')
 
     return plt.cm.ds9_b
 
@@ -168,12 +170,12 @@ def load_bluered_cmap():
                }
 
     try:
-        plt.cm.bluered = plt.cm.get_cmap('bluered')
+        plt.cm.bluered = plt.get_cmap('bluered')
 
     except ValueError:
         bluered_cmap=LinearSegmentedColormap(name = 'bluered', segmentdata = bluered )
-        plt.register_cmap(cmap = bluered_cmap)
-        plt.cm.bluered = plt.cm.get_cmap('bluered')
+        plt.colormaps.register(cmap = bluered_cmap)
+        plt.cm.bluered = plt.get_cmap('bluered')
     
     return plt.cm.bluered
 
@@ -309,9 +311,9 @@ class ImagePlotter(object):
 
         load_ds9_cmap()
         try:
-            colormap = plt.cm.get_cmap(cmap).copy()
+            colormap = plt.get_cmap(cmap).copy()
         except:
-            colormap = plt.cm.get_cmap('ds9_b').copy()
+            colormap = plt.get_cmap('ds9_b').copy()
 
         colormap.set_under(colormap(0))
 
@@ -721,7 +723,10 @@ class SEDPlotter(object):
                 logli = np.interp(fluxCenters, flux, logl)
             llhMatrix[i, :] = logli
 
-        cmap = copy.deepcopy(plt.cm.get_cmap(cmap))
+        #cmap = copy.deepcopy(plt.cm.get_cmap(cmap))
+        cmap = copy.deepcopy(matplotlib.colormaps.get_cmap(cmap))
+
+
         # cmap.set_under('w')
 
         if cmap_trunc_lo is not None or cmap_trunc_hi is not None:
@@ -919,7 +924,7 @@ class ExtensionPlotter(object):
                                             loge_bounds=self._loge_bounds)
             p._data += p1.data
             p.plot_projection(iaxis, color=matplotlib.cm.Reds(cf),
-                              noerror=True, label='%.4f$^\circ$' % w)
+                              noerror=True, label=r'%.4f$^\circ$' % w)
 
 
 class AnalysisPlotter(fermipy.config.Configurable):
@@ -1012,7 +1017,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fig = plt.figure(figsize=figsize)
         p = ROIPlotter(maps['sigma'], roi=roi, **kwargs)
         p.plot(vmin=-5, vmax=5, levels=sigma_levels,
-               cb_label='Significance [$\sigma$]', interpolation='bicubic',
+               cb_label=r'Significance [$\sigma$]', interpolation='bicubic',
                cmap=cmap_resid, zoom=zoom)
         plt.savefig(utils.format_filename(workdir,
                                           'residmap_sigma',
@@ -1128,7 +1133,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         fig = plt.figure(figsize=figsize)
         p = ROIPlotter(maps['sqrt_ts'], roi=roi, **kwargs)
         p.plot(vmin=0, vmax=5, levels=sigma_levels,
-               cb_label='Sqrt(TS) [$\sigma$]', interpolation='bicubic',
+               cb_label=r'Sqrt(TS) [$\sigma$]', interpolation='bicubic',
                zoom=zoom)
         plt.savefig(utils.format_filename(workdir,
                                           '%s_sqrt_ts' % suffix,
@@ -1169,6 +1174,176 @@ class AnalysisPlotter(fermipy.config.Configurable):
         plt.savefig(utils.format_filename(workdir,
                                           '%s_ts_hist' % suffix,
                                           prefix=[prefix],
+                                          extension=fmt))
+        plt.close(fig)
+
+    def make_psmap_plots(self, psmaps, roi=None, **kwargs):
+        """Make plots from the output of
+        `~fermipy.gtanalysis.GTAnalysis.psmap`
+        This method generates 2D PS maps (one in PS units, one in sigma units).  
+
+        Parameters
+        ----------
+        maps : dict
+            Output dictionary of
+            `~fermipy.gtanalysis.GTAnalysis.psmap`.
+
+        roi : `~fermipy.roi_model.ROIModel`
+            ROI Model object.  Generate markers at the positions of
+            the sources in this ROI.
+
+        zoom : float
+            Crop the image by this factor.  If None then no crop is
+            applied.
+        """
+        kwargs.setdefault('graticule_radii', self.config['graticule_radii'])
+        kwargs.setdefault('label_ts_threshold',
+                          self.config['label_ts_threshold'])
+        kwargs.setdefault('cmap', self.config['cmap'])
+        kwargs.setdefault('catalogs', self.config['catalogs'])
+        fmt = kwargs.get('format', self.config['format'])
+        figsize = kwargs.get('figsize', self.config['figsize'])
+        workdir = kwargs.pop('workdir', self.config['fileio']['workdir'])
+        suffix = kwargs.pop('suffix', 'psmap')
+        zoom = kwargs.pop('zoom', None)
+        cmap_resid = kwargs.pop('cmap_resid', self.config['cmap_resid'])
+
+        prefix=psmaps['name']
+
+        load_bluered_cmap()
+
+        fig = plt.figure(figsize=figsize)
+
+        p = ROIPlotter(psmaps['ps_map'], roi=roi, **kwargs)
+
+        ps_levels = [ 2.57, 4.20, 6.24]
+
+        p.plot(vmin=-6.24, vmax=6.24,
+               levels=ps_levels,
+               cb_label='PSMAP', interpolation='bicubic',
+               cmap=cmap_resid, zoom=zoom)
+        plt.savefig(utils.format_filename(workdir,
+                                          '%s_psmap' % prefix,
+                                          extension=fmt))
+        plt.close(fig)
+
+        sigma_levels = [3, 4, 5]
+
+        fig = plt.figure(figsize=figsize)
+        p = ROIPlotter(psmaps['pssigma_map'], roi=roi, **kwargs)
+        p.plot(vmin=-5, vmax=5,
+               levels=sigma_levels,
+               cb_label='PSMAP [SIGMA]', interpolation='bicubic',
+               cmap=cmap_resid, zoom=zoom)
+        plt.savefig(utils.format_filename(workdir,
+                                          '%s_psmap_sigma' % prefix,
+                                          extension=fmt))
+        plt.close(fig)
+
+        # make and draw PS histogram
+        fig = plt.figure(figsize=[12,6])
+
+        gs = gridspec.GridSpec(nrows=1, ncols=2)
+        ax0 = fig.add_subplot(gs[0,0])
+        ax1 = fig.add_subplot(gs[0,1])
+
+        # PS sigma histogram
+        nbin = 100
+        bins = np.linspace(-10, 10, nbin+1)
+
+        data = np.nan_to_num(psmaps['pssigma_map'].data)
+        n, bins, patches = ax0.hist(data.flatten(), bins, density=True,
+                                   histtype='stepfilled',
+                                   facecolor='green', alpha=0.75)
+
+        binscen = 0.5*(bins[1:] + bins[:-1])
+        mygaus = 0.5*(bins[1:] + bins[:-1])
+        mytot = np.sum(n)
+        for i in range(nbin):
+            mygaus[i] = mytot*quad(norm.pdf,bins[i],bins[i+1])[0]
+
+        ax0.plot(binscen,mygaus,color='k',label=r"Gauss(0,1)")
+        ax0.set_yscale('log')
+        ax0.set_ylim(1E-4)
+        ax0.legend(loc='upper right', frameon=False)
+
+        # labels and such
+        ax0.set_xlabel(r'$PS \, [\sigma]$')
+        ax0.set_ylabel('Probability')
+
+        # |PS sigma| histogram
+        nbin = 50
+        bins = np.linspace(0, 10, nbin+1)
+
+        data = np.abs(np.nan_to_num(psmaps['pssigma_map'].data))
+        n, bins, patches = ax1.hist(data.flatten(), bins, density=True,
+                                   histtype='stepfilled',
+                                   facecolor='green', alpha=0.75)
+
+        binscen = 0.5*(bins[1:] + bins[:-1])
+        mygaus = 0.5*(bins[1:] + bins[:-1])
+        mytot = np.sum(n)
+        for i in range(nbin):
+            mygaus[i] = 2*mytot*quad(norm.pdf,bins[i],bins[i+1])[0]
+
+        ax1.plot(binscen,mygaus,color='k',label=r"|Gauss(0,1)|")
+
+        ax1.set_yscale('log')
+        ax1.set_ylim(1E-4)
+        ax1.legend(loc='upper right', frameon=False)
+
+        # labels and such
+        ax1.set_xlabel(r'$|PS| \, [\sigma]$')
+        ax1.set_ylabel('Probability')
+
+        plt.savefig(utils.format_filename(workdir,
+                                          '%s_ps_hist_sigma' % prefix,
+                                          extension=fmt))
+        plt.close(fig)
+
+        # make and draw count spectrum
+        fig = plt.figure(figsize=figsize)
+
+        logener = psmaps['hlogebin']
+        gs = gridspec.GridSpec(2, 1, height_ratios=[1.4, 1])
+        ax0 = fig.add_subplot(gs[0, 0])
+        ax1 = fig.add_subplot(gs[1, 0], sharex=ax0)
+
+        mytitle = 'PS=%.2f sigma at (%s,%s) = (%.2f,%.2f)' %(psmaps['psmaxsigma'],psmaps['coordname1'],psmaps['coordname2'],float(psmaps['coordx']),float(psmaps['coordy']))
+        ax0.set_title(mytitle)
+
+        x = 0.5 * (logener[1:] + logener[:-1])
+        xerr = 0.5 * (logener[1:] - logener[:-1])
+
+        y = psmaps['datcounts']
+        ym = psmaps['modcounts']
+
+        ax0.errorbar(x, y, yerr=np.sqrt(y), xerr=xerr, color='k',
+                     linestyle='None', marker='s',
+                     label='Data')
+
+        ax0.errorbar(x, ym, color='red', linestyle='-', marker='None',
+                     label='Total')
+
+        ax0.set_yscale('log')
+        ax0.set_ylim(0.1, None)
+        ax0.set_xlim(logener[0], logener[-1])
+        ax0.set_ylabel('Counts')
+        ax0.legend(frameon=False, loc='best', prop={'size': 8}, ncol=2)
+
+        ax1.errorbar(x, (y - ym) / ym, xerr=xerr, yerr=np.sqrt(y) / ym,
+                     color='k', linestyle='None', marker='s',
+                     label='Data')
+
+        ax1.set_xlabel('Energy [log$_{10}$(E/MeV)]')
+        ax1.set_ylabel('Fractional Residual')
+
+        ax1.set_ylim(-1, 5)
+        ax1.set_xlim(logener[0], logener[-1])
+        ax1.axhline(0.0, color='k')
+
+        plt.savefig(utils.format_filename(workdir,
+                                          '%s_countspectrum' % prefix,
                                           extension=fmt))
         plt.close(fig)
 
@@ -1274,7 +1449,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         figsize = kwargs.get('figsize', self.config['figsize'])
         p = SEDPlotter(sed)
         fig = plt.figure(figsize=figsize)
-        p.plot()
+        p.plot(**kwargs)
 
         outfile = utils.format_filename(self.config['fileio']['workdir'],
                                         'sed', prefix=[prefix, name],
@@ -1321,7 +1496,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         p.plot(levels=[-200, -100, -50, -20, -9.21, -5.99, -2.3, -1.0],
                cmap=cmap, vmin=vmin, colors=['k'],
-               interpolation='bicubic', cb_label='2$\\times\Delta\ln$L')
+               interpolation='bicubic', cb_label=r'2$\times\Delta\ln$L')
 
         cdelt0 = np.abs(tsmap.geom.wcs.wcs.cdelt[0])
         cdelt1 = np.abs(tsmap.geom.wcs.wcs.cdelt[1])
@@ -1396,7 +1571,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         p.plot(levels=[-200, -100, -50, -20, -9.21, -5.99, -2.3, -1.0],
                cmap=cmap, vmin=vmin, colors=['k'],
-               interpolation='bicubic', cb_label='2$\\times\Delta\ln$L')
+               interpolation='bicubic', cb_label=r'2$\times\Delta\ln$L')
 
         cdelt0 = np.abs(tsmap.geom.wcs.wcs.cdelt[0])
         cdelt1 = np.abs(tsmap.geom.wcs.wcs.cdelt[1])
@@ -1415,16 +1590,16 @@ class AnalysisPlotter(fermipy.config.Configurable):
                      label='New Position')
 
         plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='w',
-                           color='w', colname='pos_r68', label='68% Uncertainty')
+                           color='w', colname='pos_r68', label=r'68% Uncertainty')
         plot_error_ellipse(loc, scan_pix, cdelt, edgecolor='w',
-                           color='w', colname='pos_r99', label='99% Uncertainty',
+                           color='w', colname='pos_r99', label=r'99% Uncertainty',
                            linestyle='--')
 
         handles, labels = plt.gca().get_legend_handles_labels()
         h0 = Line2D([], [], color='w', marker='None',
-                    label='68% Uncertainty', linewidth=1.0)
+                    label=r'68% Uncertainty', linewidth=1.0)
         h1 = Line2D([], [], color='w', marker='None',
-                    label='99% Uncertainty', linewidth=1.0,
+                    label=r'99% Uncertainty', linewidth=1.0,
                     linestyle='--')
         plt.legend(handles=handles + [h0, h1])
 
@@ -1537,7 +1712,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                 logli = np.interp(widthCenters, width, logl)
             llhMatrix[i, :] = logli
 
-        cmap = copy.deepcopy(plt.cm.get_cmap(cmap))
+        cmap = copy.deepcopy(matplotlib.colormaps.get_cmap(cmap))
         # cmap.set_under('w')
 
         if cmap_trunc_lo is not None or cmap_trunc_hi is not None:
@@ -1584,14 +1759,14 @@ class AnalysisPlotter(fermipy.config.Configurable):
 
         if ext['ts_ext'] > 9.0:
             p.draw_circle(ext['ext'], skydir=c, edgecolor='lime', linestyle='-',
-                          linewidth=1.0, label='R$_{68}$', path_effects=[path_effect])
+                          linewidth=1.0, label=r'R$_{68}$', path_effects=[path_effect])
             p.draw_circle(ext['ext'] + ext['ext_err'], skydir=c, edgecolor='lime', linestyle='--',
-                          linewidth=1.0, label='R$_{68}$ $\pm 1 \sigma$', path_effects=[path_effect])
+                          linewidth=1.0, label=r'R$_{68}$ $\pm 1 \sigma$', path_effects=[path_effect])
             p.draw_circle(ext['ext'] - ext['ext_err'], skydir=c, edgecolor='lime', linestyle='--',
                           linewidth=1.0, path_effects=[path_effect])
         else:
             p.draw_circle(ext['ext_ul95'], skydir=c, edgecolor='lime', linestyle='--',
-                          linewidth=1.0, label='R$_{68}$ 95% UL',
+                          linewidth=1.0, label=r'R$_{68}$ 95% UL',
                           path_effects=[path_effect])
         leg = plt.gca().legend(frameon=False, loc='upper left')
 
