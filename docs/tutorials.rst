@@ -35,10 +35,10 @@ Here is a list of available notebooks:
    :titlesonly:
    
    notebooks/SMC.ipynb
-   notebooks/file_function_examples.ipynb
-   notebooks/gtools_customize.ipynb
-   notebooks/optimize_model.ipynb
-   notebooks/draco.ipynb
-   notebooks/ic443.ipynb
-   notebooks/phase_analysis.ipynb
    notebooks/pg1553.ipynb
+   notebooks/optimize_model.ipynb
+   notebooks/gtools_customize.ipynb
+   notebooks/file_function_examples.ipynb
+   notebooks/phase_analysis.ipynb
+   notebooks/ic443.ipynb
+   notebooks/draco.ipynb
