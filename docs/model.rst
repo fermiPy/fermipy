@@ -15,16 +15,16 @@ isotropic diffuse components.  By default the galactic diffuse and
 isotropic components will be named *galdiff* and *isodiff*
 respectively.  An alias for each component will also be created with
 the name of the mapcube or file spectrum.  For instance the galactic
-diffuse can be referred to as *galdiff* or *gll_iem_v06* in the
+diffuse can be referred to as *galdiff* or *gll_iem_v07* in the
 following example.
 
 .. code-block:: yaml
    
    model:
      src_roiwidth : 10.0
-     galdiff  : '$FERMI_DIFFUSE_DIR/gll_iem_v06.fits'
-     isodiff  : '$FERMI_DIFFUSE_DIR/isotropic_source_4years_P8V3.txt'
-     catalogs : ['gll_psc_v14.fit']
+     galdiff  : '$FERMI_DIR/refdata/fermi/galdiffuse/gll_iem_v07.fits'
+     isodiff  : '$FERMI_DIR/refdata/fermi/galdiffuse/iso_P8R3_SOURCE_V3_v1.txt'
+     catalogs : ['4FGL-DR3']
 
 To define two or more galactic diffuse components you can optionally define
 the *galdiff* and *isodiff* parameters as lists.  A separate
@@ -67,7 +67,7 @@ takes precedence.
      src_radius: 5.0
      src_roiwidth: 10.0
      catalogs : 
-       - 'gll_psc_v16.fit'
+       - 'gll_psc_v31.fit'
        - 'extra_sources.xml'
 
 Individual sources can also be defined within the configuration file
@@ -138,8 +138,15 @@ with the ``SpatialMap`` type.
         
 
 
-Editing the Model at Runtime
-----------------------------
+Editing the Source List at Runtime
+----------------------------------
+
+.. tip::
+
+   Many users chose to delete sources that are not signifcantly
+   detected (e.g. ``TS<1`` and/or ``nPred<1``) from the model
+   after the :py:meth:`~fermipy.gtanalysis.GTAnalysis.optimize` step.
+   
 
 The model can be manually editing at runtime with the
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.add_source` and
@@ -173,4 +180,56 @@ following example.
 Sources added after calling
 :py:meth:`~fermipy.gtanalysis.GTAnalysis.setup` will be created
 dynamically through the pyLikelihood object creation mechanism.  
+
+
+Freeing and Fixing Parameters
+-----------------------------
+
+In addition to freeing and fixing parameters for a source or list
+of sources as explained in
+:ref:`quickstart.html#creating-an-analysis-script`, we can also
+free and fix parameters by name using the
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.free_parameter` method.
+For example:
+
+.. code-block:: python
+
+   gta.free_parameter(name="SourceA", par="Index", free=False)
+   gta.free_parameter(name="SourceB", par="Prefactor", free=True)
+
+
+Manual Setting of Parameters and Parameter Ranges
+-------------------------------------------------
+
+.. note::
+
+   As in `fermitools <https://fermi.gsfc.nasa.gov/ssc/data/analysis/scitools/source_models.html>`_,
+   "The actual value of a given parameter that is used in the
+   calculation is the value attribute multiplied by the scale
+   attribute. The value attribute is what the optimizers see."
+
+In rare cases, the user may want to access or change the current
+value or allowed range of a given parameter. The function
+:py:meth:`~fermipy.gtanalysis.GTAnalysis._get_param` returns a
+dictionary with information about a given parameter such as its
+value and allowed range. Parameters can also accessed via the ROI
+dictionsary. For example, the following are equivalent:
+
+.. code-block:: python
+
+   indexA = gta._get_param(name="SourceA", par="Index")["value"]
+   indexA = gta.roi["SourceA"].spectral_pars["Index"]["value"]
+
+
+:py:meth:`~fermipy.gtanalysis.GTAnalysis.set_parameter` can be
+used to set the value or range. Note that the ``bounds`` argument
+is always unscaled. The following calls are equivalent:
+
+
+.. code-block:: python
+
+   gta.set_parameter("SourceA", "Prefactor", 1.236583491e-13, bounds=[0.01, 100], scale=1e-13, true_value=True)
+   gta.set_parameter("SourceA", "Prefactor", 1.236583491,     bounds=[0.01, 100], scale=1e-13, true_value=False)
+
+In either case, the allowed parameter values range from ``1e-15`` to ``1e-11``.
 

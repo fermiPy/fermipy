@@ -53,6 +53,34 @@ Installing development versions of fermitools
 
 To test fermipy against future versions of fermitools, use the ``rc`` (release candidate) or ``dev`` (development) versions in the respective conda channels, e.g. ``mamba install -c fermi/label/rc fermitools=2.1.36``.
 
+Installing development versions of fermipy
+------------------------------------------
+
+You can use `pip` to install `fermipy` directly from a git branch or from a local directory. Inside an environment that should already contain fermitools and its dependencies, use ``pip install -U git+https://github.com/fermiPy/fermipy@branch_name``.
+
+Installing a local version:
+
+.. code-block:: bash
+
+   $ cd $MY_FERMIY_DIR
+   $ git clone git@github.com:fermiPy/fermipy.git
+   $ cd ./fermipy
+   $ git checkout -b "new_feature_branch"
+   [make local changes]
+   $ pip install .
+
+
+Running tests locally
+---------------------
+
+Note: The tests create a number of temporary files. It is recommended to run them inside an empty directory and remove the directory afterwards.
+
+.. code-block:: bash
+  
+  $ pip install pytest
+  $ pytest --pyargs fermipy
+
+
 
 Creating a New Release
 ----------------------
@@ -69,11 +97,22 @@ The following are steps for creating a new release:
    
 .. code-block:: bash
 
-   $ git tag -a XX.YY.ZZ -m ""
+   $ git tag -a XX.YY.ZZ -m "version XX.YY.ZZ"
    $ git push --tags
 
 5. Upload the release to pypi.
    
+.. code-block:: bash
+
+   $ pip install build twine
+   [inside the fermipy directory:]
+   $ python -m build
+   $ python -m twine upload dist/fermipy-1.1.2*
+   Username: __token__
+   Password: [secret token from pypi.org]
+
+Or alternatively:
+
 .. code-block:: bash
 
    $ python setup.py sdist upload -r pypi
