@@ -10,7 +10,7 @@ setup(
     name='fermipy',
     version=get_git_version(),
     author='The Fermipy developers',
-    author_email='fermipy.developers@gmail.com',
+    #author_email='fermipy.developers@gmail.com',
     description='A Python package for analysis of Fermi-LAT data',
     long_description=long_description,
     long_description_content_type='text/x-rst',
