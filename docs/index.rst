@@ -41,6 +41,7 @@ perform different analysis operations.
 
 For instructions on installing Fermipy see the :ref:`install` page.
 For a short introduction to using Fermipy see the :ref:`quickstart`.
+For more detailed examples see the :ref:`tutorials`. 
 
 Getting Help
 ------------
@@ -71,6 +72,7 @@ Documentation Contents
    team
    install
    quickstart
+   tutorials
    config
    output
    fitting

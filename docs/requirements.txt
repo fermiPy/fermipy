@@ -6,3 +6,7 @@ pyyaml
 healpy
 gammapy
 sphinx_rtd_theme
+rtds_action
+nbsphinx
+ipython
+pypandoc_binary
