@@ -6,6 +6,10 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
+1.3.1 (08/20/2024)
+------------------
+* Requirements of astropy and gammapy updated
+
 1.3.0 (08/20/2024)
 ------------------
 * Added `tutorial notebooks <https://fermipy.readthedocs.io/en/master/tutorials.html>`_ to the documentation
