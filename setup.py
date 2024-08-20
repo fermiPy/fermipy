@@ -20,7 +20,7 @@ setup(
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: Implementation :: CPython',
         'Topic :: Scientific/Engineering :: Astronomy',
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
     ],
     scripts=[],
     entry_points={'console_scripts': [
@@ -107,9 +107,9 @@ setup(
         "numpy>=1.16",
         "pyyaml",
         "scipy<1.12",
-        "astropy<6",
+        "astropy<=6",
         "matplotlib>=3.3",
-        "gammapy>=0.18",
+        "gammapy>=1.0",
         "healpy",
         "astropy-healpix"
     ],
