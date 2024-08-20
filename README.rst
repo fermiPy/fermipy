@@ -6,8 +6,9 @@ Fermi-LAT Python Analysis Framework
 * Documentation: http://fermipy.readthedocs.org/
 * Installation: http://fermipy.readthedocs.org/en/latest/install.html
 
-.. image:: https://travis-ci.org/fermiPy/fermipy.svg
-    :target: https://travis-ci.org/fermiPy/fermipy
+.. image:: https://github.com/fermiPy/fermipy/actions/workflows/python-package.yml/badge.svg?branch=master
+    :target: https://github.com/fermiPy/fermipy/actions/workflows/python-package.yml
+    :alt: Python Package
 
 .. image:: https://img.shields.io/coveralls/fermiPy/fermipy.svg
     :target: https://coveralls.io/r/fermiPy/fermipy
