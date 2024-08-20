@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 from setuptools import setup, find_packages
 from fermipy.version import get_git_version
+from pathlib import Path
+
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.rst").read_text()
 
 setup(
     name='fermipy',
@@ -8,6 +12,8 @@ setup(
     author='The Fermipy developers',
     author_email='fermipy.developers@gmail.com',
     description='A Python package for analysis of Fermi-LAT data',
+    long_description=long_description,
+    long_description_content_type='text/x-rst',
     license='BSD',
     packages=find_packages(),
     include_package_data=True,
