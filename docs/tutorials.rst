@@ -7,7 +7,7 @@ This page collects various python notebooks that demonstrate how to use
 fermipy. These notebooks are available in the `notebooks
 <https://github.com/fermiPy/fermipy-extra/tree/master/notebooks/>`_
 directory of the `fermipy-extra
-<https://github.com/fermiPy/fermipy-extra>`_ respository. These
+<https://github.com/fermiPy/fermipy-extra>`_ repository. These
 notebooks can be run interactively by downloading the fermipy-extra 
 repository and running ``jupyter notebook`` in the notebooks directory:
 

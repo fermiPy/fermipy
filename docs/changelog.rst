@@ -6,12 +6,13 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
-1.2.3 (03/25/2024)
+1.3.0 (08/20/2024)
 ------------------
+* Added `tutorial notebooks <https://fermipy.readthedocs.io/en/master/tutorials.html>`_ to the documentation
+* Published `organization chart <https://fermipy.readthedocs.io/en/master/team.html>`_
 * Added PS map implementing code from Philippe Bruel in `~fermipy.gtanalysis.GTAnalysis.psmap`
 * Added PS map visualition in `~fermipy.gtanalysis.plotter.make_psmap_plots`
-* Added PS map Documentation
-
+* Added `PS map <https://fermipy.readthedocs.io/en/master/advanced/psmap.html>`_ to the documentation
 
 1.2.2 (01/21/2024)
 ------------------
