@@ -1398,10 +1398,10 @@ class AnalysisPlotter(fermipy.config.Configurable):
             xmin = -1
             xmax = 1
         elif gta.projtype == "HPX":
-            hpx2wcs = counts_map.make_wcs_mapping(proj='CAR', oversample=2)
-            counts_map = counts_map.to_wcs(hpx2wcs=hpx2wcs)
-            mcube_tot = mcube_tot.to_wcs(hpx2wcs=hpx2wcs)
-            mcube_diffuse = mcube_diffuse.to_wcs(hpx2wcs=hpx2wcs)
+            #hpx2wcs = counts_map.make_wcs_mapping(proj='CAR', oversample=2)
+            counts_map = counts_map.to_wcs(proj='CAR', oversample=2)
+            mcube_tot = mcube_tot.to_wcs(proj='CAR', oversample=2)
+            mcube_diffuse = mcube_diffuse.to_wcs(proj='CAR', oversample=2)
             xmin = None
             xmax = None
 

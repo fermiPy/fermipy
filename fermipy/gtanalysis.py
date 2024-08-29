@@ -5058,7 +5058,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         if self.projtype == "WCS":
             v = pyLike.FloatVector(self.npix[0] * self.npix[1] * self.enumbins)
         elif self.projtype == "HPX":
-            v = pyLike.FloatVector(np.max(self.geom.npix) * self.enumbins)
+            v = pyLike.FloatVector(int(np.max(self.geom.npix) * self.enumbins))
         else:
             raise Exception("Unknown projection type %s", self.projtype)
 
