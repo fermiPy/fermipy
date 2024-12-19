@@ -82,7 +82,7 @@ are keyed to a section name (*data*, *binning*, etc.).
      edisp : True
      edisp_bins : -1
      irfs : 'P8R3_SOURCE_V2'
-     edisp_disable : ['isodiff','galdiff']
+     edisp_disable : ['isodiff']
 
    model:
      src_roiwidth : 15.0
