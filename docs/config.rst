@@ -83,6 +83,7 @@ are keyed to a section name (*data*, *binning*, etc.).
      edisp_bins : -1
      irfs : 'P8R3_SOURCE_V2'
      edisp_disable : ['isodiff']
+     # For analysis using older diffuse models (gll_iem_v06.fits or older) the energy dispersion should also be turned off for the diffuse model
 
    model:
      src_roiwidth : 15.0
