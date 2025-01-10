@@ -26,7 +26,7 @@ The :py:meth:`~fermipy.gtanalysis.GTAnalysis.psmap` will then be called, specify
    gta.write_model_map(model_name="model01")
 
    # Generate the PS map
-   psmap = gta.psmap(ccmap='ccube_00.fits',mmap='mcube_model01_00.fits', make_plots=True, emin=100, emax=100000, nbinloge=15)
+   psmap = gta.psmap(cmap='ccube_00.fits',mmap='mcube_model01_00.fits', make_plots=True, emin=100, emax=100000, nbinloge=15)
 
 In the case of an analysis with multiple components, the user has to provide the list of data and model files (separated by colons) corresponding to the components that the user wants to include in the PS computation:
 
@@ -36,7 +36,7 @@ In the case of an analysis with multiple components, the user has to provide the
    gta.write_model_map(model_name="model01")
 
    # Generate the PS map using the first three components
-   psmap = gta.psmap(ccmap='ccube_00.fits:ccube_01.fits:ccube_02.fits',mmap='mcube_model01_00.fits:mcube_model01_01.fits:mcube_model01_02.fits', make_plots=True, emin=100, emax=100000, nbinloge=15)
+   psmap = gta.psmap(cmap='ccube_00.fits:ccube_01.fits:ccube_02.fits',mmap='mcube_model01_00.fits:mcube_model01_01.fits:mcube_model01_02.fits', make_plots=True, emin=100, emax=100000, nbinloge=15)
 
 
 Configuration
