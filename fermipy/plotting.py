@@ -266,7 +266,7 @@ class ImagePlotter(object):
             self._projtype = 'HPX'
             raise ValueError
         else:
-            raise ValueError("Can't plot map of unknown type %s" % type(proj))
+            raise ValueError("Can't plot map of unknown type")
 
         self._img = img
 
@@ -381,7 +381,7 @@ class ROIPlotter(fermipy.config.Configurable):
         'cmap': ('ds9_b', '', str),
     }
 
-    def __init__(self, data_map, hpx2wcs=None, **kwargs):
+    def __init__(self, data_map, proj='AIT', **kwargs):
         self._roi = kwargs.pop('roi', None)
         super(ROIPlotter, self).__init__(None, **kwargs)
 
@@ -399,7 +399,7 @@ class ROIPlotter(fermipy.config.Configurable):
             self._data_map = copy.deepcopy(data_map)
         elif isinstance(data_map, HpxNDMap):
             self._projtype = 'HPX'
-            self._data_map = data_map.to_wcs(normalize=False, hpx2wcs=hpx2wcs)
+            self._data_map = data_map.to_wcs(normalize=False, proj=proj)
         else:
             raise Exception(
                 "Can't make ROIPlotter of unknown projection type %s" % type(data_map))
@@ -1398,10 +1398,9 @@ class AnalysisPlotter(fermipy.config.Configurable):
             xmin = -1
             xmax = 1
         elif gta.projtype == "HPX":
-            hpx2wcs = counts_map.make_wcs_mapping(proj='CAR', oversample=2)
-            counts_map = counts_map.to_wcs(hpx2wcs=hpx2wcs)
-            mcube_tot = mcube_tot.to_wcs(hpx2wcs=hpx2wcs)
-            mcube_diffuse = mcube_diffuse.to_wcs(hpx2wcs=hpx2wcs)
+            counts_map = counts_map.to_wcs(proj='CAR', oversample=2)
+            mcube_tot = mcube_tot.to_wcs(proj='CAR', oversample=2)
+            mcube_diffuse = mcube_diffuse.to_wcs(proj='CAR', oversample=2)
             xmin = None
             xmax = None
 
