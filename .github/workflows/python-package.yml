@@ -62,3 +62,56 @@ jobs:
         fail_ci_if_error: true
         token: ${{ secrets.CODECOV_TOKEN }} # required
         
+  build-dev:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        python-version: [3.11]
+        os : ["ubuntu-latest", "macos-latest"]                
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v4
+    - uses: conda-incubator/setup-miniconda@v2
+      with:
+        miniforge-variant: Mambaforge
+        activate-environment: fermipy
+        environment-file: environment.yml
+        channels: conda-forge,fermi/label/dev
+        channel-priority: strict
+        python-version: ${{ matrix.python-version }}
+        auto-activate-base: false
+    - name: Install
+      shell: bash -l {0}
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install pylint pytest pytest-cov        
+    - name: Lint with pylint
+      shell: bash -l {0}
+      run: |
+        # stop the build if there are Python syntax errors or undefined names
+        #pylint --reports=no --errors-only fermipy
+        # stp the build if there are a lot of messages
+        #pylint --reports=no --fail-under=9.5 fermipy
+        # exit-zero treats all errors as warnings.
+        pylint --exit-zero fermipy
+    - name: Test with pytest and codecov
+      shell: bash -l {0}
+      run: |
+        python -m pytest --cov=./fermipy --cov-report=xml fermipy
+#      if: runner.os == 'macOS'
+#    - name: Test with pytest without codecov
+#      shell: bash -l {0}
+#      run: |
+#        python -m pytest fermipy
+#      if: runner.os != 'macOS'
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage.xml
+        flags: unittests
+        env_vars: OS,PYTHON
+        name: codecov-umbrella
+        fail_ci_if_error: true
+        token: ${{ secrets.CODECOV_TOKEN }} # required
+              
+      
