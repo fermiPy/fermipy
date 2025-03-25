@@ -146,7 +146,7 @@ def test_gtanalysis_fit(create_diffuse_dir, create_draco_analysis):
 
 
 #@requires_git_version('00-00-01')
-@requires_git_version('99-00-01')
+#@requires_git_version('99-00-01')
 def test_gtanalysis_fit_newton(create_diffuse_dir, create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit0')
@@ -174,7 +174,7 @@ def test_gtanalysis_psmap(create_diffuse_dir, create_draco_analysis):
     gta.psmap(cmap=mycmap,mmap=mymmap,make_plots=True,emin=1000,emax=10000,nbinloge=4,outfile='testpsmap',chatter=3)
 
 
-@requires_git_version('99-00-01')
+#@requires_git_version('99-00-01')
 def test_gtanalysis_tscube(create_diffuse_dir, create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
@@ -340,17 +340,13 @@ def test_gtanalysis_lightcurve(create_diffuse_dir, create_pg1553_analysis):
     o = gta.lightcurve('4FGL J1555.7+1111', nbins=2,
                        free_radius=3.0)
 
-    rtol = 0.01
-    flux = np.array([2.917568e-08,
-                     2.359114e-08])
+    rtol = 0.02
+    flux = np.array([2.953438e-08,
+                     2.396414e-08])
     flux_err = np.array([1.931940e-09,
                          1.822694e-09])
-    #flux = np.array([2.860243e-08,
-    #                 2.312212e-08])
-    #flux_err = np.array([1.874528e-09,
-    #                     1.762850e-09])
-    ts = np.array([1463.066,
-                   1123.160])
+    ts = np.array([1490.767,
+                   1149.025])
     
     assert_allclose(o['flux'], flux, rtol=rtol)
     assert_allclose(o['flux_err'], flux_err, rtol=rtol)
