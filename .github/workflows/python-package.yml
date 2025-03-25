@@ -21,9 +21,9 @@ jobs:
       fail-fast: false
     steps:
     - uses: actions/checkout@v4
-    - uses: conda-incubator/setup-miniconda@v2
+    - uses: conda-incubator/setup-miniconda@v3
       with:
-        miniforge-variant: Mambaforge
+        miniforge-variant: Miniforge3
         activate-environment: fermipy
         environment-file: environment.yml
         python-version: ${{ matrix.python-version }}
@@ -71,9 +71,9 @@ jobs:
       fail-fast: false
     steps:
     - uses: actions/checkout@v4
-    - uses: conda-incubator/setup-miniconda@v2
+    - uses: conda-incubator/setup-miniconda@v3
       with:
-        miniforge-variant: Mambaforge
+        miniforge-variant: Miniforge3
         activate-environment: fermipy
         environment-file: environment.yml
         channels: conda-forge,fermi/label/dev
