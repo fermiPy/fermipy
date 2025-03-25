@@ -75,9 +75,7 @@ jobs:
       with:
         miniforge-variant: Miniforge3
         activate-environment: fermipy
-        environment-file: environment.yml
-        channels: conda-forge,fermi/label/dev
-        channel-priority: strict
+        environment-file: environment-dev.yml
         python-version: ${{ matrix.python-version }}
         auto-activate-base: false
     - name: Install
@@ -98,12 +96,6 @@ jobs:
       shell: bash -l {0}
       run: |
         python -m pytest --cov=./fermipy --cov-report=xml fermipy
-#      if: runner.os == 'macOS'
-#    - name: Test with pytest without codecov
-#      shell: bash -l {0}
-#      run: |
-#        python -m pytest fermipy
-#      if: runner.os != 'macOS'
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:
