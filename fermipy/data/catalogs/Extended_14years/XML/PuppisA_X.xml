@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<source_library title="source library">
+  <source name="PuppisA" type="DiffuseSource">
+    <spectrum normPar="norm" type="LogParabola">
+      <parameter error="0.06061108051" free="1" max="100" min="0" name="norm" scale="1e-12" value="2.429006057"/>
+      <parameter error="0.0280351233" free="1" max="5" min="0" name="alpha" scale="1" value="1.921705514"/>
+      <parameter error="0.1320072585" free="1" max="10" min="-5" name="beta" scale="0.1" value="0.957120726"/>
+      <parameter free="0" max="300" min="0.02" name="Eb" scale="1000" value="1.993576821"/>
+    </spectrum>
+    <spatialModel file="$(LATEXTDIR)/Templates/PuppisA_X.fits" map_based_integral="true" type="SpatialMap">
+      <parameter free="0" max="1" min="1" name="Prefactor" scale="1" value="1"/>
+    </spatialModel>
+  </source>
+</source_library>

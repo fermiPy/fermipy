@@ -1,0 +1,56 @@
+Extended sources for 14-year source list, 2022
+----------------------------------------------
+
+
+New extended sources:
+---------------------
+
+- CTB 80: Araya & Herrera 2021, MNRAS 502, 472
+
+- G51.26+0.11: Araya 2021, ApJ 921, 69
+
+- 3C 58 (around PSR J0205+6449): Li et al 2018, ApJ 858, 84
+  radio morphology to avoid tail in 3PC pulsar spectrum
+
+- G292.2-0.5: TeV morphology (HESS GPS 2018, A&A 612, A1)
+  to avoid tail in 3PC pulsar spectrum
+
+
+Modified extended sources:
+--------------------------
+
+- Cygnus Loop: Tutone et al 2021, A&A 656, A13
+
+- Puppis A: Xin et al 2017, ApJ 843, 90
+  prefer eROSITA map (Mayer et al 2022, A&A 661, A31)
+
+
+Not implemented yet:
+--------------------
+
+- IC 443 (J. Hewitt): not ready
+
+- HESS J1912+101 (D. Green, F. de Palma): not ready
+  see also Zhang, H.-M. et al 2020, ApJ 889, 12
+
+- new HESS shells (F. de Palma): not ready
+
+- CenA lobes (J. Magill): not ready
+
+- HESS J1731-347 (Condon et al 2017, Guo et al 2018): TSExt < 16
+
+- Geminga halo (di Mauro et al): under discussion
+
+- W 30 (Bing Liu et al 2019, ApJ 881, 94): smaller disk with no point source inside: not as good
+
+- Westerlund 2 (Mestre et al): not ready yet
+ 
+- W 44: di Tria and di Venere, in progress (radio template + CO template)
+
+- W 28: try HESS template for outside emission instead of many point sources?
+
+- eHWC J1907-063 (Li et al, di Mauro et al): check
+
+- HESS J1614-518 (de Palma et al): not ready yet
+
+- Cygnus cocoon (Astiasarain et al): not ready yet
