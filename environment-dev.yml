@@ -1,7 +1,7 @@
 name: fermipy
 channels:
-  - fermi
   - conda-forge
+  - fermi/label/dev
 dependencies:
   - python
   - pyyaml
