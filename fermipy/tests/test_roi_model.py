@@ -184,6 +184,32 @@ def test_load_4fgldr3_catalog_fits():
                      [7.0208e-13, -1.9582, 0.6666667, 0.4653, 1387.38], rtol=1e-3)
 
 
+def test_load_4fgldr4_catalog_fits():
+    #tested against web interface: https://heasarc.gsfc.nasa.gov/db-perl/W3Browse/w3query.pl
+    
+    skydir = SkyCoord(0.0, 30.0, unit='deg', frame='galactic').icrs
+    rm = ROIModel(catalogs=['4FGL-DR4'], skydir=skydir, src_radius=20.0)
+    assert len(rm.sources) == 178
+
+    src_name = '4FGL J1605.1-1140'
+    assert(rm[src_name]['SpectrumType'] == 'PowerLaw')
+    check_src_params(rm, src_name,
+                     ['Prefactor', 'Index', 'Scale'],
+                     [2.9204e-14, -2.0761, 3323.97])
+
+    src_name = '4FGL J1557.9-1404'
+    assert(rm[src_name]['SpectrumType'] == 'LogParabola')
+    check_src_params(rm, src_name,
+                     ['norm', 'alpha', 'beta', 'Eb'],
+                     [3.8898e-13, 2.2553, 0.3945, 1187.73])
+
+    src_name = '4FGL J1623.0-0315'
+    assert(rm[src_name]['SpectrumType'] == 'PLSuperExpCutoff4')
+    
+    check_src_params(rm, src_name,
+                     ['Prefactor', 'IndexS', 'Index2', 'ExpfactorS', 'Scale'],
+                     [6.3293e-13, -1.9659, 0.6667, 0.47695, 1406.84], rtol=1e-3)
+
 
 def test_create_roi_from_source():
 
