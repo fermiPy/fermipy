@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<source_library title="source library">
+  <source name="G292.2-0.5" type="DiffuseSource">
+    <spectrum normPar="Prefactor" type="PowerLaw">
+      <parameter free="1" max="100" min="0" name="Prefactor" scale="5e-16" value="4"/>
+      <parameter free="1" max="5" min="0" name="Index" scale="-1" value="2.05"/>
+      <parameter free="0" max="100" min="0.1" name="Scale" scale="1000" value="30"/>
+    </spectrum>
+    <spatialModel type="RadialGaussian">
+      <parameter free="0" max="360" min="0" name="RA" scale="1" value="169.77"/>
+      <parameter free="0" max="90" min="-90" name="DEC" scale="1" value="-61.45"/>
+      <parameter free="0" max="10" min="0" name="Sigma" scale="1" value="0.1"/>
+    </spatialModel>
+  </source>
+</source_library>

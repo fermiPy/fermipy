@@ -1,0 +1,16 @@
+<?xml version="1.0" standalone="no"?>
+<source_library title="source library">
+  <source name="HB21" type="DiffuseSource">
+    <spectrum normPar="norm" type="LogParabola">
+      <parameter error="0.23" free="1" max="100" min="0" name="norm" scale="1e-11" value="5.76"/>
+      <parameter error="0.05" free="1" max="5" min="0" name="alpha" scale="1" value="2.00"/>
+      <parameter error="0.47" free="1" max="10" min="0" name="beta" scale="0.1" value="3.76"/>
+      <parameter free="0" max="100" min="0.1" name="Eb" scale="1000" value="0.599"/>
+    </spectrum>
+    <spatialModel type="RadialDisk">
+      <parameter name="RA" value="311.241" scale="1" min="-360" max="360" free="0"/>
+      <parameter name="DEC" value="50.489" scale="1" min="-90" max="90" free="0"/>
+      <parameter name="Radius" value="0.83" scale="1" min="0" max="10" free="0"/>
+    </spatialModel>
+  </source>
+</source_library>
