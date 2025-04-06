@@ -170,77 +170,155 @@ def _process_lc_bin(itime, name, config, basedir, workdir, diff_sources, const_s
               (time[0], time[1]))
         print(sys.exc_info())
         return {'fit_success': False}
+    #Add an additional try structure so the code won't crash due to NaN values, and will simply ignore the corresponding bin
+    try:
+        gta._lck_params = lck_params
+        # Recompute source map for source of interest and sources within 3 deg
+        if gta.config['gtlike']['use_scaled_srcmap']:
+            names = [s.name for s in
+                     gta.roi.get_sources(distance=3.0, skydir=gta.roi[name].skydir)
+                     if not s.diffuse]
+            gta.reload_sources(names)
 
-    gta._lck_params = lck_params
-    # Recompute source map for source of interest and sources within 3 deg
-    if gta.config['gtlike']['use_scaled_srcmap']:
-        names = [s.name for s in
-                 gta.roi.get_sources(distance=3.0, skydir=gta.roi[name].skydir)
-                 if not s.diffuse]
-        gta.reload_sources(names)
+        # Write the current model
+        gta.write_xml(xmlfile)
 
-    # Write the current model
-    gta.write_xml(xmlfile)
+        # Optimize the model
+        gta.optimize(skip=diff_sources,
+                     shape_ts_threshold=kwargs.get('shape_ts_threshold'),
+                     max_free_sources=kwargs.get('max_free_sources') )
 
-    # Optimize the model
-    gta.optimize(skip=diff_sources,
-                 shape_ts_threshold=kwargs.get('shape_ts_threshold'),
-                 max_free_sources=kwargs.get('max_free_sources') )
-
-    fit_results = _fit_lc(gta, name, **kwargs)
-    gta.write_xml('fit_model_final.xml')
-    srcmodel = copy.deepcopy(gta.get_src_model(name))
-    numfree = gta.get_free_param_vector().count(True)
+        fit_results = _fit_lc(gta, name, **kwargs)
+        gta.write_xml('fit_model_final.xml')
+        srcmodel = copy.deepcopy(gta.get_src_model(name))
+        numfree = gta.get_free_param_vector().count(True)
     
-    const_srcmodel = gta.get_src_model(name).copy()
-    fixed_fit_results = fit_results.copy()
-    fixed_srcmodel = gta.get_src_model(name).copy()
-    fixed_fit_results['fit_success'],fixed_srcmodel['fit_success'] = [False,False]
-    fixed_fit_results['fit_quality'],fixed_srcmodel['fit_quality'] = [0,0]
-    max_ts_thresholds = [None, 4, 9, 16, 25]
-    for max_ts in max_ts_thresholds:
-        if max_ts is not None:
-            gta.free_sources(minmax_ts=[None, max_ts], free=False, exclude=[name])
+        const_srcmodel = gta.get_src_model(name).copy()
+        fixed_fit_results = fit_results.copy()
+        fixed_srcmodel = gta.get_src_model(name).copy()
+        fixed_fit_results['fit_success'],fixed_srcmodel['fit_success'] = [False,False]
+        fixed_fit_results['fit_quality'],fixed_srcmodel['fit_quality'] = [0,0]
+        max_ts_thresholds = [None, 4, 9, 16, 25]
+        for max_ts in max_ts_thresholds:
+            if max_ts is not None:
+                gta.free_sources(minmax_ts=[None, max_ts], free=False, exclude=[name])
 
-        # rerun fit using params from full time (constant) fit using same
-        # param vector as the successful fit to get loglike
-        specname, spectrum = const_spectrum
-        gta.set_source_spectrum(name, spectrum_type=specname,
-                                spectrum_pars=spectrum,
-                                update_source=False)
-        gta.free_source(name, free=False)
-        const_fit_results = gta.fit()
-        if not const_fit_results['fit_success']:
-            continue
-        const_srcmodel = gta.get_src_model(name)
-        # rerun using shape fixed to full time fit
-        # for the fixed-shape lightcurve
-        gta.free_source(name, pars='norm')
-        fixed_fit_results = gta.fit()
-        if not fixed_fit_results['fit_success']:
-            continue
-        fixed_srcmodel = gta.get_src_model(name)
-        break
-    
-    # special lc output
-    o = {'flux_const': const_srcmodel['flux'],
-         'loglike_const': const_fit_results['loglike'],
-         'fit_success': fit_results['fit_success'],
-         'fit_success_fixed': fixed_fit_results['fit_success'],
-         'fit_quality': fit_results['fit_quality'],
-         'fit_status': fit_results['fit_status'],
-         'num_free_params': numfree,
-         'config': config}
-    # full flux output
-    if fit_results['fit_success'] == 1:
-        for k in defaults.source_flux_output.keys():
-            if not k in srcmodel:
+            # rerun fit using params from full time (constant) fit using same
+            # param vector as the successful fit to get loglike
+            specname, spectrum = const_spectrum
+            gta.set_source_spectrum(name, spectrum_type=specname,
+                                    spectrum_pars=spectrum,
+                                    update_source=False)
+            gta.free_source(name, free=False)
+            const_fit_results = gta.fit()
+            if not const_fit_results['fit_success']:
                 continue
-            o[k] = srcmodel[k]
-            o[k+'_fixed'] = fixed_srcmodel[k]
+            const_srcmodel = gta.get_src_model(name)
+            # rerun using shape fixed to full time fit
+            # for the fixed-shape lightcurve
+            gta.free_source(name, pars='norm')
+            fixed_fit_results = gta.fit()
+            if not fixed_fit_results['fit_success']:
+                continue
+            fixed_srcmodel = gta.get_src_model(name)
+            break
+    
+        # special lc output
+        o = {'flux_const': const_srcmodel['flux'],
+             'loglike_const': const_fit_results['loglike'],
+             'fit_success': fit_results['fit_success'],
+             'fit_success_fixed': fixed_fit_results['fit_success'],
+             'fit_quality': fit_results['fit_quality'],
+             'fit_status': fit_results['fit_status'],
+             'num_free_params': numfree,
+             'config': config}
+        # full flux output
+        if fit_results['fit_success'] == 1:
+            for k in defaults.source_flux_output.keys():
+                if not k in srcmodel:
+                    continue
+                o[k] = srcmodel[k]
+                o[k+'_fixed'] = fixed_srcmodel[k]
 
-    gta.logger.info('Finished time range %i %i' % (time[0], time[1]))
-    return o
+        gta.logger.info('Finished time range %i %i' % (time[0], time[1]))
+        return o
+##
+    except:
+        print('Analysis failed in time range %i %i' %
+              (time[0], time[1]))
+        print(sys.exc_info())
+        return {'fit_success': False}
+        
+        gta._lck_params = lck_params
+        # Recompute source map for source of interest and sources within 3 deg
+        if gta.config['gtlike']['use_scaled_srcmap']:
+            names = [s.name for s in
+                     gta.roi.get_sources(distance=3.0, skydir=gta.roi[name].skydir)
+                     if not s.diffuse]
+            gta.reload_sources(names)
+
+        # Write the current model
+        gta.write_xml(xmlfile)
+
+        # Optimize the model
+        gta.optimize(skip=diff_sources,
+                     shape_ts_threshold=kwargs.get('shape_ts_threshold'),
+                     max_free_sources=kwargs.get('max_free_sources') )
+
+        fit_results = _fit_lc(gta, name, **kwargs)
+        gta.write_xml('fit_model_final.xml')
+        srcmodel = copy.deepcopy(gta.get_src_model(name))
+        numfree = gta.get_free_param_vector().count(True)
+    
+        const_srcmodel = gta.get_src_model(name).copy()
+        fixed_fit_results = fit_results.copy()
+        fixed_srcmodel = gta.get_src_model(name).copy()
+        fixed_fit_results['fit_success'],fixed_srcmodel['fit_success'] = [False,False]
+        fixed_fit_results['fit_quality'],fixed_srcmodel['fit_quality'] = [0,0]
+        max_ts_thresholds = [None, 4, 9, 16, 25]
+        for max_ts in max_ts_thresholds:
+            if max_ts is not None:
+                gta.free_sources(minmax_ts=[None, max_ts], free=False, exclude=[name])
+
+            # rerun fit using params from full time (constant) fit using same
+            # param vector as the successful fit to get loglike
+            specname, spectrum = const_spectrum
+            gta.set_source_spectrum(name, spectrum_type=specname,
+                                    spectrum_pars=spectrum,
+                                    update_source=False)
+            gta.free_source(name, free=False)
+            const_fit_results = gta.fit()
+            if not const_fit_results['fit_success']:
+                continue
+            const_srcmodel = gta.get_src_model(name)
+            # rerun using shape fixed to full time fit
+            # for the fixed-shape lightcurve
+            gta.free_source(name, pars='norm')
+            fixed_fit_results = gta.fit()
+            if not fixed_fit_results['fit_success']:
+                continue
+            fixed_srcmodel = gta.get_src_model(name)
+            break
+    
+        # special lc output
+        o = {'flux_const': const_srcmodel['flux'],
+             'loglike_const': const_fit_results['loglike'],
+             'fit_success': fit_results['fit_success'],
+             'fit_success_fixed': fixed_fit_results['fit_success'],
+             'fit_quality': fit_results['fit_quality'],
+             'fit_status': fit_results['fit_status'],
+             'num_free_params': numfree,
+             'config': config}
+        # full flux output
+        if fit_results['fit_success'] == 1:
+            for k in defaults.source_flux_output.keys():
+                if not k in srcmodel:
+                    continue
+                o[k] = srcmodel[k]
+                o[k+'_fixed'] = fixed_srcmodel[k]
+
+        gta.logger.info('Finished time range %i %i' % (time[0], time[1]))
+        return o
 
 
 def calcTS_var(loglike, loglike_const, flux_err, flux_const, systematic, fit_success):
