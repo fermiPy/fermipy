@@ -642,7 +642,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
                 rm['npred_wt'] += np.sum(src['model_counts_wt'])
             except:
                 rm['model_counts_wt'] += src['model_counts']
-                rm['npred'] += np.sum(src['model_counts'])
+                rm['npred_wt'] += np.sum(src['model_counts'])
 
             mc = self.model_counts_spectrum(name)
             mc_wt = self.model_counts_spectrum(name, weighted=True)
