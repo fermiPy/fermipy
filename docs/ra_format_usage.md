@@ -52,9 +52,9 @@ psmap = gta.psmap(cmap='ccube_00.fits',
                   ra_format='deg')
 ```
 
-#### For Other Plot Methods
+#### For Other Map Methods
 
-The `ra_format` parameter can be passed to any plotting method:
+The `ra_format` parameter is supported by **ALL** map generation methods in fermipy:
 
 ```python
 # For residual maps
@@ -63,11 +63,19 @@ gta.residmap(make_plots=True, ra_format='deg')
 # For TS maps
 gta.tsmap(make_plots=True, ra_format='deg')
 
+# For TS cubes
+gta.tscube(make_plots=True, ra_format='deg')
+
 # For localization plots
 gta.localize('SourceName', make_plots=True, ra_format='deg')
 
 # For extension analysis
 gta.extension('SourceName', make_plots=True, ra_format='deg')
+
+# For ROI diagnostic plots
+gta.write_roi('roi_file', make_plots=True, plotting={'ra_format': 'deg'})
+# or
+gta.make_plots('prefix', ra_format='deg')
 ```
 
 ## Examples
@@ -125,9 +133,31 @@ psmap:
 - `'deg'`: Displays RA in decimal degrees
   - Example: 187.562
 
+## Supported Map Types
+
+The `ra_format` configuration is supported by all map generation methods:
+
+### Sky Maps
+- **psmap**: PS (Poisson statistics) maps
+- **tsmap**: Test Statistic maps
+- **tscube**: Test Statistic cubes (energy-resolved TS maps)
+- **residmap**: Residual maps (data - model)
+
+### Analysis Maps
+- **localization**: Source position localization maps
+- **extension**: Source extension analysis maps
+- **ROI plots**: Region of interest diagnostic maps
+  - Model maps
+  - Counts maps
+  - Projection plots
+
 ## Notes
 
 - The default format is `'hour'` to maintain backward compatibility
 - The setting only affects ICRS (celestial) coordinate systems; galactic coordinates are unaffected
-- All 2D sky maps (residual maps, TS maps, PS maps, etc.) support this configuration
+- **ALL** 2D sky maps in fermipy support this configuration
 - The format can be set globally or overridden per method call
+- Configuration can be set at multiple levels:
+  - Global plotting configuration
+  - Method-specific configuration (psmap, tsmap, residmap, etc.)
+  - Direct parameter in method call

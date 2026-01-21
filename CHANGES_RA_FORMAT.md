@@ -11,7 +11,13 @@ This update adds functionality to display Right Ascension (RA) coordinates in de
   - Allowed values: `'hour'` or `'deg'`
   - Description: "Format for RA axis labels in sky maps. Options are 'hour' (hh:mm:ss) or 'deg' (degrees)."
 
-- Added `ra_format` option to the `psmap` configuration dictionary
+- Added `ra_format` option to ALL map configuration dictionaries:
+  - `psmap`: PS map configuration
+  - `tsmap`: TS map configuration
+  - `tscube`: TS cube configuration
+  - `residmap`: Residual map configuration
+  - `localize`: Localization configuration
+  - `extension`: Extension analysis configuration
   - Allows method-specific override of the global plotting configuration
 
 ### 2. Plotting Module Updates (fermipy/plotting.py)
@@ -27,16 +33,37 @@ This update adds functionality to display Right Ascension (RA) coordinates in de
 - Ensures the setting is propagated to ImagePlotter
 
 #### AnalysisPlotter class
-Updated the following methods to support `ra_format` configuration:
+Updated ALL plotting methods to support `ra_format` configuration:
 - `make_residmap_plots()` - for residual maps
-- `make_tsmap_plots()` - for TS maps
+- `make_tsmap_plots()` - for TS maps and TS cubes
 - `make_psmap_plots()` - for PS maps
+- `make_roi_plots()` - for ROI diagnostic maps (model, counts, projections)
+- `make_localization_plots()` - for source localization maps (both plots)
+- `make_extension_plots()` -> `_plot_extension_tsmap()` - for extension analysis maps
 
 Each method now calls `kwargs.setdefault('ra_format', self.config['ra_format'])` to ensure the global configuration is applied unless overridden.
 
-### 3. PSMap Module Updates (fermipy/psmap.py)
+### 3. Analysis Method Updates
+Updated ALL map-generating analysis methods to pass `ra_format` to plotting:
+
+#### fermipy/psmap.py
 - Modified `PSMapGenerator.psmap()` method to pass `ra_format` from psmap configuration to the plotter
-- Allows users to set RA format specifically for psmap calls
+
+#### fermipy/tsmap.py
+- Modified `tsmap()` method to pass `ra_format` to make_tsmap_plots
+- Modified `tscube()` method to pass `ra_format` to make_tsmap_plots
+
+#### fermipy/residmap.py
+- Modified `residmap()` method to pass `ra_format` to make_residmap_plots
+
+#### fermipy/sourcefind.py
+- Modified `localize()` method to pass `ra_format` to make_localization_plots
+
+#### fermipy/extension.py
+- Modified `extension()` method to pass `ra_format` to make_extension_plots
+
+#### fermipy/gtanalysis.py
+- `write_roi()` and `make_plots()` methods automatically support `ra_format` through the plotting infrastructure
 
 ## Usage Examples
 
@@ -57,16 +84,49 @@ psmap = gta.psmap(cmap='ccube_00.fits',
 # For tsmap
 tsmap = gta.tsmap(make_plots=True, ra_format='deg')
 
+# For tscube
+tscube = gta.tscube(make_plots=True, ra_format='deg')
+
 # For residmap
 resid = gta.residmap(make_plots=True, ra_format='deg')
+
+# For localization
+loc = gta.localize('SourceName', make_plots=True, ra_format='deg')
+
+# For extension
+ext = gta.extension('SourceName', make_plots=True, ra_format='deg')
+
+# For ROI plots
+gta.write_roi('output', make_plots=True, plotting={'ra_format': 'deg'})
 ```
 
 ### YAML Configuration
 ```yaml
 plotting:
+  ra_format: 'deg'  # Global setting for all plots
+
+# Method-specific settings (optional overrides)
+psmap:
+  make_plots: true
   ra_format: 'deg'
 
-psmap:
+tsmap:
+  make_plots: true
+  ra_format: 'deg'
+
+tscube:
+  make_plots: true
+  ra_format: 'deg'
+
+residmap:
+  make_plots: true
+  ra_format: 'deg'
+
+localize:
+  make_plots: true
+  ra_format: 'deg'
+
+extension:
   make_plots: true
   ra_format: 'deg'
 ```
@@ -104,9 +164,13 @@ The implementation uses matplotlib's WCSAxes coordinate formatter:
 4. Default value (`'hour'`)
 
 ## Files Modified
-1. `fermipy/defaults.py` - Added configuration options
-2. `fermipy/plotting.py` - Implemented RA format control in plotting classes
+1. `fermipy/defaults.py` - Added configuration options to all map configurations
+2. `fermipy/plotting.py` - Implemented RA format control in all plotting methods
 3. `fermipy/psmap.py` - Pass configuration from psmap to plotter
+4. `fermipy/tsmap.py` - Pass configuration from tsmap and tscube to plotter
+5. `fermipy/residmap.py` - Pass configuration from residmap to plotter
+6. `fermipy/sourcefind.py` - Pass configuration from localize to plotter
+7. `fermipy/extension.py` - Pass configuration from extension to plotter
 
 ## Files Created
 1. `docs/ra_format_usage.md` - User documentation
