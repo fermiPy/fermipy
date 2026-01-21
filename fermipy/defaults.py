@@ -357,6 +357,7 @@ psmap = {
     'scaleaxis':(20,'LL computation: scale axis.', float),
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
+    'ra_format': ('hour', 'Format for RA axis labels in plots. Options are "hour" (hh:mm:ss) or "deg" (degrees).', str),
 }
 
 # Options for Source Finder
@@ -784,6 +785,7 @@ plotting = {
     'label_ts_threshold':
         (0., 'TS threshold for labeling sources in sky maps.  If None then no sources will be labeled.', float),
     'interactive': (False, 'Enable interactive mode.  If True then plots will be drawn after each plotting command.', bool),
+    'ra_format': ('hour', 'Format for RA axis labels in sky maps. Options are "hour" (hh:mm:ss) or "deg" (degrees).', str),
 }
 
 # Source dictionary
