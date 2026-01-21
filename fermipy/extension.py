@@ -84,8 +84,11 @@ class ExtensionFit(object):
         self.logger.info('Finished extension fit.')
 
         if config['make_plots']:
-            self._plotter.make_extension_plots(ext, self.roi,
-                                               prefix=config['prefix'])
+            # Pass ra_format from extension config if specified
+            plot_kwargs = {'prefix': config['prefix']}
+            if 'ra_format' in config:
+                plot_kwargs['ra_format'] = config['ra_format']
+            self._plotter.make_extension_plots(ext, self.roi, **plot_kwargs)
 
         outfile = config.get('outfile', None)
         if outfile is None:

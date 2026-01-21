@@ -1383,6 +1383,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                               self.config['label_ts_threshold'])
         roi_kwargs.setdefault('cmap', self.config['cmap'])
         roi_kwargs.setdefault('catalogs', self._catalogs)
+        roi_kwargs.setdefault('ra_format', kwargs.get('ra_format', self.config['ra_format']))
 
         if loge_bounds is None:
             loge_bounds = (gta.log_energies[0], gta.log_energies[-1])
@@ -1483,6 +1484,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         prefix = kwargs.get('prefix', '')
         skydir = kwargs.get('skydir', None)
         cmap = kwargs.get('cmap', self.config['cmap'])
+        ra_format = kwargs.get('ra_format', self.config['ra_format'])
         name = loc.get('name', '')
         name = name.lower().replace(' ', '_')
 
@@ -1498,7 +1500,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         path_effect = PathEffects.withStroke(linewidth=2.0,
                                              foreground="black")
 
-        p = ROIPlotter(tsmap_renorm, roi=roi)
+        p = ROIPlotter(tsmap_renorm, roi=roi, ra_format=ra_format)
         fig = plt.figure(figsize=figsize)
 
         vmin = max(-100.0, np.min(tsmap_renorm.data))
@@ -1573,7 +1575,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         tsmap_renorm = copy.deepcopy(tsmap)
         tsmap_renorm.data -= np.max(tsmap_renorm.data)
 
-        p = ROIPlotter(tsmap_renorm, roi=roi)
+        p = ROIPlotter(tsmap_renorm, roi=roi, ra_format=ra_format)
         fig = plt.figure(figsize=figsize)
 
         vmin = max(-50.0, np.min(tsmap_renorm.data))
@@ -1751,10 +1753,11 @@ class AnalysisPlotter(fermipy.config.Configurable):
         figsize = kwargs.get('figsize', self.config['figsize'])
         prefix = kwargs.get('prefix', '')
         cmap = kwargs.get('cmap', self.config['cmap'])
+        ra_format = kwargs.get('ra_format', self.config['ra_format'])
         name = ext.get('name', '')
         name = name.lower().replace(' ', '_')
 
-        p = ROIPlotter(ext['tsmap'], roi=roi)
+        p = ROIPlotter(ext['tsmap'], roi=roi, ra_format=ra_format)
         fig = plt.figure(figsize=figsize)
 
         sigma_levels = [3, 5, 7] + list(np.logspace(1, 3, 17))

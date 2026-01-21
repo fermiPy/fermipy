@@ -294,6 +294,7 @@ residmap = {
     'use_weights': common['use_weights'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
+    'ra_format': ('hour', 'Format for RA axis labels in plots. Options are "hour" (hh:mm:ss) or "deg" (degrees).', str),
 }
 
 # TS Map
@@ -310,6 +311,7 @@ tsmap = {
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
+    'ra_format': ('hour', 'Format for RA axis labels in plots. Options are "hour" (hh:mm:ss) or "deg" (degrees).', str),
 }
 
 # TS Cube
@@ -330,6 +332,7 @@ tscube = {
     'remake_test_source': (False, 'If true, recomputes the test source image (otherwise just shifts it)', bool),
     'st_scan_level': (0, 'Level to which to do ST-based fitting (for testing)', int),
     'init_lambda': (0, 'Initial value of damping parameter for newton step size calculation.   A value of zero disables damping.', float),
+    'ra_format': ('hour', 'Format for RA axis labels in plots. Options are "hour" (hh:mm:ss) or "deg" (degrees).', str),
 }
 
 # PS map
@@ -589,6 +592,7 @@ extension = {
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
     'reoptimize':(False, 'Re-fit ROI in each energy bin. No effect if fit_ebin=False or there are no free parameters', bool ),
+    'ra_format': ('hour', 'Format for RA axis labels in plots. Options are "hour" (hh:mm:ss) or "deg" (degrees).', str),
 }
 
 # Options for localization analysis
@@ -607,6 +611,7 @@ localize = {
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
+    'ra_format': ('hour', 'Format for RA axis labels in plots. Options are "hour" (hh:mm:ss) or "deg" (degrees).', str),
 }
 
 # Output for localization analysis
