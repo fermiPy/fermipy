@@ -329,6 +329,14 @@ optimizer
 plotting
 --------
 
+The options in *plotting* control the default behavior of sky maps and
+other plots.  The ``ra_format`` option (``'hour'`` or ``'deg'``) sets
+how Right Ascension is displayed on 2D sky maps; it can be set globally
+here, in method-specific config (e.g. *psmap*, *tsmap*), or passed as a
+parameter to map methods such as `~fermipy.gtanalysis.GTAnalysis.psmap`,
+`~fermipy.gtanalysis.GTAnalysis.tsmap`, and
+`~fermipy.gtanalysis.GTAnalysis.residmap`.
+
 .. csv-table:: *plotting* Options
    :header:    Option, Default, Description
    :file: config/plotting.csv

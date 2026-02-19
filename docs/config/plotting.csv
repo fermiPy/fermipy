@@ -7,3 +7,4 @@
 ``interactive``	False	Enable interactive mode.  If True then plots will be drawn after each plotting command.
 ``label_ts_threshold``	0.0	TS threshold for labeling sources in sky maps.  If None then no sources will be labeled.
 ``loge_bounds``	None	
+``ra_format``	hour	Display RA coordinates on sky maps as hour angle (hh:mm:ss) or decimal degrees.  Options: ``'hour'`` (default) or ``'deg'``.  Applies to all 2D sky maps (psmap, tsmap, residmap, tscube, localization, extension, ROI plots).  Can be overridden per method (e.g. in *psmap* config or by passing ``ra_format`` to map methods).
