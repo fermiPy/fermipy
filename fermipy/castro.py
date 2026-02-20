@@ -14,6 +14,7 @@ particle.
 from __future__ import absolute_import, division, print_function
 import numpy as np
 import scipy
+import yaml
 from scipy import stats
 from scipy.optimize import fmin
 
@@ -1139,7 +1140,33 @@ class CastroData(CastroData_Base):
     def create_from_yamlfile(cls, yamlfile):
         """Create a Castro data object from a yaml file contains
         the likelihood data."""
-        data = load_yaml(yamlfile)
+        try:
+            data = load_yaml(yamlfile)
+        except yaml.constructor.ConstructorError:
+            # Backward compatibility for legacy YAML files that serialize
+            # numpy objects with python/object tags.
+            with open(yamlfile) as f:
+                try:
+                    data = yaml.unsafe_load(f)
+                except ValueError:
+                    # Some legacy files encode pickled numpy scalar payloads
+                    # as python/str values that are not latin1-safe.
+                    class LegacyNumpyUnsafeLoader(yaml.UnsafeLoader):
+                        pass
+
+                    def _construct_python_str(loader, node):
+                        value = loader.construct_scalar(node)
+                        try:
+                            value.encode('latin1')
+                            return value
+                        except UnicodeEncodeError:
+                            return value.encode('utf-8').decode('latin1')
+
+                    LegacyNumpyUnsafeLoader.add_constructor(
+                        'tag:yaml.org,2002:python/str',
+                        _construct_python_str)
+                    f.seek(0)
+                    data = yaml.load(f, Loader=LegacyNumpyUnsafeLoader)
         nebins = len(data)
         emin = np.array([data[i]['emin'] for i in range(nebins)])
         emax = np.array([data[i]['emax'] for i in range(nebins)])

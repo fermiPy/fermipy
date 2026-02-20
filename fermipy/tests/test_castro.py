@@ -51,13 +51,8 @@ def test_castro_test_spectra_sed(sedfile):
 
 
 def test_castro_test_spectra_yaml(yamlfile):
-    # There is a bug in numpy that won't let it read back the yaml file we are using for 
-    # this test in python 3.
-    # Catch this for now
-    try:
-        c = castro.CastroData.create_from_yamlfile(yamlfile)        
-    except Exception:
-        pytest.xfail("Known issue with numpy/pyyaml")
+    
+    c = castro.CastroData.create_from_yamlfile(yamlfile)
 
     test_dict = c.test_spectra()
 
