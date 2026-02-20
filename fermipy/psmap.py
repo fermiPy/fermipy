@@ -59,28 +59,28 @@ class PSMapGenerator(object):
 
         mydatcounts = o['datcounts']
 
-        ps_map      = WcsNDMap(map_geom, o['psmap'])
+        ps_map = WcsNDMap(map_geom, o['psmap'])
         pssigma_map = WcsNDMap(map_geom, o['psmapsigma'])
 
-        o['name']  = 'PSmap'
-        o['ps_map']= ps_map
-        o['pssigma_map']=pssigma_map
-        o['config']=kwargs
+        o['name'] = utils.join_strings([prefix, 'PSmap'])
+        o['ps_map'] = ps_map
+        o['pssigma_map'] = pssigma_map
+        o['config'] = kwargs
 
-        outfile = config.get('outfile', None)
-        if outfile != '':
-            o['name']  = os.path.splitext(outfile)[0]
+        outfile = config.get('outfile', '')
+        if outfile == '':
+            outfile = utils.format_filename(self.workdir, 'PSmap',
+                                            prefix=[prefix])
+        else:
+            outfile = os.path.join(self.workdir,
+                                   os.path.splitext(outfile)[0])
 
         o['file'] = None
         if config['write_fits']:
-            if outfile=='':
-                outfile = utils.format_filename(self.workdir, 'PSmap')
-            else:
-                outfile = os.path.join(self.workdir,
-                                       os.path.splitext(outfile)[0])
             o['file'] = os.path.basename(outfile) + '.fits'
             gtpsmap.make_psmap_fits(o,outfile + '.fits')
-            self.logger.log(config['loglevel'], 'Writing output file %s.',outfile + '.fits')
+            self.logger.log(config['loglevel'], 'Writing output file %s.',
+                            outfile + '.fits')
 
         if config['make_plots']:
 
