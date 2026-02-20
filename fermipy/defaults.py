@@ -65,6 +65,7 @@ common = {
                      'By default the full analysis energy range will be used.  If '
                      'either emin/emax are None then only an upper/lower bound on '
                      'the energy range wil be applied.', list),
+    'ra_format': ('hour', 'Format for RA axis labels in plots. Options are "hour" (hh:mm:ss) or "deg" (degrees).', str),
 }
 
 # Options for defining input data files
@@ -294,6 +295,7 @@ residmap = {
     'use_weights': common['use_weights'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
+    'ra_format': common['ra_format'],
 }
 
 # TS Map
@@ -310,6 +312,7 @@ tsmap = {
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
+    'ra_format': common['ra_format'],
 }
 
 # TS Cube
@@ -330,6 +333,7 @@ tscube = {
     'remake_test_source': (False, 'If true, recomputes the test source image (otherwise just shifts it)', bool),
     'st_scan_level': (0, 'Level to which to do ST-based fitting (for testing)', int),
     'init_lambda': (0, 'Initial value of damping parameter for newton step size calculation.   A value of zero disables damping.', float),
+    'ra_format': common['ra_format'],
 }
 
 # PS map
@@ -357,6 +361,7 @@ psmap = {
     'scaleaxis':(20,'LL computation: scale axis.', float),
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
+    'ra_format': common['ra_format'],
 }
 
 # Options for Source Finder
@@ -588,6 +593,7 @@ extension = {
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
     'reoptimize':(False, 'Re-fit ROI in each energy bin. No effect if fit_ebin=False or there are no free parameters', bool ),
+    'ra_format': common['ra_format'],
 }
 
 # Options for localization analysis
@@ -606,6 +612,7 @@ localize = {
     'make_plots': common['make_plots'],
     'write_fits': common['write_fits'],
     'write_npy': common['write_npy'],
+    'ra_format': common['ra_format'],
 }
 
 # Output for localization analysis
@@ -784,6 +791,7 @@ plotting = {
     'label_ts_threshold':
         (0., 'TS threshold for labeling sources in sky maps.  If None then no sources will be labeled.', float),
     'interactive': (False, 'Enable interactive mode.  If True then plots will be drawn after each plotting command.', bool),
+    'ra_format': common['ra_format'],
 }
 
 # Source dictionary

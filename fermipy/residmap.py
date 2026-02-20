@@ -270,7 +270,11 @@ class ResidMapGenerator(object):
                                                fileio=self.config['fileio'],
                                                logging=self.config['logging'])
 
-            plotter.make_residmap_plots(o, self.roi)
+            # Pass ra_format from residmap config if specified
+            plot_kwargs = {}
+            if 'ra_format' in config:
+                plot_kwargs['ra_format'] = config['ra_format']
+            plotter.make_residmap_plots(o, self.roi, **plot_kwargs)
 
         self.logger.info('Finished residual maps')
 

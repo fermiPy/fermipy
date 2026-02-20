@@ -289,6 +289,7 @@ class ImagePlotter(object):
         zscale = kwargs.get('zscale', 'lin')
         gamma = kwargs.get('gamma', 0.5)
         transform = kwargs.get('transform', None)
+        ra_format = kwargs.get('ra_format', 'hour')
         
         vmin = kwargs.get('vmin', None)
         vmax = kwargs.get('vmax', None)
@@ -337,6 +338,9 @@ class ImagePlotter(object):
         if frame == 'icrs':
             ax.set_xlabel('RA')
             ax.set_ylabel('DEC')
+            # Set RA format based on configuration
+            if ra_format == 'deg':
+                ax.coords[0].set_major_formatter('d.ddd')
         elif frame == 'galactic':
             ax.set_xlabel('GLON')
             ax.set_ylabel('GLAT')
@@ -379,6 +383,7 @@ class ROIPlotter(fermipy.config.Configurable):
         'graticule_radii': (None, '', list),
         'label_ts_threshold': (0.0, '', float),
         'cmap': ('ds9_b', '', str),
+        'ra_format': ('hour', '', str),
     }
 
     def __init__(self, data_map, proj='AIT', **kwargs):
@@ -587,11 +592,13 @@ class ROIPlotter(fermipy.config.Configurable):
                                      self.config['graticule_radii'])
         label_ts_threshold = kwargs.get('label_ts_threshold',
                                         self.config['label_ts_threshold'])
+        ra_format = kwargs.get('ra_format', self.config['ra_format'])
 
         im_kwargs = dict(cmap=self.config['cmap'],
                          interpolation='nearest', transform=None,
                          vmin=None, vmax=None, clip=False, levels=None,
-                         zscale='lin', subplot=111, colors=['k'])
+                         zscale='lin', subplot=111, colors=['k'],
+                         ra_format=ra_format)
 
         cb_kwargs = dict(orientation='vertical', shrink=1.0, pad=0.1,
                          fraction=0.1, cb_label=None)
@@ -995,6 +1002,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         cmap = kwargs.setdefault('cmap', self.config['cmap'])
         cmap_resid = kwargs.pop('cmap_resid', self.config['cmap_resid'])
         kwargs.setdefault('catalogs', self.config['catalogs'])
+        kwargs.setdefault('ra_format', self.config['ra_format'])
         if no_contour:
             sigma_levels = None
         else:
@@ -1119,6 +1127,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                           self.config['label_ts_threshold'])
         kwargs.setdefault('cmap', self.config['cmap'])
         kwargs.setdefault('catalogs', self.config['catalogs'])
+        kwargs.setdefault('ra_format', self.config['ra_format'])
         fmt = kwargs.get('format', self.config['format'])
         figsize = kwargs.get('figsize', self.config['figsize'])
         workdir = kwargs.pop('workdir', self.config['fileio']['workdir'])
@@ -1201,6 +1210,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                           self.config['label_ts_threshold'])
         kwargs.setdefault('cmap', self.config['cmap'])
         kwargs.setdefault('catalogs', self.config['catalogs'])
+        kwargs.setdefault('ra_format', self.config['ra_format'])
         fmt = kwargs.get('format', self.config['format'])
         figsize = kwargs.get('figsize', self.config['figsize'])
         workdir = kwargs.pop('workdir', self.config['fileio']['workdir'])
@@ -1373,6 +1383,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
                               self.config['label_ts_threshold'])
         roi_kwargs.setdefault('cmap', self.config['cmap'])
         roi_kwargs.setdefault('catalogs', self._catalogs)
+        roi_kwargs.setdefault('ra_format', kwargs.get('ra_format', self.config['ra_format']))
 
         if loge_bounds is None:
             loge_bounds = (gta.log_energies[0], gta.log_energies[-1])
@@ -1473,6 +1484,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         prefix = kwargs.get('prefix', '')
         skydir = kwargs.get('skydir', None)
         cmap = kwargs.get('cmap', self.config['cmap'])
+        ra_format = kwargs.get('ra_format', self.config['ra_format'])
         name = loc.get('name', '')
         name = name.lower().replace(' ', '_')
 
@@ -1488,7 +1500,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         path_effect = PathEffects.withStroke(linewidth=2.0,
                                              foreground="black")
 
-        p = ROIPlotter(tsmap_renorm, roi=roi)
+        p = ROIPlotter(tsmap_renorm, roi=roi, ra_format=ra_format)
         fig = plt.figure(figsize=figsize)
 
         vmin = max(-100.0, np.min(tsmap_renorm.data))
@@ -1563,7 +1575,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         tsmap_renorm = copy.deepcopy(tsmap)
         tsmap_renorm.data -= np.max(tsmap_renorm.data)
 
-        p = ROIPlotter(tsmap_renorm, roi=roi)
+        p = ROIPlotter(tsmap_renorm, roi=roi, ra_format=ra_format)
         fig = plt.figure(figsize=figsize)
 
         vmin = max(-50.0, np.min(tsmap_renorm.data))
@@ -1741,10 +1753,11 @@ class AnalysisPlotter(fermipy.config.Configurable):
         figsize = kwargs.get('figsize', self.config['figsize'])
         prefix = kwargs.get('prefix', '')
         cmap = kwargs.get('cmap', self.config['cmap'])
+        ra_format = kwargs.get('ra_format', self.config['ra_format'])
         name = ext.get('name', '')
         name = name.lower().replace(' ', '_')
 
-        p = ROIPlotter(ext['tsmap'], roi=roi)
+        p = ROIPlotter(ext['tsmap'], roi=roi, ra_format=ra_format)
         fig = plt.figure(figsize=figsize)
 
         sigma_levels = [3, 5, 7] + list(np.logspace(1, 3, 17))

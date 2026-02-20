@@ -87,7 +87,11 @@ class PSMapGenerator(object):
             plotter = plotting.AnalysisPlotter(self.config['plotting'],
                                                fileio=self.config['fileio'],
                                                logging=self.config['logging'])
-            plotter.make_psmap_plots(o, self.roi)
+            # Pass ra_format from psmap config if specified
+            plot_kwargs = {}
+            if 'ra_format' in config:
+                plot_kwargs['ra_format'] = config['ra_format']
+            plotter.make_psmap_plots(o, self.roi, **plot_kwargs)
 
         self.logger.log(config['loglevel'], 'Finished PS map')
         return o
