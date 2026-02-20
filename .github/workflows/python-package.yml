@@ -33,9 +33,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install pylint pytest pytest-cov
-        python -c "import fermipy; print(fermipy.get_st_version())" 
-        python -c "import fermipy; print(fermipy.get_git_version_fp())"
-        python -c "import fermipy; print(fermipy.get_ft_conda_version())" 
+        python -c "import fermipy; print(fermipy.get_st_version())"
     - name: Lint with pylint
       shell: bash -l {0}
       run: |
@@ -86,9 +84,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install pylint pytest pytest-cov
-        python -c "import fermipy; print(fermipy.get_st_version())" 
-        python -c "import fermipy; print(fermipy.get_git_version_fp())"
-        python -c "import fermipy; print(fermipy.get_ft_conda_version())"
+        python -c "import fermipy; print(fermipy.get_st_version())"
     - name: Lint with pylint
       shell: bash -l {0}
       run: |

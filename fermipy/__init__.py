@@ -59,12 +59,12 @@ def get_ft_conda_version():
     # 1. Try Python package metadata (works in any env, no subprocess; works with Miniforge3)
     try:
         from importlib.metadata import version
-        print("Version retrieved with importlib.metadata", version('fermitools'))
         return version('fermitools')
     except Exception:
         pass
 
     # 2. Try reading conda-meta in current env (no subprocess)
+    # Only match package name "fermitools", not "fermitools-data"
     conda_prefix = os.environ.get('CONDA_PREFIX')
     if conda_prefix:
         import glob
@@ -75,17 +75,20 @@ def get_ft_conda_version():
                 try:
                     with open(path) as f:
                         info = json.load(f)
-                    print("Version retrieved with conda-meta", info.get('version', 'unknown'))
+                    if info.get('name') != 'fermitools':
+                        continue
                     return info.get('version', 'unknown')
                 except Exception:
                     pass
             # Fallback: parse version from filename (e.g. fermitools-2.2.0-py39h....json)
+            # Exclude fermitools-data (filename would be fermitools-data-<version>-...)
             for path in glob.glob(os.path.join(meta_dir, 'fermitools-*.json')):
                 base = os.path.basename(path)
+                if base.startswith('fermitools-data-'):
+                    continue
                 # format: fermitools-<version>-<build>.json
                 parts = base.replace('.json', '').split('-')
                 if len(parts) >= 2:
-                    print("Version retrieved with conda-meta filename", parts[1])
                     return parts[1]
                 break
 
@@ -106,7 +109,6 @@ def get_ft_conda_version():
             continue
         tokens = l.split()
         if len(tokens) >= 2:
-            print("Version retrieved with conda list", tokens[1])
             return tokens[1]
     return "unknown"
     
