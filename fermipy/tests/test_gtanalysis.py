@@ -162,7 +162,18 @@ def test_gtanalysis_fit_newton(create_diffuse_dir, create_draco_analysis):
 def test_gtanalysis_tsmap(create_diffuse_dir, create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
-    gta.tsmap(model={}, make_plots=True)
+    gta.tsmap(model={}, make_plots=True, prefix='tsmap_default')
+    gta.config['plotting']['label_source'] = None
+    gta.config['plotting']['label_ts_threshold'] = 25.0
+    gta.tsmap(model={}, make_plots=True, prefix='tsmap_ts25')
+
+    gta.config['plotting']['label_source'] = ['draco',
+                                              '4FGL J1741.2+5739',
+                                              '4FGL J1742.5+5944']
+    gta.config['plotting']['label_ts_threshold'] = 0.0
+    gta.tsmap(model={}, make_plots=True, prefix='tsmap_label_source')
+    gta.config['plotting']['label_source'] = None
+    
 
 
 def test_gtanalysis_psmap(create_diffuse_dir, create_draco_analysis):
