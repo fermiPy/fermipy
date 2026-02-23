@@ -55,18 +55,61 @@ def get_git_version_fp():
 
 
 def get_ft_conda_version():
-    """Get the version string from conda"""
+    """Get the fermitools version from package metadata, conda-meta, or conda list."""
+    # 1. Try Python package metadata (works in any env, no subprocess; works with Miniforge3)
     try:
-        lines = subprocess.check_output(['conda', 'list', '-f',  'fermitools']).decode().split('\n')
-    except:
-        lines = subprocess.check_output(['conda', 'list', '-f',  'fermitools']).split('\n')
+        from importlib.metadata import version
+        return version('fermitools')
+    except Exception:
+        pass
+
+    # 2. Try reading conda-meta in current env (no subprocess)
+    # Only match package name "fermitools", not "fermitools-data"
+    conda_prefix = os.environ.get('CONDA_PREFIX')
+    if conda_prefix:
+        import glob
+        import json
+        meta_dir = os.path.join(conda_prefix, 'conda-meta')
+        if os.path.isdir(meta_dir):
+            for path in glob.glob(os.path.join(meta_dir, 'fermitools-*.json')):
+                try:
+                    with open(path) as f:
+                        info = json.load(f)
+                    if info.get('name') != 'fermitools':
+                        continue
+                    return info.get('version', 'unknown')
+                except Exception:
+                    pass
+            # Fallback: parse version from filename (e.g. fermitools-2.2.0-py39h....json)
+            # Exclude fermitools-data (filename would be fermitools-data-<version>-...)
+            for path in glob.glob(os.path.join(meta_dir, 'fermitools-*.json')):
+                base = os.path.basename(path)
+                if base.startswith('fermitools-data-'):
+                    continue
+                # format: fermitools-<version>-<build>.json
+                parts = base.replace('.json', '').split('-')
+                if len(parts) >= 2:
+                    return parts[1]
+                break
+
+    # 3. Try conda list, using CONDA_EXE when set (avoids PATH/permission issues on Miniforge3)
+    conda_exe = os.environ.get('CONDA_EXE', 'conda')
+    try:
+        lines = subprocess.check_output(
+            [conda_exe, 'list', '-f', 'fermitools'],
+            stderr=subprocess.DEVNULL
+        )
+        if isinstance(lines, bytes):
+            lines = lines.decode('utf-8', errors='replace')
+        lines = lines.split('\n')
+    except (OSError, subprocess.CalledProcessError):
+        return "unknown"
     for l in lines:
-        if not l:
-            continue
-        if l[0] == '#':
+        if not l or l[0] == '#':
             continue
         tokens = l.split()
-        return tokens[1]
+        if len(tokens) >= 2:
+            return tokens[1]
     return "unknown"
     
 

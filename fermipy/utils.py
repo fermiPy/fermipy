@@ -678,8 +678,13 @@ def find_function_root(fn, x0, xb, delta=0.0, bounds=None):
     if x0 == xb:
         return np.nan
 
+    f0 = fn(x0) + delta
+    fb = fn(xb) + delta
+    if not np.isfinite(f0) or not np.isfinite(fb):
+        return np.nan
+
     for i in range(10):
-        if np.sign(fn(xb) + delta) != np.sign(fn(x0) + delta):
+        if np.sign(fb) != np.sign(f0):
             break
         if bounds is not None and (xb < bounds[0] or xb > bounds[1]):
             break
@@ -687,9 +692,12 @@ def find_function_root(fn, x0, xb, delta=0.0, bounds=None):
             xb *= 0.5
         else:
             xb *= 2.0
+        fb = fn(xb) + delta
+        if not np.isfinite(fb):
+            return np.nan
 
     # Failed to find a root
-    if np.sign(fn(xb) + delta) == np.sign(fn(x0) + delta):
+    if np.sign(fb) == np.sign(f0):
         return np.nan
 
     if x0 == 0:
@@ -700,7 +708,7 @@ def find_function_root(fn, x0, xb, delta=0.0, bounds=None):
     try:
         return brentq(lambda t: fn(t) + delta, x0, xb, xtol=xtol)
     except (RuntimeError, ValueError):
-        raise RuntimeError("Brentq failed ", x0, xb, fn(x0)+delta, fn(xb)+delta, xtol, delta)
+        raise RuntimeError("Brentq failed ", x0, xb, f0, fb, xtol, delta)
 
 
 def get_parameter_limits(xval, loglike, cl_limit=0.95, cl_err=0.68269, tol=1E-2,

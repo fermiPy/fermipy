@@ -162,7 +162,19 @@ def test_gtanalysis_fit_newton(create_diffuse_dir, create_draco_analysis):
 def test_gtanalysis_tsmap(create_diffuse_dir, create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
-    gta.tsmap(model={}, make_plots=True)
+    gta.tsmap(model={}, make_plots=True, prefix='tsmap_default')
+    gta.config['plotting']['label_source'] = None
+    gta.config['plotting']['label_ts_threshold'] = 25.0
+    gta.tsmap(model={}, make_plots=True, prefix='tsmap_ts25')
+
+    gta.config['plotting']['label_source'] = ['draco',
+                                              '4FGL J1741.2+5739',
+                                              '4FGL J1742.5+5944']
+    gta.config['plotting']['label_ts_threshold'] = 0.0
+    gta.tsmap(model={}, make_plots=True, prefix='tsmap_label_source')
+    gta.config['plotting']['label_source'] = None
+    
+
 
 def test_gtanalysis_psmap(create_diffuse_dir, create_draco_analysis):
     gta = create_draco_analysis
@@ -170,8 +182,8 @@ def test_gtanalysis_psmap(create_diffuse_dir, create_draco_analysis):
     gta.write_model_map(model_name="model01")
     mycmap = os.path.join(gta.workdir, 'ccube_00.fits')
     mymmap = os.path.join(gta.workdir, 'mcube_model01_00.fits')
-    print('cmap and mmap %s %s' %(mycmap,mymmap))
-    gta.psmap(cmap=mycmap,mmap=mymmap,make_plots=True,emin=1000,emax=10000,nbinloge=4,outfile='testpsmap',chatter=3)
+    print('cmap and mmap %s %s' %(mycmap, mymmap))
+    gta.psmap(cmap=mycmap, mmap=mymmap, make_plots=True, emin=1000, emax=10000, nbinloge=4, outfile='test_psmap', chatter=3, prefix='test_img')
 
 
 #@requires_git_version('99-00-01')
@@ -278,11 +290,9 @@ def test_gtanalysis_sed(create_diffuse_dir, create_draco_analysis):
 
     prefactor_resid = (params['Prefactor']['value'] -
                        prefactor) / params['Prefactor']['error']
-    try:
-        assert_allclose(prefactor_resid, 0, atol=3.0)
-        gta.simulate_roi(restore=True)
-    except AssertionError:
-        pytest.xfail("Known issue with fit stability in macos")
+    
+    assert_allclose(prefactor_resid, 0, atol=3.0)
+    gta.simulate_roi(restore=True)
 
 
 def test_gtanalysis_extension_gaussian(create_diffuse_dir, create_draco_analysis):

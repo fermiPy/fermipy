@@ -382,6 +382,7 @@ class ROIPlotter(fermipy.config.Configurable):
         'catalogs': (None, '', list),
         'graticule_radii': (None, '', list),
         'label_ts_threshold': (0.0, '', float),
+        'label_source': (None, '', (str, list)),
         'cmap': ('ds9_b', '', str),
         'ra_format': ('hour', '', str),
     }
@@ -539,6 +540,7 @@ class ROIPlotter(fermipy.config.Configurable):
         src_color = 'w'
 
         label_ts_threshold = kwargs.get('label_ts_threshold', 0.0)
+        label_source = kwargs.get('label_source', None)
         plot_kwargs = dict(linestyle='None', marker='+',
                            markerfacecolor='None', mew=0.66, ms=8,
                            #                           markersize=8,
@@ -548,16 +550,24 @@ class ROIPlotter(fermipy.config.Configurable):
                            fontweight='normal')
 
         ts = np.array([s['ts'] for s in roi.point_sources])
+        skydir = roi._src_skydir
+        labels = [s.name for s in roi.point_sources]
 
-        if label_ts_threshold is None:
+        # If label_source is specified, only label those sources
+        if label_source is not None:
+            # Convert to list if it's a single string
+            if utils.isstr(label_source):
+                label_source = [label_source]
+            # Create mask for sources matching the specified names
+            m = np.array([s.name in label_source for s in roi.point_sources])
+        # Otherwise use the TS threshold logic
+        elif label_ts_threshold is None:
             m = np.zeros(len(ts), dtype=bool)
         elif label_ts_threshold <= 0:
             m = np.ones(len(ts), dtype=bool)
         else:
             m = ts > label_ts_threshold
 
-        skydir = roi._src_skydir
-        labels = [s.name for s in roi.point_sources]
         self.plot_sources(skydir, labels, plot_kwargs, text_kwargs,
                           label_mask=m, **kwargs)
 
@@ -592,7 +602,11 @@ class ROIPlotter(fermipy.config.Configurable):
                                      self.config['graticule_radii'])
         label_ts_threshold = kwargs.get('label_ts_threshold',
                                         self.config['label_ts_threshold'])
+<<<<<<< HEAD
         ra_format = kwargs.get('ra_format', self.config['ra_format'])
+=======
+        label_source = kwargs.get('label_source', self.config['label_source'])
+>>>>>>> origin/master
 
         im_kwargs = dict(cmap=self.config['cmap'],
                          interpolation='nearest', transform=None,
@@ -615,7 +629,8 @@ class ROIPlotter(fermipy.config.Configurable):
 
         if self._roi is not None:
             self.plot_roi(self._roi,
-                          label_ts_threshold=label_ts_threshold)
+                          label_ts_threshold=label_ts_threshold,
+                          label_source=label_source)
 
         self._extent = im.get_extent()
         ax.set_xlim(self._extent[0], self._extent[1])
@@ -986,6 +1001,17 @@ class AnalysisPlotter(fermipy.config.Configurable):
             Crop the image by this factor.  If None then no crop is
             applied.
 
+        label_source : str or list, optional
+            Name(s) of source(s) to label on the plot. If specified,
+            only these sources will be labeled, overriding the
+            `label_ts_threshold` setting. Can be a single source name
+            (string) or a list of source names.
+
+        label_ts_threshold : float, optional
+            TS threshold for labeling sources. Only used if
+            `label_source` is not specified. If None, no sources will
+            be labeled. If <= 0, all sources will be labeled.
+
         """
 
         fmt = kwargs.get('format', self.config['format'])
@@ -999,6 +1025,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         kwargs.setdefault('graticule_radii', self.config['graticule_radii'])
         kwargs.setdefault('label_ts_threshold',
                           self.config['label_ts_threshold'])
+        kwargs.setdefault('label_source', self.config['label_source'])
         cmap = kwargs.setdefault('cmap', self.config['cmap'])
         cmap_resid = kwargs.pop('cmap_resid', self.config['cmap_resid'])
         kwargs.setdefault('catalogs', self.config['catalogs'])
@@ -1121,10 +1148,22 @@ class AnalysisPlotter(fermipy.config.Configurable):
         zoom : float
             Crop the image by this factor.  If None then no crop is
             applied.
+
+        label_source : str or list, optional
+            Name(s) of source(s) to label on the plot. If specified,
+            only these sources will be labeled, overriding the
+            `label_ts_threshold` setting. Can be a single source name
+            (string) or a list of source names.
+
+        label_ts_threshold : float, optional
+            TS threshold for labeling sources. Only used if
+            `label_source` is not specified. If None, no sources will
+            be labeled. If <= 0, all sources will be labeled.
         """
         kwargs.setdefault('graticule_radii', self.config['graticule_radii'])
         kwargs.setdefault('label_ts_threshold',
                           self.config['label_ts_threshold'])
+        kwargs.setdefault('label_source', self.config['label_source'])
         kwargs.setdefault('cmap', self.config['cmap'])
         kwargs.setdefault('catalogs', self.config['catalogs'])
         kwargs.setdefault('ra_format', self.config['ra_format'])
@@ -1208,6 +1247,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         kwargs.setdefault('graticule_radii', self.config['graticule_radii'])
         kwargs.setdefault('label_ts_threshold',
                           self.config['label_ts_threshold'])
+        kwargs.setdefault('label_source', self.config['label_source'])
         kwargs.setdefault('cmap', self.config['cmap'])
         kwargs.setdefault('catalogs', self.config['catalogs'])
         kwargs.setdefault('ra_format', self.config['ra_format'])
@@ -1381,6 +1421,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
             'graticule_radii', self.config['graticule_radii'])
         roi_kwargs.setdefault('label_ts_threshold',
                               self.config['label_ts_threshold'])
+        roi_kwargs.setdefault('label_source', self.config['label_source'])
         roi_kwargs.setdefault('cmap', self.config['cmap'])
         roi_kwargs.setdefault('catalogs', self._catalogs)
         roi_kwargs.setdefault('ra_format', kwargs.get('ra_format', self.config['ra_format']))
