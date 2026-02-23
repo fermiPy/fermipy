@@ -65,6 +65,13 @@ def validate_option(opt_name, opt_val, schema_type):
     if opt_val is None:
         return
 
+    # Union type: schema_type is a tuple of allowed types (e.g. (str, list))
+    if isinstance(schema_type, tuple):
+        if type(opt_val) not in schema_type:
+            raise TypeError('Wrong type for %s %s (allowed: %s)' %
+                            (opt_name, type(opt_val), schema_type))
+        return
+
     type_match = type(opt_val) is schema_type
     type_checks = (schema_type in [list, dict, bool] or
                    type(opt_val) in [list, dict, bool])

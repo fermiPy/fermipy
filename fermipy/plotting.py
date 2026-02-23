@@ -597,7 +597,7 @@ class ROIPlotter(fermipy.config.Configurable):
                                      self.config['graticule_radii'])
         label_ts_threshold = kwargs.get('label_ts_threshold',
                                         self.config['label_ts_threshold'])
-        label_source = kwargs.get('label_source', None)
+        label_source = kwargs.get('label_source', self.config['label_source'])
 
         im_kwargs = dict(cmap=self.config['cmap'],
                          interpolation='nearest', transform=None,
@@ -1235,6 +1235,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
         kwargs.setdefault('graticule_radii', self.config['graticule_radii'])
         kwargs.setdefault('label_ts_threshold',
                           self.config['label_ts_threshold'])
+        kwargs.setdefault('label_source', self.config['label_source'])
         kwargs.setdefault('cmap', self.config['cmap'])
         kwargs.setdefault('catalogs', self.config['catalogs'])
         fmt = kwargs.get('format', self.config['format'])
@@ -1407,6 +1408,7 @@ class AnalysisPlotter(fermipy.config.Configurable):
             'graticule_radii', self.config['graticule_radii'])
         roi_kwargs.setdefault('label_ts_threshold',
                               self.config['label_ts_threshold'])
+        roi_kwargs.setdefault('label_source', self.config['label_source'])
         roi_kwargs.setdefault('cmap', self.config['cmap'])
         roi_kwargs.setdefault('catalogs', self._catalogs)
 
