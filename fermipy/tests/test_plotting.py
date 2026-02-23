@@ -2,6 +2,8 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 
+from fermipy import config
+from fermipy import defaults
 from fermipy.plotting import ROIPlotter
 
 
@@ -42,3 +44,74 @@ def test_plot_roi_label_source_and_ts_threshold():
     recorder = _MaskRecorder()
     ROIPlotter.plot_roi(recorder, roi, label_ts_threshold=12.0)
     assert np.array_equal(recorder.label_mask, np.array([False, True, False]))
+
+
+def test_plotting_ra_format_default():
+    """Test that ra_format has correct default value in plotting config."""
+    plotting_defaults = defaults.plotting
+    assert 'ra_format' in plotting_defaults
+    assert plotting_defaults['ra_format'][0] == 'hour'
+
+
+def test_psmap_ra_format_default():
+    """Test that ra_format has correct default value in psmap config."""
+    psmap_defaults = defaults.psmap
+    assert 'ra_format' in psmap_defaults
+    assert psmap_defaults['ra_format'][0] == 'hour'
+
+
+def test_ra_format_config_values():
+    """Test that ra_format defaults and schema metadata are valid."""
+    plotting_defaults = defaults.plotting
+
+    # Check default.
+    default_value = plotting_defaults['ra_format'][0]
+    assert default_value in ['hour', 'deg']
+
+    # Check description exists.
+    description = plotting_defaults['ra_format'][1]
+    assert len(description) > 0
+    assert 'hour' in description.lower() or 'deg' in description.lower()
+
+    # Check type.
+    value_type = plotting_defaults['ra_format'][2]
+    assert value_type == str
+
+
+def test_ra_format_in_roiplotter_defaults():
+    """Test that ROIPlotter has ra_format in its defaults."""
+    assert 'ra_format' in ROIPlotter.defaults
+    default_value = ROIPlotter.defaults['ra_format'][0]
+    assert default_value == 'hour'
+
+
+def test_plotting_config_creation():
+    """Test that plotting configuration can be created with ra_format."""
+    schema = config.ConfigSchema(defaults.plotting)
+    cfg = schema.create_config({'ra_format': 'deg'})
+    assert cfg['ra_format'] == 'deg'
+
+    # Test with default value.
+    cfg_default = schema.create_config({})
+    assert cfg_default['ra_format'] == 'hour'
+
+
+def test_psmap_config_creation():
+    """Test that psmap configuration can be created with ra_format."""
+    schema = config.ConfigSchema(defaults.psmap)
+    cfg = schema.create_config({'ra_format': 'deg'})
+    assert cfg['ra_format'] == 'deg'
+
+    # Test with default value.
+    cfg_default = schema.create_config({})
+    assert cfg_default['ra_format'] == 'hour'
+
+
+def test_ra_format_override():
+    """Test that ra_format can be overridden in configuration."""
+    schema = config.ConfigSchema(defaults.plotting)
+    base_cfg = schema.create_config({'ra_format': 'hour'})
+    assert base_cfg['ra_format'] == 'hour'
+
+    override_cfg = schema.create_config(base_cfg, ra_format='deg')
+    assert override_cfg['ra_format'] == 'deg'

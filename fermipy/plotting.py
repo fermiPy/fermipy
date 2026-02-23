@@ -602,11 +602,8 @@ class ROIPlotter(fermipy.config.Configurable):
                                      self.config['graticule_radii'])
         label_ts_threshold = kwargs.get('label_ts_threshold',
                                         self.config['label_ts_threshold'])
-<<<<<<< HEAD
-        ra_format = kwargs.get('ra_format', self.config['ra_format'])
-=======
         label_source = kwargs.get('label_source', self.config['label_source'])
->>>>>>> origin/master
+        ra_format = kwargs.get('ra_format', self.config['ra_format'])
 
         im_kwargs = dict(cmap=self.config['cmap'],
                          interpolation='nearest', transform=None,

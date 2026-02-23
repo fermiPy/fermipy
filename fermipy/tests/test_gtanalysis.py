@@ -175,7 +175,6 @@ def test_gtanalysis_tsmap(create_diffuse_dir, create_draco_analysis):
     gta.config['plotting']['label_source'] = None
     
 
-
 def test_gtanalysis_psmap(create_diffuse_dir, create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
