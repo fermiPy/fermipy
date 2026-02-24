@@ -700,7 +700,11 @@ class TSMapGenerator(object):
                                                fileio=self.config['fileio'],
                                                logging=self.config['logging'])
 
-            plotter.make_tsmap_plots(o, self.roi)
+            # Pass ra_format from tsmap config if specified
+            plot_kwargs = {}
+            if 'ra_format' in config:
+                plot_kwargs['ra_format'] = config['ra_format']
+            plotter.make_tsmap_plots(o, self.roi, **plot_kwargs)
 
         self.logger.log(config['loglevel'], 'Finished TS map')
 
@@ -1030,7 +1034,11 @@ class TSCubeGenerator(object):
                                                fileio=self.config['fileio'],
                                                logging=self.config['logging'])
 
-            plotter.make_tsmap_plots(maps, self.roi, suffix='tscube')
+            # Pass ra_format from tscube config if specified
+            plot_kwargs = {'suffix': 'tscube'}
+            if 'ra_format' in config:
+                plot_kwargs['ra_format'] = config['ra_format']
+            plotter.make_tsmap_plots(maps, self.roi, **plot_kwargs)
 
         self.logger.info("Finished TS cube")
         return maps

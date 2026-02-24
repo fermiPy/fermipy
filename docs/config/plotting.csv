@@ -8,3 +8,4 @@
 ``label_ts_threshold``	0.0	TS threshold for labeling sources in sky maps.  If None then no sources will be labeled.
 ``label_source``	None	Name(s) of source(s) to label on plots. If specified, only these sources will be labeled, overriding label_ts_threshold. Can be a single source name (string) or a list of source names.
 ``loge_bounds``	None	
+``ra_format``	hour	Display RA coordinates on sky maps as hour angle (hh:mm:ss) or decimal degrees.  Options: ``'hour'`` (default) or ``'deg'``.  Applies to all 2D sky maps (psmap, tsmap, residmap, tscube, localization, extension, ROI plots).  Can be overridden per method (e.g. in *psmap* config or by passing ``ra_format`` to map methods).

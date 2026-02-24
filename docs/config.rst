@@ -329,6 +329,9 @@ optimizer
 plotting
 --------
 
+The options in *plotting* control the default behavior of sky maps and
+other plots.
+
 .. csv-table:: *plotting* Options
    :header:    Option, Default, Description
    :file: config/plotting.csv
