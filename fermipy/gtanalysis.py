@@ -9,6 +9,8 @@ import tempfile
 import filecmp
 import time
 import json
+from pathlib import Path
+
 import numpy as np
 from astropy.io import fits
 from astropy.table import Table, Column, vstack
@@ -290,6 +292,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         self._outdir = None
         validate = kwargs.pop('validate', True)
         self._loglevel = kwargs.pop('loglevel', logging.INFO)
+
+        if isinstance(config, Path) or isinstance(config, str):
+            config = str(Path(config).resolve())
 
         super(GTAnalysis, self).__init__(config, validate=validate,
                                          **kwargs)
