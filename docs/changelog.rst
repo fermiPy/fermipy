@@ -6,6 +6,24 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
+1.4.1 (02/25/2026)
+------------------
+* Added tests for macos-15-intel and improved fit stability on macos
+* Improved handling of fermitools version retrieval from conda environment
+* Fixed `prefix` option in PSMap to avoid overwriting existing files
+* Added support for pathlib.Path objects for config file paths
+* Added `label_source` option to plotting methods to select sources to label on the plots
+* Added `ra_format` option to plotting methods to set the format of the RA coordinate.
+* Fixed the double counting on `Npred` when `model_counts_wt` is missing
+
+1.4.0 (04/21/2025)
+------------------
+* Fixed the release to conda-forge channel
+* Added support for latest versions of `fermitools` and `gammapy`
+* Added tests againts development versions of fermitools
+* Added support for 4FGL-DR4 catalog
+* Fixed interface for TSCube and PSMap
+
 1.3.1 (08/20/2024)
 ------------------
 * Requirements of astropy and gammapy updated
