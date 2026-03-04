@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<source_library title="source library">
+  <source name="G279.0+1.1" type="DiffuseSource">
+    <spectrum normPar="norm" type="LogParabola">
+      <parameter error="0.3948509866" free="1" max="100" min="0" name="norm" scale="1e-14" value="4.165892112"/>
+      <parameter error="0.0475230201" free="1" max="5" min="0" name="alpha" scale="1" value="1.763602127"/>
+      <parameter error="0.2429669229" free="1" max="10" min="-5" name="beta" scale="0.1" value="0.5353644436"/>
+      <parameter free="0" max="100" min="0.1" name="Eb" scale="1000" value="10"/>
+    </spectrum>
+    <spatialModel file="$(LATEXTDIR)/Templates/G279.0+1.1.fits" map_based_integral="true" type="SpatialMap">
+      <parameter free="0" max="1" min="1" name="Prefactor" scale="1" value="1"/>
+    </spatialModel>
+  </source>
+</source_library>

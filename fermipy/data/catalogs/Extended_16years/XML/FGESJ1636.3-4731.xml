@@ -1,0 +1,16 @@
+<?xml version="1.0" ?>
+<source_library title="source library">
+  <source name="G337.0-0.1" type="DiffuseSource">
+    <spectrum normPar="norm" type="LogParabola">
+      <parameter error="0.2" free="1" max="100" min="0" name="norm" scale="1e-12" value="3.2"/>
+      <parameter error="0.06" free="1" max="5" min="0" name="alpha" scale="1" value="2.17"/>
+      <parameter error="0.3" free="1" max="10" min="-5" name="beta" scale="0.1" value="1.1"/>
+      <parameter free="0" max="100" min="0.1" name="Eb" scale="1000" value="2.3"/>
+    </spectrum>
+    <spatialModel type="RadialDisk">
+      <parameter free="0" max="360" min="-360" name="RA" scale="1" value="249.079"/>
+      <parameter free="0" max="90" min="-90" name="DEC" scale="1" value="-47.523"/>
+      <parameter free="0" max="10" min="0" name="Radius" scale="1" value="0.139"/>
+    </spatialModel>
+  </source>
+</source_library>

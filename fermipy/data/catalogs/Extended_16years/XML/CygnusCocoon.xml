@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<source_library title="source library">
+  <source name="CygnusCocoon" type="DiffuseSource">
+    <spectrum normPar="Prefactor" type="PowerLaw">
+      <parameter free="1" max="100" min="0" name="Prefactor" scale="1e-10" value="0.6846"/>
+      <parameter free="1" max="5" min="0" name="Index" scale="-1" value="2.175"/>
+      <parameter free="0" max="100" min="0.1" name="Scale" scale="1000" value="1"/>
+    </spectrum>
+    <spatialModel type="RadialGaussian">
+      <parameter name="RA" value="307.17" scale="1" min="-360" max="360" free="0"/>
+      <parameter name="DEC" value="41.17" scale="1" min="-90" max="90" free="0"/>
+      <parameter name="Sigma" value="1.99" scale="1" min="0" max="10" free="0"/>
+    </spatialModel>
+  </source>
+</source_library>

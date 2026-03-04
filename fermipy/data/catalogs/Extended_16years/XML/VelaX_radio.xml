@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<source_library title="source library">
+  <source name="VelaX" type="DiffuseSource">
+    <spectrum normPar="norm" type="LogParabola">
+      <parameter error="0.3437489837" free="1" max="100" min="0" name="norm" scale="1e-13" value="5.387669391"/>
+      <parameter error="0.05788246538" free="1" max="5" min="0" name="alpha" scale="1" value="2.11240777"/>
+      <parameter error="0.2576650316" free="1" max="10" min="-5" name="beta" scale="0.1" value="0.4132687018"/>
+      <parameter free="0" max="300" min="0.02" name="Eb" scale="1000" value="4.495028849"/>
+    </spectrum>
+    <spatialModel file="$(LATEXTDIR)/Templates/VelaX_radio.fits" map_based_integral="true" type="SpatialMap">
+      <parameter free="0" max="1" min="1" name="Prefactor" scale="1" value="1"/>
+    </spatialModel>
+  </source>
+</source_library>

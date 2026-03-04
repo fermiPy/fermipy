@@ -210,6 +210,30 @@ def test_load_4fgldr4_catalog_fits():
                      ['Prefactor', 'IndexS', 'Index2', 'ExpfactorS', 'Scale'],
                      [6.3293e-13, -1.9659, 0.6667, 0.47695, 1406.84], rtol=1e-3)
 
+def test_load_fl16y_catalog_fits():
+    
+    skydir = SkyCoord(0.0, 30.0, unit='deg', frame='galactic').icrs
+    rm = ROIModel(catalogs=['FL16Y'], skydir=skydir, src_radius=20.0)
+    assert len(rm.sources) == 171
+
+    src_name = 'FL16Y J1605.1-1140'
+    assert(rm[src_name]['SpectrumType'] == 'PowerLaw')
+    check_src_params(rm, src_name,
+                     ['Prefactor', 'Index', 'Scale'],
+                     [2.7332e-14, -2.0660, 3441.72])
+
+    src_name = 'FL16Y J1557.7-1404'
+    assert(rm[src_name]['SpectrumType'] == 'LogParabola')
+    check_src_params(rm, src_name,
+                     ['norm', 'alpha', 'beta', 'Eb'],
+                     [2.8876e-13, 2.2597, 0.3350, 1268.78])
+
+    src_name = 'FL16Y J1623.0-0315'
+    assert(rm[src_name]['SpectrumType'] == 'PLSuperExpCutoff4')
+    
+    check_src_params(rm, src_name,
+                     ['Prefactor', 'IndexS', 'Index2', 'ExpfactorS', 'Scale'],
+                     [6.8069e-13, -1.9789, 0.6667, 0.47595, 1363.21])
 
 def test_create_roi_from_source():
 

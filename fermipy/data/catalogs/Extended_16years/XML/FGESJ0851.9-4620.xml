@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<source_library title="source library">
+  <source name="VelaJunior" type="DiffuseSource">
+    <spectrum normPar="Prefactor" type="PowerLaw">
+      <parameter error="0.2" free="1" max="100" min="0" name="Prefactor" scale="1e-13" value="5.5"/>
+      <parameter error="0.04" free="1" max="5" min="0" name="Index" scale="-1" value="1.84"/>
+      <parameter free="0" max="100" min="0.1" name="Scale" scale="1000" value="4.7"/>
+    </spectrum>
+    <spatialModel type="RadialDisk">
+      <parameter free="0" max="360" min="-360" name="RA" scale="1" value="132.987"/>
+      <parameter free="0" max="90" min="-90" name="DEC" scale="1" value="-46.342"/>
+      <parameter free="0" max="10" min="0" name="Radius" scale="1" value="0.978"/>
+    </spatialModel>
+  </source>
+</source_library>
