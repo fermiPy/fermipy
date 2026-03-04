@@ -1,0 +1,13 @@
+<?xml version="1.0" ?>
+<source_library title="source library">
+  <source name="RCW86" type="DiffuseSource">
+    <spectrum normPar="Prefactor" type="PowerLaw">
+      <parameter error="0.3" free="1" max="100" min="0" name="Prefactor" scale="1e-14" value="1.11"/>
+      <parameter error="0.1" free="1" max="5" min="0" name="Index" scale="-1" value="1.42"/>
+      <parameter free="0" max="100" min="1" name="Scale" scale="1000" value="10"/>
+    </spectrum>
+    <spatialModel file="$(LATEXTDIR)/Templates/RCW86.fits" map_based_integral="true" type="SpatialMap">
+      <parameter free="0" max="1" min="1" name="Prefactor" scale="1" value="1"/>
+    </spatialModel>
+  </source>
+</source_library>

@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<source_library title="source library">
+  <source name="CTB80" type="DiffuseSource">
+    <spectrum normPar="Prefactor" type="PowerLaw">
+      <parameter free="1" max="100" min="0" name="Prefactor" scale="1e-14" value="1.8"/>
+      <parameter free="1" max="5" min="0" name="Index" scale="-1" value="2.34"/>
+      <parameter free="0" max="100" min="0.1" name="Scale" scale="1000" value="10"/>
+    </spectrum>
+    <spatialModel type="RadialDisk">
+      <parameter free="0" max="360" min="-360" name="RA" scale="1" value="298.60"/>
+      <parameter free="0" max="90" min="-90" name="DEC" scale="1" value="32.87"/>
+      <parameter free="0" max="10" min="0" name="Radius" scale="1" value="0.65"/>
+    </spatialModel>
+  </source>
+</source_library>

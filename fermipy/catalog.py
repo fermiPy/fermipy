@@ -93,6 +93,97 @@ def row_to_dict(row):
     return o
 
 
+_EXTSRC_JOIN_COLS = ['Model_Form', 'Model_SemiMajor',
+                     'Model_SemiMinor', 'Model_PosAng',
+                     'Spatial_Filename', 'Spatial_Function']
+
+
+def _resolve_default_catalog_file(fitsfile, default_filename):
+    if fitsfile is not None:
+        return fitsfile
+    return os.path.join(fermipy.PACKAGE_DATA, 'catalogs', default_filename)
+
+
+def _load_extended_tables(fitsfile, key_left='Extended_Source_Name'):
+    table = Table.read(fitsfile, hdu=1)
+    table_extsrc = Table.read(fitsfile, 'ExtendedSources')
+    table_extsrc.meta.clear()
+
+    strip_columns(table)
+    strip_columns(table_extsrc)
+    if 'Spatial_Function' not in table_extsrc.colnames:
+        table_extsrc.add_column(Column(name='Spatial_Function', dtype='U20',
+                                       length=len(table_extsrc)))
+        table_extsrc['Spatial_Function'] = 'SpatialMap'
+
+    table = join_tables(table, table_extsrc, key_left, 'Source_Name',
+                        _EXTSRC_JOIN_COLS)
+    table.sort('Source_Name')
+    return table
+
+
+def _postprocess_extended_catalog_table(table):
+    excol = np.zeros((len(table)), 'bool')
+    for i, exname in enumerate(table['Extended_Source_Name']):
+        if len(exname.strip()) > 0:
+            excol[i] = True
+
+    table['extended'] = excol
+    table['Extended'] = excol
+
+    scol = Column(name='Spatial_Function', dtype='U20',
+                  data=table['Spatial_Function'].data)
+    table.remove_column('Spatial_Function')
+    table['Spatial_Function'] = scol
+
+    m = table['Spatial_Function'] == 'RadialGauss'
+    table['Spatial_Function'][m] = 'RadialGaussian'
+    table['TS'] = table['Signif_Avg'] * table['Signif_Avg']
+
+
+def _init_param_values(tab):
+    tab['param_values'] = np.nan * np.ones((len(tab), 10))
+
+
+def _fill_powerlaw_params(tab, prefactor_col, index_col):
+    m = tab['SpectrumType'] == 'PowerLaw'
+    idxs = {k: i for i, k in enumerate(get_function_par_names('PowerLaw'))}
+    tab['param_values'][m, idxs['Prefactor']] = tab[prefactor_col][m]
+    tab['param_values'][m, idxs['Index']] = -1.0 * tab[index_col][m]
+    tab['param_values'][m, idxs['Scale']] = tab['Pivot_Energy'][m]
+
+
+def _fill_plsuperexpcutoff2_params(tab, prefactor_col):
+    m = tab['SpectrumType'] == 'PLSuperExpCutoff2'
+    idxs = {k: i for i, k in enumerate(get_function_par_names('PLSuperExpCutoff2'))}
+    tab['param_values'][m, idxs['Prefactor']] = (
+        tab[prefactor_col][m] * np.exp(tab['PLEC_Expfactor'][m] *
+                                       tab['Pivot_Energy'][m] ** tab['PLEC_Exp_Index'][m]))
+    tab['param_values'][m, idxs['Index1']] = -1.0 * tab['PLEC_Index'][m]
+    tab['param_values'][m, idxs['Scale']] = tab['Pivot_Energy'][m]
+    tab['param_values'][m, idxs['Expfactor']] = tab['PLEC_Expfactor'][m]
+    tab['param_values'][m, idxs['Index2']] = tab['PLEC_Exp_Index'][m]
+
+
+def _fill_plsuperexpcutoff4_params(tab, prefactor_col):
+    m = tab['SpectrumType'] == 'PLSuperExpCutoff4'
+    idxs = {k: i for i, k in enumerate(get_function_par_names('PLSuperExpCutoff4'))}
+    tab['param_values'][m, idxs['Prefactor']] = tab[prefactor_col][m]
+    tab['param_values'][m, idxs['IndexS']] = -1.0 * tab['PLEC_IndexS'][m]
+    tab['param_values'][m, idxs['Scale']] = tab['Pivot_Energy'][m]
+    tab['param_values'][m, idxs['ExpfactorS']] = tab['PLEC_ExpfactorS'][m]
+    tab['param_values'][m, idxs['Index2']] = tab['PLEC_Exp_Index'][m]
+
+
+def _fill_logparabola_params(tab, norm_col):
+    m = tab['SpectrumType'] == 'LogParabola'
+    idxs = {k: i for i, k in enumerate(get_function_par_names('LogParabola'))}
+    tab['param_values'][m, idxs['norm']] = tab[norm_col][m]
+    tab['param_values'][m, idxs['alpha']] = tab['LP_Index'][m]
+    tab['param_values'][m, idxs['beta']] = tab['LP_beta'][m]
+    tab['param_values'][m, idxs['Eb']] = tab['Pivot_Energy'][m]
+
+
 class Catalog(object):
     """Source catalog object.  This class provides a simple wrapper around
     FITS catalog tables."""
@@ -146,6 +237,16 @@ class Catalog(object):
 
     @classmethod
     def create(cls, name):
+        catalog_classes = {
+            '3FGL': Catalog3FGL,
+            '2FHL': Catalog2FHL,
+            'FL8Y': CatalogFL8Y,
+            '4FGL': Catalog4FGL,
+            '4FGL-DR2': Catalog4FGLDR2,
+            '4FGL-DR3': Catalog4FGLDR3,
+            '4FGL-DR4': Catalog4FGLDR4,
+            'FL16Y': CatalogFL16Y,
+        }
 
         extname = os.path.splitext(name)[1]
         if extname == '.fits' or extname == '.fit':
@@ -162,17 +263,14 @@ class Catalog(object):
             tab = Table.read(fitsfile, hdu=1)
 
             # Try to guess the catalog type from its name
-            if name == '3FGL':
-                return Catalog3FGL(fitsfile)
-            elif name == 'FL8Y':
-                return CatalogFL8Y(fitsfile)
-            elif name == '4FGL':
+            if name == '4FGL':
                 if 'PLEC_Index' in tab.columns:
                     return Catalog4FGL(fitsfile) ## this is ok for both 4FGL and 4FGL-DR2
                 elif 'PLEC_IndexS' in tab.columns:
-                    return Catalog4FGLDR3(fitsfile) 
-            #elif name == '4FGL-DR2': ## does not work because the CDS-NAME is still 4FGL also for the 4FGL-DR2
-            #    return Catalog4FGLDR2(fitsfile)
+                    return Catalog4FGLDR3(fitsfile)
+            elif name in catalog_classes:
+                return catalog_classes[name](fitsfile)
+
             elif 'gll_psch_v08' in fitsfile:
                 return Catalog2FHL(fitsfile)
 
@@ -181,22 +279,10 @@ class Catalog(object):
             else:
                 return CatalogFPY(fitsfile)
 
-        elif name == '3FGL':
-            return Catalog3FGL()
-        elif name == '2FHL':
-            return Catalog2FHL()
-        elif name == 'FL8Y':
-            return CatalogFL8Y()
-        elif name == '4FGL':
-            return Catalog4FGL()
-        elif name == '4FGL-DR2':
-            return Catalog4FGLDR2()
-        elif name == '4FGL-DR3':
-            return Catalog4FGLDR3()
-        elif name == '4FGL-DR4':
-            return Catalog4FGLDR4()
-        else:
-            raise Exception('Unrecognized catalog {}.'.format(name))
+        elif name in catalog_classes:
+            return catalog_classes[name]()
+
+        raise Exception('Unrecognized catalog {}.'.format(name))
 
 
 class CatalogFPY(Catalog):
@@ -370,6 +456,7 @@ class Catalog3FGL(Catalog):
         tab['param_values'][m, idxs['Eb']] = tab['Pivot_Energy'][m]
 
 
+
 class Catalog4FGLP(Catalog):
     """This class supports preliminary releases of the 4FGL catalog.
     Because there is currently no dedicated extended source library
@@ -423,48 +510,12 @@ class Catalog4FGL(Catalog):
             extdir = os.path.join('$FERMIPY_DATA_DIR', 'catalogs',
                                   'Extended_8years')
 
-        if fitsfile is None:
-            fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
-                                    'gll_psc_v20.fit')
-
-        #hdulist = fits.open(fitsfile)
-        table = Table.read(fitsfile, hdu=1)
-        table_extsrc = Table.read(fitsfile, 'ExtendedSources')
-        table_extsrc.meta.clear()
-        hdulist = fits.open(fitsfile)
-
-        strip_columns(table)
-        strip_columns(table_extsrc)
-        if 'Spatial_Function' not in table_extsrc.colnames:
-            table_extsrc.add_column(Column(name='Spatial_Function', dtype='U20',
-                                           length=len(table_extsrc)))
-            table_extsrc['Spatial_Function'] = 'SpatialMap'
-
-        #'Extended_Source_Name', 'Source_Name',
-        table = join_tables(table, table_extsrc,
-                            'Extended_Source_Name', 'Source_Name',
-                            ['Model_Form', 'Model_SemiMajor',
-                             'Model_SemiMinor', 'Model_PosAng',
-                             'Spatial_Filename', 'Spatial_Function'])
+        fitsfile = _resolve_default_catalog_file(fitsfile, 'gll_psc_v20.fit')
+        table = _load_extended_tables(fitsfile)
         table.sort('Source_Name')
         super(Catalog4FGL, self).__init__(table, extdir)
 
-        excol = np.zeros((len(table)), 'bool')
-        for i, exname in enumerate(table['Extended_Source_Name']):
-            if len(exname.strip()) > 0:
-                excol[i] = True
-
-        self.table['extended'] = excol
-        self.table['Extended'] = excol
-
-        scol = Column(name='Spatial_Function', dtype='U20',
-                      data=self.table['Spatial_Function'].data)
-        self.table.remove_column('Spatial_Function')
-        self.table['Spatial_Function'] = scol
-
-        m = self.table['Spatial_Function'] == 'RadialGauss'
-        self.table['Spatial_Function'][m] = 'RadialGaussian'
-        self.table['TS'] = self.table['Signif_Avg'] * self.table['Signif_Avg']
+        _postprocess_extended_catalog_table(self.table)
 
 
         m = self.table['SpectrumType'] == 'PLSuperExpCutoff'
@@ -474,41 +525,11 @@ class Catalog4FGL(Catalog):
 
     @staticmethod
     def _fill_params(tab):
-
-        tab['param_values'] = np.nan * np.ones((len(tab), 10))
-
-        # PowerLaw
-        # Prefactor, Index, Scale
-        m = tab['SpectrumType'] == 'PowerLaw'
-        idxs = {k: i for i, k in
-                enumerate(get_function_par_names('PowerLaw'))}
-        tab['param_values'][m, idxs['Prefactor']] = tab['PL_Flux_Density'][m]
-        tab['param_values'][m, idxs['Index']] = -1.0 * tab['PL_Index'][m]
-        tab['param_values'][m, idxs['Scale']] = tab['Pivot_Energy'][m]
-
-        # PLSuperExpCutoff2 or PLSuperExpCutoff
-        # Prefactor, Index1, Scale, Expfactor, Index2
-        m = tab['SpectrumType'] == 'PLSuperExpCutoff2'
-        idxs = {k: i for i, k in
-                enumerate(get_function_par_names('PLSuperExpCutoff2'))}
-        tab['param_values'][m, idxs['Prefactor']] = (tab['PLEC_Flux_Density'][m] *
-                                                     np.exp(tab['PLEC_Expfactor'][m] *
-                                                            tab['Pivot_Energy'][m] **
-                                                            tab['PLEC_Exp_Index'][m]))
-        tab['param_values'][m, idxs['Index1']] = -1.0 * tab['PLEC_Index'][m]
-        tab['param_values'][m, idxs['Scale']] = tab['Pivot_Energy'][m]
-        tab['param_values'][m, idxs['Expfactor']] = tab['PLEC_Expfactor'][m]
-        tab['param_values'][m, idxs['Index2']] = tab['PLEC_Exp_Index'][m]
-
-        # LogParabola
-        # norm, alpha, beta, Eb
-        m = tab['SpectrumType'] == 'LogParabola'
-        idxs = {k: i for i, k in
-                enumerate(get_function_par_names('LogParabola'))}
-        tab['param_values'][m, idxs['norm']] = tab['LP_Flux_Density'][m]
-        tab['param_values'][m, idxs['alpha']] = tab['LP_Index'][m]
-        tab['param_values'][m, idxs['beta']] = tab['LP_beta'][m]
-        tab['param_values'][m, idxs['Eb']] = tab['Pivot_Energy'][m]
+        _init_param_values(tab)
+        _fill_powerlaw_params(tab, prefactor_col='PL_Flux_Density',
+                              index_col='PL_Index')
+        _fill_plsuperexpcutoff2_params(tab, prefactor_col='PLEC_Flux_Density')
+        _fill_logparabola_params(tab, norm_col='LP_Flux_Density')
 
 
 class CatalogFL8Y(Catalog):
@@ -523,85 +544,19 @@ class CatalogFL8Y(Catalog):
             extdir = os.path.join('$FERMIPY_DATA_DIR', 'catalogs',
                                   'Extended_archive_v18')
 
-        if fitsfile is None:
-            fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
-                                    'gll_psc_8year_v5.fit')
-
-        #hdulist = fits.open(fitsfile)
-        table = Table.read(fitsfile, hdu=1)
-        table_extsrc = Table.read(fitsfile, 'ExtendedSources')
-        table_extsrc.meta.clear()
-
-        strip_columns(table)
-        strip_columns(table_extsrc)
-        if 'Spatial_Function' not in table_extsrc.colnames:
-            table_extsrc.add_column(Column(name='Spatial_Function', dtype='U20',
-                                           length=len(table_extsrc)))
-            table_extsrc['Spatial_Function'] = 'SpatialMap'
-
-        table = join_tables(table, table_extsrc,
-                            'Extended_Source_Name', 'Source_Name',
-                            ['Model_Form', 'Model_SemiMajor',
-                             'Model_SemiMinor', 'Model_PosAng',
-                             'Spatial_Filename', 'Spatial_Function'])
-        table.sort('Source_Name')
+        fitsfile = _resolve_default_catalog_file(fitsfile, 'gll_psc_8year_v5.fit')
+        table = _load_extended_tables(fitsfile)
         super(CatalogFL8Y, self).__init__(table, extdir)
-
-        excol = np.zeros((len(table)), 'bool')
-        for i, exname in enumerate(table['Extended_Source_Name']):
-            if len(exname.strip()) > 0:
-                excol[i] = True
-
-        self.table['extended'] = excol
-        self.table['Extended'] = excol
-
-        scol = Column(name='Spatial_Function', dtype='U20',
-                      data=self.table['Spatial_Function'].data)
-        self.table.remove_column('Spatial_Function')
-        self.table['Spatial_Function'] = scol
-
-        m = self.table['Spatial_Function'] == 'RadialGauss'
-        self.table['Spatial_Function'][m] = 'RadialGaussian'
-        self.table['TS'] = self.table['Signif_Avg'] * self.table['Signif_Avg']
+        _postprocess_extended_catalog_table(self.table)
         self._fill_params(self.table)
 
     @staticmethod
     def _fill_params(tab):
-
-        tab['param_values'] = np.nan * np.ones((len(tab), 10))
-
-        # PowerLaw
-        # Prefactor, Index, Scale
-        m = tab['SpectrumType'] == 'PowerLaw'
-        idxs = {k: i for i, k in
-                enumerate(get_function_par_names('PowerLaw'))}
-        tab['param_values'][m, idxs['Prefactor']] = tab['Flux_Density'][m]
-        tab['param_values'][m, idxs['Index']] = -1.0 * tab['PL_Index'][m]
-        tab['param_values'][m, idxs['Scale']] = tab['Pivot_Energy'][m]
-
-        # PLSuperExpCutoff2
-        # Prefactor, Index1, Scale, Expfactor, Index2
-        m = tab['SpectrumType'] == 'PLSuperExpCutoff2'
-        idxs = {k: i for i, k in
-                enumerate(get_function_par_names('PLSuperExpCutoff2'))}
-        tab['param_values'][m, idxs['Prefactor']] = (tab['Flux_Density'][m] *
-                                                     np.exp(tab['PLEC_Expfactor'][m] *
-                                                            tab['Pivot_Energy'][m] **
-                                                            tab['PLEC_Exp_Index'][m]))
-        tab['param_values'][m, idxs['Index1']] = -1.0 * tab['PLEC_Index'][m]
-        tab['param_values'][m, idxs['Scale']] = tab['Pivot_Energy'][m]
-        tab['param_values'][m, idxs['Expfactor']] = tab['PLEC_Expfactor'][m]
-        tab['param_values'][m, idxs['Index2']] = tab['PLEC_Exp_Index'][m]
-
-        # LogParabola
-        # norm, alpha, beta, Eb
-        m = tab['SpectrumType'] == 'LogParabola'
-        idxs = {k: i for i, k in
-                enumerate(get_function_par_names('LogParabola'))}
-        tab['param_values'][m, idxs['norm']] = tab['Flux_Density'][m]
-        tab['param_values'][m, idxs['alpha']] = tab['LP_Index'][m]
-        tab['param_values'][m, idxs['beta']] = tab['LP_beta'][m]
-        tab['param_values'][m, idxs['Eb']] = tab['Pivot_Energy'][m]
+        _init_param_values(tab)
+        _fill_powerlaw_params(tab, prefactor_col='Flux_Density',
+                              index_col='PL_Index')
+        _fill_plsuperexpcutoff2_params(tab, prefactor_col='Flux_Density')
+        _fill_logparabola_params(tab, norm_col='Flux_Density')
 
 
 class Catalog4FGLDR2(Catalog):
@@ -616,48 +571,12 @@ class Catalog4FGLDR2(Catalog):
                                   'Extended_8years')
         #4FGL-DR2 is using the same extended templates as 4FGL
 
-        if fitsfile is None:
-            fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
-                                    'gll_psc_v27.fit')
-
-        #hdulist = fits.open(fitsfile)
-        table = Table.read(fitsfile, hdu=1)
-        table_extsrc = Table.read(fitsfile, 'ExtendedSources')
-        table_extsrc.meta.clear()
-        hdulist = fits.open(fitsfile)
-
-        strip_columns(table)
-        strip_columns(table_extsrc)
-        if 'Spatial_Function' not in table_extsrc.colnames:
-            table_extsrc.add_column(Column(name='Spatial_Function', dtype='U20',
-                                           length=len(table_extsrc)))
-            table_extsrc['Spatial_Function'] = 'SpatialMap'
-
-        #'Extended_Source_Name', 'Source_Name',
-        table = join_tables(table, table_extsrc,
-                            'Extended_Source_Name', 'Source_Name',
-                            ['Model_Form', 'Model_SemiMajor',
-                             'Model_SemiMinor', 'Model_PosAng',
-                             'Spatial_Filename', 'Spatial_Function'])
+        fitsfile = _resolve_default_catalog_file(fitsfile, 'gll_psc_v27.fit')
+        table = _load_extended_tables(fitsfile)
         table.sort('Source_Name')
         super(Catalog4FGLDR2, self).__init__(table, extdir)
 
-        excol = np.zeros((len(table)), 'bool')
-        for i, exname in enumerate(table['Extended_Source_Name']):
-            if len(exname.strip()) > 0:
-                excol[i] = True
-
-        self.table['extended'] = excol
-        self.table['Extended'] = excol
-
-        scol = Column(name='Spatial_Function', dtype='U20',
-                      data=self.table['Spatial_Function'].data)
-        self.table.remove_column('Spatial_Function')
-        self.table['Spatial_Function'] = scol
-
-        m = self.table['Spatial_Function'] == 'RadialGauss'
-        self.table['Spatial_Function'][m] = 'RadialGaussian'
-        self.table['TS'] = self.table['Signif_Avg'] * self.table['Signif_Avg']
+        _postprocess_extended_catalog_table(self.table)
 
         m = self.table['SpectrumType'] == 'PLSuperExpCutoff'
         self.table['SpectrumType'][m] = 'PLSuperExpCutoff2'
@@ -666,41 +585,7 @@ class Catalog4FGLDR2(Catalog):
 
     @staticmethod
     def _fill_params(tab):
-
-        tab['param_values'] = np.nan * np.ones((len(tab), 10))
-
-        # PowerLaw
-        # Prefactor, Index, Scale
-        m = tab['SpectrumType'] == 'PowerLaw'
-        idxs = {k: i for i, k in
-                enumerate(get_function_par_names('PowerLaw'))}
-        tab['param_values'][m, idxs['Prefactor']] = tab['PL_Flux_Density'][m]
-        tab['param_values'][m, idxs['Index']] = -1.0 * tab['PL_Index'][m]
-        tab['param_values'][m, idxs['Scale']] = tab['Pivot_Energy'][m]
-
-        # PLSuperExpCutoff2 or PLSuperExpCutoff
-        # Prefactor, Index1, Scale, Expfactor, Index2
-        m = tab['SpectrumType'] == 'PLSuperExpCutoff2'
-        idxs = {k: i for i, k in
-                enumerate(get_function_par_names('PLSuperExpCutoff2'))}
-        tab['param_values'][m, idxs['Prefactor']] = (tab['PLEC_Flux_Density'][m] *
-                                                     np.exp(tab['PLEC_Expfactor'][m] *
-                                                            tab['Pivot_Energy'][m] **
-                                                            tab['PLEC_Exp_Index'][m]))
-        tab['param_values'][m, idxs['Index1']] = -1.0 * tab['PLEC_Index'][m]
-        tab['param_values'][m, idxs['Scale']] = tab['Pivot_Energy'][m]
-        tab['param_values'][m, idxs['Expfactor']] = tab['PLEC_Expfactor'][m]
-        tab['param_values'][m, idxs['Index2']] = tab['PLEC_Exp_Index'][m]
-
-        # LogParabola
-        # norm, alpha, beta, Eb
-        m = tab['SpectrumType'] == 'LogParabola'
-        idxs = {k: i for i, k in
-                enumerate(get_function_par_names('LogParabola'))}
-        tab['param_values'][m, idxs['norm']] = tab['LP_Flux_Density'][m]
-        tab['param_values'][m, idxs['alpha']] = tab['LP_Index'][m]
-        tab['param_values'][m, idxs['beta']] = tab['LP_beta'][m]
-        tab['param_values'][m, idxs['Eb']] = tab['Pivot_Energy'][m]
+        Catalog4FGL._fill_params(tab)
 
 
 class Catalog4FGLDR3(Catalog):
@@ -715,48 +600,12 @@ class Catalog4FGLDR3(Catalog):
                                   'Extended_12years') ## to be added to the repository
         #4FGL-DR3 is using a new archive for extended templates
 
-        if fitsfile is None:
-            fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
-                                    'gll_psc_v29.fit') #added to the repository
-
-        #hdulist = fits.open(fitsfile)
-        table = Table.read(fitsfile, hdu=1)
-        table_extsrc = Table.read(fitsfile, 'ExtendedSources')
-        table_extsrc.meta.clear()
-        hdulist = fits.open(fitsfile)
-
-        strip_columns(table)
-        strip_columns(table_extsrc)
-        if 'Spatial_Function' not in table_extsrc.colnames:
-            table_extsrc.add_column(Column(name='Spatial_Function', dtype='U20',
-                                           length=len(table_extsrc)))
-            table_extsrc['Spatial_Function'] = 'SpatialMap'
-
-        #'Extended_Source_Name', 'Source_Name',
-        table = join_tables(table, table_extsrc,
-                            'Extended_Source_Name', 'Source_Name',
-                            ['Model_Form', 'Model_SemiMajor',
-                             'Model_SemiMinor', 'Model_PosAng',
-                             'Spatial_Filename', 'Spatial_Function'])
+        fitsfile = _resolve_default_catalog_file(fitsfile, 'gll_psc_v29.fit')
+        table = _load_extended_tables(fitsfile)
         table.sort('Source_Name')
         super(Catalog4FGLDR3, self).__init__(table, extdir)
 
-        excol = np.zeros((len(table)), 'bool')
-        for i, exname in enumerate(table['Extended_Source_Name']):
-            if len(exname.strip()) > 0:
-                excol[i] = True
-
-        self.table['extended'] = excol
-        self.table['Extended'] = excol
-
-        scol = Column(name='Spatial_Function', dtype='U20',
-                      data=self.table['Spatial_Function'].data)
-        self.table.remove_column('Spatial_Function')
-        self.table['Spatial_Function'] = scol
-
-        m = self.table['Spatial_Function'] == 'RadialGauss'
-        self.table['Spatial_Function'][m] = 'RadialGaussian'
-        self.table['TS'] = self.table['Signif_Avg'] * self.table['Signif_Avg']
+        _postprocess_extended_catalog_table(self.table)
 
         m = self.table['SpectrumType'] == 'PLSuperExpCutoff'
         self.table['SpectrumType'][m] = 'PLSuperExpCutoff4'
@@ -765,38 +614,11 @@ class Catalog4FGLDR3(Catalog):
 
     @staticmethod
     def _fill_params(tab):
-
-        tab['param_values'] = np.nan * np.ones((len(tab), 10))
-
-        # PowerLaw
-        # Prefactor, Index, Scale
-        m = tab['SpectrumType'] == 'PowerLaw'
-        idxs = {k: i for i, k in
-                enumerate(get_function_par_names('PowerLaw'))}
-        tab['param_values'][m, idxs['Prefactor']] = tab['PL_Flux_Density'][m]
-        tab['param_values'][m, idxs['Index']] = -1.0 * tab['PL_Index'][m]
-        tab['param_values'][m, idxs['Scale']] = tab['Pivot_Energy'][m]
-
-        # PLSuperExpCutoff4
-        # Prefactor, IndexS, Scale, ExpfactorS, Index2
-        m = tab['SpectrumType'] == 'PLSuperExpCutoff4'
-        idxs = {k: i for i, k in
-                enumerate(get_function_par_names('PLSuperExpCutoff4'))}
-        tab['param_values'][m, idxs['Prefactor']] = tab['PLEC_Flux_Density'][m] 
-        tab['param_values'][m, idxs['IndexS']] = -1.0 * tab['PLEC_IndexS'][m]
-        tab['param_values'][m, idxs['Scale']] = tab['Pivot_Energy'][m]
-        tab['param_values'][m, idxs['ExpfactorS']] = tab['PLEC_ExpfactorS'][m]
-        tab['param_values'][m, idxs['Index2']] = tab['PLEC_Exp_Index'][m]
-
-        # LogParabola
-        # norm, alpha, beta, Eb
-        m = tab['SpectrumType'] == 'LogParabola'
-        idxs = {k: i for i, k in
-                enumerate(get_function_par_names('LogParabola'))}
-        tab['param_values'][m, idxs['norm']] = tab['LP_Flux_Density'][m]
-        tab['param_values'][m, idxs['alpha']] = tab['LP_Index'][m]
-        tab['param_values'][m, idxs['beta']] = tab['LP_beta'][m]
-        tab['param_values'][m, idxs['Eb']] = tab['Pivot_Energy'][m]
+        _init_param_values(tab)
+        _fill_powerlaw_params(tab, prefactor_col='PL_Flux_Density',
+                              index_col='PL_Index')
+        _fill_plsuperexpcutoff4_params(tab, prefactor_col='PLEC_Flux_Density')
+        _fill_logparabola_params(tab, norm_col='LP_Flux_Density')
 
 
 class Catalog4FGLDR4(Catalog):
@@ -811,48 +633,12 @@ class Catalog4FGLDR4(Catalog):
                                   'Extended_14years') ## to be added to the repository
         #4FGL-DR4 is using a new archive for extended templates
 
-        if fitsfile is None:
-            fitsfile = os.path.join(fermipy.PACKAGE_DATA, 'catalogs',
-                                    'gll_psc_v35.fit') #added to the repository
-
-        #hdulist = fits.open(fitsfile)
-        table = Table.read(fitsfile, hdu=1)
-        table_extsrc = Table.read(fitsfile, 'ExtendedSources')
-        table_extsrc.meta.clear()
-        hdulist = fits.open(fitsfile)
-
-        strip_columns(table)
-        strip_columns(table_extsrc)
-        if 'Spatial_Function' not in table_extsrc.colnames:
-            table_extsrc.add_column(Column(name='Spatial_Function', dtype='U20',
-                                           length=len(table_extsrc)))
-            table_extsrc['Spatial_Function'] = 'SpatialMap'
-
-        #'Extended_Source_Name', 'Source_Name',
-        table = join_tables(table, table_extsrc,
-                            'Extended_Source_Name', 'Source_Name',
-                            ['Model_Form', 'Model_SemiMajor',
-                             'Model_SemiMinor', 'Model_PosAng',
-                             'Spatial_Filename', 'Spatial_Function'])
+        fitsfile = _resolve_default_catalog_file(fitsfile, 'gll_psc_v35.fit')
+        table = _load_extended_tables(fitsfile)
         table.sort('Source_Name')
         super(Catalog4FGLDR4, self).__init__(table, extdir)
 
-        excol = np.zeros((len(table)), 'bool')
-        for i, exname in enumerate(table['Extended_Source_Name']):
-            if len(exname.strip()) > 0:
-                excol[i] = True
-
-        self.table['extended'] = excol
-        self.table['Extended'] = excol
-
-        scol = Column(name='Spatial_Function', dtype='U20',
-                      data=self.table['Spatial_Function'].data)
-        self.table.remove_column('Spatial_Function')
-        self.table['Spatial_Function'] = scol
-
-        m = self.table['Spatial_Function'] == 'RadialGauss'
-        self.table['Spatial_Function'][m] = 'RadialGaussian'
-        self.table['TS'] = self.table['Signif_Avg'] * self.table['Signif_Avg']
+        _postprocess_extended_catalog_table(self.table)
 
         m = self.table['SpectrumType'] == 'PLSuperExpCutoff'
         self.table['SpectrumType'][m] = 'PLSuperExpCutoff4'
@@ -861,36 +647,32 @@ class Catalog4FGLDR4(Catalog):
 
     @staticmethod
     def _fill_params(tab):
+        Catalog4FGLDR3._fill_params(tab)
 
-        tab['param_values'] = np.nan * np.ones((len(tab), 10))
+class CatalogFL16Y(Catalog):
+    """This class supports releases the preliminary 16-yr point-source
+    list (FL16Y).  See
+    https://fermi.gsfc.nasa.gov/ssc/data/access/lat/fl16y/.
+    """
 
-        # PowerLaw
-        # Prefactor, Index, Scale
-        m = tab['SpectrumType'] == 'PowerLaw'
-        idxs = {k: i for i, k in
-                enumerate(get_function_par_names('PowerLaw'))}
-        tab['param_values'][m, idxs['Prefactor']] = tab['PL_Flux_Density'][m]
-        tab['param_values'][m, idxs['Index']] = -1.0 * tab['PL_Index'][m]
-        tab['param_values'][m, idxs['Scale']] = tab['Pivot_Energy'][m]
+    def __init__(self, fitsfile=None, extdir=None):
 
-        # PLSuperExpCutoff4
-        # Prefactor, IndexS, Scale, ExpfactorS, Index2
-        m = tab['SpectrumType'] == 'PLSuperExpCutoff4'
-        idxs = {k: i for i, k in
-                enumerate(get_function_par_names('PLSuperExpCutoff4'))}
-        tab['param_values'][m, idxs['Prefactor']] = tab['PLEC_Flux_Density'][m] 
-        tab['param_values'][m, idxs['IndexS']] = -1.0 * tab['PLEC_IndexS'][m]
-        tab['param_values'][m, idxs['Scale']] = tab['Pivot_Energy'][m]
-        tab['param_values'][m, idxs['ExpfactorS']] = tab['PLEC_ExpfactorS'][m]
-        tab['param_values'][m, idxs['Index2']] = tab['PLEC_Exp_Index'][m]
+        if extdir is None:
+            extdir = os.path.join('$FERMIPY_DATA_DIR', 'catalogs',
+                                  'Extended_16years')
 
-        # LogParabola
-        # norm, alpha, beta, Eb
-        m = tab['SpectrumType'] == 'LogParabola'
-        idxs = {k: i for i, k in
-                enumerate(get_function_par_names('LogParabola'))}
-        tab['param_values'][m, idxs['norm']] = tab['LP_Flux_Density'][m]
-        tab['param_values'][m, idxs['alpha']] = tab['LP_Index'][m]
-        tab['param_values'][m, idxs['beta']] = tab['LP_beta'][m]
-        tab['param_values'][m, idxs['Eb']] = tab['Pivot_Energy'][m]
+        fitsfile = _resolve_default_catalog_file(fitsfile, 'gll_psc_v40.fit')
+        table = _load_extended_tables(fitsfile)
+        table.sort('Source_Name')
+        super(CatalogFL16Y, self).__init__(table, extdir)
 
+        _postprocess_extended_catalog_table(self.table)
+
+        m = self.table['SpectrumType'] == 'PLSuperExpCutoff'
+        self.table['SpectrumType'][m] = 'PLSuperExpCutoff4'
+
+        self._fill_params(self.table)
+
+    @staticmethod
+    def _fill_params(tab):
+        Catalog4FGLDR3._fill_params(tab)

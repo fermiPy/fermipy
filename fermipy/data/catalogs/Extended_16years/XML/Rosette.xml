@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone="no"?>
+<source_library title="source library">
+  <source name="Rosette" type="DiffuseSource">
+    <spectrum normPar="norm" type="LogParabola">
+      <parameter error="0.20" free="1" max="100" min="0" name="norm" scale="1e-11" value="2.0"/>
+      <parameter error="0.03" free="1" max="5" min="0" name="alpha" scale="1" value="2.29"/>
+      <parameter error="0.2" free="1" max="10" min="0" name="beta" scale="0.1" value="3.9"/>
+      <parameter free="0" max="100" min="0.1" name="Eb" scale="1000" value="1"/>
+    </spectrum>
+    <spatialModel file="$(LATEXTDIR)/Templates/Rosette.fits" map_based_integral="true" type="SpatialMap">
+      <parameter free="0" max="1" min="1" name="Prefactor" scale="1" value="1"/>
+    </spatialModel>
+  </source>
+</source_library>

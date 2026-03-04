@@ -1,0 +1,16 @@
+<?xml version="1.0" standalone="no"?>
+<source_library title="source library">
+  <source name="HESSJ1808-204" type="DiffuseSource">
+    <spectrum normPar="norm" type="LogParabola">
+      <parameter error="0.257473585" free="1" max="100" min="0" name="norm" scale="1e-12" value="2.354037878"/>
+      <parameter error="0.1752871061" free="1" max="5" min="0" name="alpha" scale="1" value="2.73860033"/>
+      <parameter error="1.37249813" free="1" max="10" min="-10" name="beta" scale="0.1" value="3.605092901"/>
+      <parameter free="0" max="100" min="1" name="Eb" scale="1000" value="2"/>
+    </spectrum>
+    <spatialModel type="RadialDisk">
+      <parameter free="0" max="360" min="-360" name="RA" scale="1" value="272.05"/>
+      <parameter free="0" max="90" min="-90" name="DEC" scale="1" value="-20.48"/>
+      <parameter free="0" max="10" min="0" name="Radius" scale="1" value="0.65"/>
+    </spatialModel>
+  </source>
+</source_library>

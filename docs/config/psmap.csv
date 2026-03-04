@@ -18,6 +18,7 @@
 ``psfpar1``	100	Spatial integration: PSF-like parameter 1 (MeV) of the parameterization sqrt(p0^2*pow(E/p1,-2*p2) + p3^2).
 ``psfpar2``	0.9	Spatial integration: PSF-like parameter 2 of the parameterization sqrt(p0^2*pow(E/p1,-2*p2) + p3^2).
 ``psfpar3``	0.1	Spatial integration: PSF-like parameter 3 (deg) of the parameterization sqrt(p0^2*pow(E/p1,-2*p2) + p3^2).
+``ra_format``	hour	Format for RA axis labels in plots. Options are "hour" (hh:mm:ss) or "deg" (degrees).
 ``scaleaxis``	20	LL computation: scale axis.
 ``wmap``		Weight 3d map file or list of files (separated by colons).
 ``write_fits``	True	Write the output to a FITS file.

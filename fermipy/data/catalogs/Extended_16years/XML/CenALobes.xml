@@ -1,0 +1,13 @@
+<?xml version="1.0" ?>
+<source_library title="source library">
+  <source name="CenALobes" type="DiffuseSource">
+    <spectrum normPar="Prefactor" type="PowerLaw">
+      <parameter error="0.11" free="1" max="100" min="0" name="Prefactor" scale="1e-11" value="1.42"/>
+      <parameter error="0.053" free="1" max="5" min="0" name="Index" scale="-1" value="2.53"/>
+      <parameter free="0" max="10" min="0.1" name="Scale" scale="1000" value="0.671"/>
+    </spectrum>
+    <spatialModel file="$(LATEXTDIR)/Templates/CenALobes.fits" map_based_integral="true" type="SpatialMap">
+      <parameter free="0" max="1" min="1" name="Prefactor" scale="1" value="1"/>
+    </spatialModel>
+  </source>
+</source_library>

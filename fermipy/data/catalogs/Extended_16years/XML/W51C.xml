@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<source_library title="source library">
+  <source name="W51C" type="DiffuseSource">
+    <spectrum normPar="norm" type="LogParabola">
+      <parameter error="0.05" free="1" max="100" min="0" name="norm" scale="1e-11" value="2.52"/>
+      <parameter error="0.02" free="1" max="5" min="0" name="alpha" scale="1" value="2.12"/>
+      <parameter error="0.10" free="1" max="10" min="0" name="beta" scale="0.1" value="1.04"/>
+      <parameter free="0" max="100" min="0.1" name="Eb" scale="1000" value="1.362"/>
+    </spectrum>
+    <spatialModel file="$(LATEXTDIR)/Templates/W51C.fits" map_based_integral="true" type="SpatialMap">
+      <parameter free="0" max="1" min="1" name="Prefactor" scale="1" value="1"/>
+    </spatialModel>
+  </source>
+</source_library>

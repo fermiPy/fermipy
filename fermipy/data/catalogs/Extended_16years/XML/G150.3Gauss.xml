@@ -1,0 +1,16 @@
+<?xml version="1.0" ?>
+<source_library title="source library">
+  <source name="G150.3+4.5" type="DiffuseSource">
+    <spectrum normPar="norm" type="LogParabola">
+      <parameter error="0.1004233897" free="1" max="100" min="0" name="norm" scale="3.779314646e-14" value="1.476067435"/>
+      <parameter error="0.0488964252" free="1" max="5" min="0" name="alpha" scale="1" value="1.598075893"/>
+      <parameter error="0.2193215232" free="1" max="10" min="-5" name="beta" scale="0.1" value="0.7745913193"/>
+      <parameter free="0" max="300" min="0.02" name="Eb" scale="1000" value="9.692479106"/>
+    </spectrum>
+    <spatialModel type="RadialGaussian">
+      <parameter free="0" max="360" min="0" name="RA" scale="1" value="66.425"/>
+      <parameter free="0" max="90" min="-90" name="DEC" scale="1" value="55.371"/>
+      <parameter free="0" max="10" min="0" name="Sigma" scale="1" value="0.900"/>
+    </spatialModel>
+  </source>
+</source_library>

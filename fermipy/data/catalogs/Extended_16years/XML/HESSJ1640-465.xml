@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<source_library title="source library" logLikelihood="2305230.39613">
+<source name="HESSJ1640-465" type="DiffuseSource">
+    <spectrum normPar="Prefactor" type="PowerLaw">
+      <parameter error="3.579901e-01" free="1" max="100" min="0" name="Prefactor" scale="3.70125099e-15" value="5.202265e+00"/>
+      <parameter error="5.610236e-02" free="1" max="5" min="0" name="Index" scale="-1" value="1.957175e+00"/>
+      <parameter free="0" max="19238.41616" min="877.1490125" name="Scale" scale="1" value="15767.68085"/>
+    </spectrum>
+    <spatialModel type="RadialGaussian">
+      <parameter free="0" max="360" min="-360" name="RA" scale="1" value="250.180"/>
+      <parameter free="0" max="90" min="-90" name="DEC" scale="1" value="-46.53"/>
+      <parameter free="0" max="10" min="0" name="Sigma" scale="1" value="0.072"/>
+    </spatialModel>
+  </source>
+</source_library>

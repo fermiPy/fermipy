@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<source_library title="source library">
+  <source name="FGESJ1633.0-4746" type="DiffuseSource">
+    <spectrum normPar="Prefactor" type="PowerLaw">
+      <parameter error="0.2" free="1" max="100" min="0" name="Prefactor" scale="1e-12" value="5.9"/>
+      <parameter error="0.08" free="1" max="5" min="0" name="Index" scale="-1" value="2.1"/>
+      <parameter free="0" max="100" min="0.1" name="Scale" scale="1000" value="2.4"/>
+    </spectrum>
+    <spatialModel type="RadialDisk">
+      <parameter free="0" max="360" min="-360" name="RA" scale="1" value="248.259"/>
+      <parameter free="0" max="90" min="-90" name="DEC" scale="1" value="-47.770"/>
+      <parameter free="0" max="10" min="0" name="Radius" scale="1" value="0.610"/>
+    </spatialModel>
+  </source>
+</source_library>

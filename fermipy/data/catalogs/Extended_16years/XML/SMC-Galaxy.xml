@@ -1,0 +1,15 @@
+<?xml version="1.0" standalone="no"?>
+<source_library title="source library">
+  <source name="SMC-Galaxy" type="DiffuseSource">
+    <spectrum normPar="Prefactor" type="PLSuperExpCutoff4">
+      <parameter error="0.15" free="1" max="100" min="0" name="Prefactor" scale="1e-12" value="5.82"/>
+      <parameter error="0.04" free="1" max="5" min="0" name="IndexS" scale="-1" value="2.08"/>
+      <parameter free="0" max="1" min="0.1" name="Scale" scale="1000" value="0.8"/>
+      <parameter error="0.16" free="1" max="50" min="-5" name="ExpfactorS" scale="0.1" value="0.58"/>
+      <parameter free="0" max="5" min="0" name="Index2" scale="1" value="1" />
+    </spectrum>
+    <spatialModel file="$(LATEXTDIR)/Templates/SMC-Galaxy.fits" map_based_integral="true" type="SpatialMap">
+      <parameter free="0" max="1" min="1" name="Prefactor" scale="1" value="1" />
+    </spatialModel>
+  </source>
+</source_library>

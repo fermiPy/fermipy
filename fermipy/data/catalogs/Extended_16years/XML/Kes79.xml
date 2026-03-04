@@ -1,0 +1,16 @@
+<?xml version="1.0" ?>
+<source_library title="source library">
+  <source name="Kes79" type="DiffuseSource">
+    <spectrum normPar="norm" type="LogParabola">
+      <parameter error="1.836760469" free="1" max="100" min="0" name="norm" scale="1e-13" value="30.76617393"/>
+      <parameter error="0.06815319614" free="1" max="5" min="0" name="alpha" scale="1" value="2.406304468"/>
+      <parameter error="0.3446611965" free="1" max="10" min="0" name="beta" scale="0.1" value="0.8450009325"/>
+      <parameter free="0" max="100" min="1" name="Eb" scale="1000" value="2"/>
+    </spectrum>
+    <spatialModel type="RadialDisk">
+      <parameter free="0" max="360" min="-360" name="RA" scale="1" value="283.1"/>
+      <parameter free="0" max="90" min="-90" name="DEC" scale="1" value="0.63"/>
+      <parameter free="0" max="10" min="0" name="Radius" scale="1" value="0.63"/>
+    </spatialModel>
+  </source>
+</source_library>

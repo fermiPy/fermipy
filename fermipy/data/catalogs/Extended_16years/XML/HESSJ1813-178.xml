@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<source_library title="source library">
+  <source name="HESSJ1813-178" type="DiffuseSource">
+    <spectrum normPar="Prefactor" type="PowerLaw">
+      <parameter error="0.9710531623" free="1" max="100" min="0" name="Prefactor" scale="1e-14" value="8.97362198"/>
+      <parameter error="0.06224423608" free="1" max="5" min="0" name="Index" scale="-1" value="2.272940245"/>
+      <parameter free="0" max="100" min="1" name="Scale" scale="1000" value="10"/>
+    </spectrum>
+    <spatialModel type="RadialDisk">
+      <parameter free="0" max="360" min="-360" name="RA" scale="1" value="273.29"/>
+      <parameter free="0" max="90" min="-90" name="DEC" scale="1" value="-17.62"/>
+      <parameter free="0" max="10" min="0" name="Radius" scale="1" value="0.6"/>
+    </spatialModel>
+  </source>
+</source_library>
