@@ -453,7 +453,9 @@ class SEDGenerator(object):
                               (name, emin, emax))
             self.set_energy_range(logemin, logemax)
 
-            fit_output = self._fit(**config['optimizer'])
+            # Use the public fit wrapper so retries/min_fit_quality and
+            # rollback-on-failure are consistently applied.
+            fit_output = self.fit(update=False, **config['optimizer'])
             free_params = self.get_params(True)
             for j, p in enumerate(free_params):
 

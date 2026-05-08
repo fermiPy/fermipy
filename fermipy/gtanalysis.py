@@ -2736,8 +2736,13 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             if self.like.nFreeParams() > 1 and reoptimize:
                 # Only reoptimize if not all frozen
                 self.like.freeze(idx)
-                fit_output = self._fit(errors=False, **optimizer)
-                loglike1 = fit_output['loglike']
+                fit_output = self.fit(update=False, errors=False, **optimizer)
+                if fit_output['fit_success'] and np.isfinite(fit_output['loglike']):
+                    loglike1 = fit_output['loglike']
+                else:
+                    # Fall back to evaluating the current model state to avoid
+                    # propagating non-finite scan values.
+                    loglike1 = -self.like()
                 self.like.thaw(idx)
             else:
                 loglike1 = -self.like()
