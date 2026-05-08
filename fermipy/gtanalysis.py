@@ -550,7 +550,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         return self._files
 
     @classmethod
-    def create(cls, infile, config=None, params=None, mask=None):
+    def create(cls, infile, config=None, params=None, mask=None,
+               restore_strict=True):
         """Create a new instance of GTAnalysis from an analysis output file
         generated with `~fermipy.GTAnalysis.write_roi`.  By default
         the new instance will inherit the configuration of the saved
@@ -574,6 +575,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         mask : str
             Path to a fits file with an updated mask
 
+        restore_strict : bool
+            Regenerate non-diffuse source maps and resync ROI cache
+            state after loading a saved ROI.
+
         """
 
         infile = os.path.abspath(infile)
@@ -587,7 +592,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         gta = cls(config, validate=validate)
         gta.setup(init_sources=False)
-        gta.load_roi(infile, params=params, mask=mask)
+        gta.load_roi(infile, params=params, mask=mask,
+                     restore_strict=restore_strict)
         return gta
 
     def clone(self, config, **kwargs):
@@ -3597,7 +3603,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         self.logger.log(loglevel, o)
 
-    def load_roi(self, infile, reload_sources=False, params=None, mask=None):
+    def load_roi(self, infile, reload_sources=False, params=None, mask=None,
+                 restore_strict=False):
         """This function reloads the analysis state from a previously
         saved instance generated with
         `~fermipy.gtanalysis.GTAnalysis.write_roi`.
@@ -3615,6 +3622,10 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         
         mask : str
             Path to a fits file with an updated mask
+
+        restore_strict : bool
+           Force regeneration of non-diffuse source maps and refresh
+           ROI/source cache state from the current likelihood.
 
         """
 
@@ -3691,6 +3702,16 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         if reload_sources:
             names = [s.name for s in self.roi.sources if not s.diffuse]
             self.reload_sources(names, False)
+
+        if restore_strict:
+            names = [s.name for s in self.roi.sources if not s.diffuse]
+            if names:
+                self.reload_sources(names, init_source=False)
+
+            for name in self.like.sourceNames():
+                self._init_source(name)
+
+            self._update_roi()
 
         self.logger.info('Finished Loading ROI')
 

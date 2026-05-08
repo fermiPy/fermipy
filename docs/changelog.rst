@@ -6,6 +6,10 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
+1.4.2 (unreleased)
+------------------
+* Fixed ROI restore consistency in `~fermipy.gtanalysis.GTAnalysis.create`/`load_roi` so residual maps are reproducible immediately after `write_roi` without requiring an additional `optimize()` cycle.
+
 1.4.1 (02/25/2026)
 ------------------
 * Added tests for macos-15-intel and improved fit stability on macos
