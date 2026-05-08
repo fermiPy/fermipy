@@ -313,6 +313,34 @@ def test_gtanalysis_extension_gaussian(create_diffuse_dir, create_draco_analysis
 
     gta.simulate_roi(restore=True)
 
+
+def test_gtanalysis_extension_gaussian_fit_position(create_diffuse_dir, create_draco_analysis):
+    gta = create_draco_analysis
+    gta.simulate_roi(restore=True)
+    gta.load_roi('fit1')
+    np.random.seed(1)
+    spatial_width = 0.5
+
+    gta.simulate_source({'SpatialModel': 'RadialGaussian',
+                         'SpatialWidth': spatial_width,
+                         'Prefactor': 3E-12})
+
+    o = gta.extension('draco',
+                      width=[0.4, 0.45, 0.5, 0.55, 0.6],
+                      spatial_model='RadialGaussian',
+                      fit_position=True)
+
+    assert np.isfinite(o['loglike_ptsrc'])
+    assert np.isfinite(o['loglike_ext'])
+    assert np.all(np.isfinite(o['dloglike']))
+    assert_allclose(o['ts_ext'],
+                    2.0 * (o['loglike_ext'] - o['loglike_ptsrc']),
+                    rtol=1E-6, atol=1E-6)
+    # Guard against large unphysical profile dips from inconsistent null loglike.
+    assert np.min(o['dloglike']) > -20.0
+
+    gta.simulate_roi(restore=True)
+
 #@requires_git_version('02-00-00')
 def test_gtanalysis_localization(create_diffuse_dir, create_draco_analysis):
     gta = create_draco_analysis

@@ -297,7 +297,15 @@ class ExtensionFit(object):
 
         if src['SpatialModel'] == 'PointSource' and kwargs['fit_position']:
             loc = self.localize(name, update=False)
-            o.loglike_ptsrc = loc['loglike_loc']
+            if loc['fit_success'] and loc['fit_inbounds']:
+                self.set_source_morphology(name, spatial_model='PointSource',
+                                           spatial_pars={'ra': loc['ra'],
+                                                         'dec': loc['dec']},
+                                           use_pylike=False,
+                                           psf_scale_fn=psf_scale_fn)
+                fit_output = self._fit(loglevel=logging.DEBUG,
+                                       **kwargs['optimizer'])
+            o.loglike_ptsrc = fit_output['loglike']
         else:
             o.loglike_ptsrc = fit_output['loglike']
 
