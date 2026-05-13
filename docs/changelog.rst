@@ -8,7 +8,10 @@ releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
 1.4.2 (unreleased)
 ------------------
-* Fixed ROI restore consistency in `~fermipy.gtanalysis.GTAnalysis.create`/`load_roi`
+* Fixed ROI restore consistency in `~fermipy.gtanalysis.GTAnalysis.create` and
+  `~fermipy.gtanalysis.GTAnalysis.load_roi`: when ``edisp: true`` is set and
+  ``edisp_disable`` lists diffuse sources, reloading a saved ROI now produces
+  model counts and residual maps identical to those computed before saving.
 * Added support and tests for the new FL16Y source list
 * Fixed some inconsistencies and bugs in the skymap library
 

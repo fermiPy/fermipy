@@ -7,6 +7,7 @@ import collections
 import logging
 import tempfile
 import filecmp
+import xml.etree.ElementTree as ET
 import time
 import json
 from pathlib import Path
@@ -576,8 +577,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             Path to a fits file with an updated mask
 
         restore_strict : bool
-            Regenerate non-diffuse source maps and resync ROI cache
-            state after loading a saved ROI.
+            Resynchronize ROI cache state (fixed-model weights,
+            per-source properties, ROI summary) after loading a saved
+            ROI.  Passed directly to `~fermipy.GTAnalysis.load_roi`.
 
         """
 
@@ -3624,8 +3626,9 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             Path to a fits file with an updated mask
 
         restore_strict : bool
-           Force regeneration of non-diffuse source maps and refresh
-           ROI/source cache state from the current likelihood.
+           Force deterministic source-map synchronization (including
+           diffuse/fixed components) and refresh ROI/source cache state
+           from the current likelihood.
 
         """
 
@@ -3704,9 +3707,8 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
             self.reload_sources(names, False)
 
         if restore_strict:
-            names = [s.name for s in self.roi.sources if not s.diffuse]
-            if names:
-                self.reload_sources(names, init_source=False)
+            for c in self.components:
+                c.like.logLike.buildFixedModelWts()
 
             for name in self.like.sourceNames():
                 self._init_source(name)
@@ -5508,8 +5510,40 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         set_edisp_kwargs('gtlike', self.config, kw)
         self.logger.debug(kw)
 
-        self._like = BinnedAnalysis(binnedData=self._obs,
-                                    **utils.unicode_to_str(kw))
+        # When edisp is enabled globally and some sources have edisp disabled,
+        # loading an XML that contains apply_edisp='false' on those sources causes
+        # BinnedAnalysis to set edisp_val=0 instead of -1, leading to incorrect
+        # model counts after load_roi.  Strip the attribute before construction so
+        # the constructor always starts with edisp_val=-1; set_edisp_flag below
+        # will then correctly mark those sources as no-edisp.
+        edisp_disable = [s for s in self.config['gtlike']['edisp_disable']
+                         if self.roi.has_source(s)]
+        tmp_srcmdl = None
+        if edisp_disable and kw.get('edisp_bins', 0) != 0:
+            try:
+                tree = ET.parse(kw['srcModel'])
+                root = tree.getroot()
+                stripped = False
+                for src in root.findall('source'):
+                    if src.get('name') in edisp_disable:
+                        spectrum = src.find('spectrum')
+                        if spectrum is not None and 'apply_edisp' in spectrum.attrib:
+                            del spectrum.attrib['apply_edisp']
+                            stripped = True
+                if stripped:
+                    fd, tmp_srcmdl = tempfile.mkstemp(suffix='.xml')
+                    os.close(fd)
+                    tree.write(tmp_srcmdl, xml_declaration=True, encoding='unicode')
+                    kw['srcModel'] = tmp_srcmdl
+            except Exception:
+                pass
+
+        try:
+            self._like = BinnedAnalysis(binnedData=self._obs,
+                                        **utils.unicode_to_str(kw))
+        finally:
+            if tmp_srcmdl and os.path.exists(tmp_srcmdl):
+                os.unlink(tmp_srcmdl)
 
 #        print(self.like.logLike.use_single_fixed_map())
 #        self.like.logLike.set_use_single_fixed_map(False)
