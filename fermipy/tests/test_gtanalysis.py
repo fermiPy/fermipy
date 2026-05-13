@@ -227,22 +227,22 @@ def test_gtanalysis_create_restore_residmap_consistency(create_diffuse_dir,
     assert_allclose(out_model_means, ref_model_means, rtol=1E-3, atol=1E-10)
 
 
-def test_gtanalysis_load_roi_restore_strict_same_instance_consistency(
+def test_gtanalysis_load_roi_same_instance_consistency(
         create_diffuse_dir, create_draco_analysis):
     gta = create_draco_analysis
     gta.load_roi('fit1')
     gta.optimize()
-    gta.write_roi('restore_same_instance_test', make_plots=False)
+    gta.write_roi('load_roi_same_instance_test', make_plots=False)
 
     ref = gta.residmap(model={}, make_plots=False,
-                       prefix='restore_same_instance_ref')
+                       prefix='load_roi_same_instance_ref')
     ref_mean = np.nanmean(ref['excess'].data)
     ref_model_means = np.array([np.nanmean(c.model_counts_map().data)
                                 for c in gta.components])
 
-    gta.load_roi('restore_same_instance_test', restore_strict=True)
+    gta.load_roi('load_roi_same_instance_test')
     out = gta.residmap(model={}, make_plots=False,
-                       prefix='restore_same_instance_cmp')
+                       prefix='load_roi_same_instance_cmp')
     out_mean = np.nanmean(out['excess'].data)
     out_model_means = np.array([np.nanmean(c.model_counts_map().data)
                                 for c in gta.components])

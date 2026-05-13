@@ -551,8 +551,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         return self._files
 
     @classmethod
-    def create(cls, infile, config=None, params=None, mask=None,
-               restore_strict=True):
+    def create(cls, infile, config=None, params=None, mask=None):
         """Create a new instance of GTAnalysis from an analysis output file
         generated with `~fermipy.GTAnalysis.write_roi`.  By default
         the new instance will inherit the configuration of the saved
@@ -576,11 +575,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         mask : str
             Path to a fits file with an updated mask
 
-        restore_strict : bool
-            Resynchronize ROI cache state (fixed-model weights,
-            per-source properties, ROI summary) after loading a saved
-            ROI.  Passed directly to `~fermipy.GTAnalysis.load_roi`.
-
         """
 
         infile = os.path.abspath(infile)
@@ -594,8 +588,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         gta = cls(config, validate=validate)
         gta.setup(init_sources=False)
-        gta.load_roi(infile, params=params, mask=mask,
-                     restore_strict=restore_strict)
+        gta.load_roi(infile, params=params, mask=mask)
         return gta
 
     def clone(self, config, **kwargs):
@@ -3605,8 +3598,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
         self.logger.log(loglevel, o)
 
-    def load_roi(self, infile, reload_sources=False, params=None, mask=None,
-                 restore_strict=False):
+    def load_roi(self, infile, reload_sources=False, params=None, mask=None):
         """This function reloads the analysis state from a previously
         saved instance generated with
         `~fermipy.gtanalysis.GTAnalysis.write_roi`.
@@ -3624,11 +3616,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         
         mask : str
             Path to a fits file with an updated mask
-
-        restore_strict : bool
-           Force deterministic source-map synchronization (including
-           diffuse/fixed components) and refresh ROI/source cache state
-           from the current likelihood.
 
         """
 
@@ -3705,15 +3692,6 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         if reload_sources:
             names = [s.name for s in self.roi.sources if not s.diffuse]
             self.reload_sources(names, False)
-
-        if restore_strict:
-            for c in self.components:
-                c.like.logLike.buildFixedModelWts()
-
-            for name in self.like.sourceNames():
-                self._init_source(name)
-
-            self._update_roi()
 
         self.logger.info('Finished Loading ROI')
 
