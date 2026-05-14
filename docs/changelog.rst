@@ -6,6 +6,15 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
+1.4.2 (unreleased)
+------------------
+* Fixed ROI restore consistency in `~fermipy.gtanalysis.GTAnalysis.create` and
+  `~fermipy.gtanalysis.GTAnalysis.load_roi`: when ``edisp: true`` is set and
+  ``edisp_disable`` lists diffuse sources, reloading a saved ROI now produces
+  model counts and residual maps identical to those computed before saving.
+* Added support and tests for the new FL16Y source list
+* Fixed some inconsistencies and bugs in the skymap library
+
 1.4.1 (02/25/2026)
 ------------------
 * Added tests for macos-15-intel and improved fit stability on macos
@@ -35,15 +44,16 @@ releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 * Added PS map implementing code from Philippe Bruel in `~fermipy.gtanalysis.GTAnalysis.psmap`
 * Added PS map visualition in `~fermipy.gtanalysis.plotter.make_psmap_plots`
 * Added `PS map <https://fermipy.readthedocs.io/en/master/advanced/psmap.html>`_ to the documentation
+* Implemented Steve calibration to fix the residmap problem
 
 1.2.2 (01/21/2024)
 ------------------
-* fix the dependence of scipy due to gammapy
+* Fixed the dependence of scipy due to gammapy
 
 1.2.1 (12/08/2023)
 ------------------
 * Small bug fixes.
-* pinned astropy<6
+* Temporarily pinned `astropy<6`
 
 1.2 (09/21/2022)
 ----------------

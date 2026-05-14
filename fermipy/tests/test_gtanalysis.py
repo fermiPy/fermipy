@@ -202,6 +202,54 @@ def test_gtanalysis_residmap(create_diffuse_dir, create_draco_analysis):
                  make_plots=True)
 
 
+def test_gtanalysis_create_restore_residmap_consistency(create_diffuse_dir,
+                                                        create_draco_analysis):
+    gta = create_draco_analysis
+    gta.load_roi('fit1')
+    gta.optimize()
+    gta.write_roi('restore_consistency_test', make_plots=False)
+
+    ref = gta.residmap(model={}, make_plots=False,
+                       prefix='restore_consistency_ref')
+    ref_mean = np.nanmean(ref['excess'].data)
+    ref_model_means = np.array([np.nanmean(c.model_counts_map().data)
+                                for c in gta.components])
+
+    infile = os.path.join(gta.workdir, 'restore_consistency_test.npy')
+    gta_reloaded = gtanalysis.GTAnalysis.create(infile)
+    out = gta_reloaded.residmap(model={}, make_plots=False,
+                                prefix='restore_consistency_cmp')
+    out_mean = np.nanmean(out['excess'].data)
+    out_model_means = np.array([np.nanmean(c.model_counts_map().data)
+                                for c in gta_reloaded.components])
+
+    assert_allclose(out_mean, ref_mean, rtol=1E-3, atol=1E-10)
+    assert_allclose(out_model_means, ref_model_means, rtol=1E-3, atol=1E-10)
+
+
+def test_gtanalysis_load_roi_same_instance_consistency(
+        create_diffuse_dir, create_draco_analysis):
+    gta = create_draco_analysis
+    gta.load_roi('fit1')
+    gta.optimize()
+    gta.write_roi('load_roi_same_instance_test', make_plots=False)
+
+    ref = gta.residmap(model={}, make_plots=False,
+                       prefix='load_roi_same_instance_ref')
+    ref_mean = np.nanmean(ref['excess'].data)
+    ref_model_means = np.array([np.nanmean(c.model_counts_map().data)
+                                for c in gta.components])
+
+    gta.load_roi('load_roi_same_instance_test')
+    out = gta.residmap(model={}, make_plots=False,
+                       prefix='load_roi_same_instance_cmp')
+    out_mean = np.nanmean(out['excess'].data)
+    out_model_means = np.array([np.nanmean(c.model_counts_map().data)
+                                for c in gta.components])
+
+    assert_allclose(out_mean, ref_mean, rtol=1E-3, atol=1E-10)
+    assert_allclose(out_model_means, ref_model_means, rtol=1E-3, atol=1E-10)
+
 
 #@requires_git_version('02-00-00')
 def test_gtanalysis_find_sources(create_diffuse_dir, create_draco_analysis):
