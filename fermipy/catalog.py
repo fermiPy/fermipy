@@ -661,7 +661,7 @@ class CatalogFL16Y(Catalog):
             extdir = os.path.join('$FERMIPY_DATA_DIR', 'catalogs',
                                   'Extended_16years')
 
-        fitsfile = _resolve_default_catalog_file(fitsfile, 'gll_psc_v40.fit')
+        fitsfile = _resolve_default_catalog_file(fitsfile, 'gll_psc_v41.fit')
         table = _load_extended_tables(fitsfile)
         table.sort('Source_Name')
         super(CatalogFL16Y, self).__init__(table, extdir)

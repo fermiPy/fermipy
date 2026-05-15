@@ -6,7 +6,7 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
-1.4.2 (unreleased)
+1.4.2 (05/15/2026)
 ------------------
 * Fixed ROI restore consistency in `~fermipy.gtanalysis.GTAnalysis.create` and
   `~fermipy.gtanalysis.GTAnalysis.load_roi`: when ``edisp: true`` is set and
