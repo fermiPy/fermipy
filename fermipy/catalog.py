@@ -77,7 +77,7 @@ def strip_columns(tab):
     """Strip whitespace from string columns."""
     for colname in tab.colnames:
         if tab[colname].dtype.kind in ['S', 'U']:
-            tab[colname] = np.core.defchararray.strip(tab[colname])
+            tab[colname] = np.char.strip(tab[colname])
 
 
 def row_to_dict(row):
