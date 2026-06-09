@@ -15,7 +15,6 @@ from scipy.interpolate import UnivariateSpline
 from scipy.optimize import brentq
 from scipy.ndimage import label
 import scipy.special as special
-from numpy.core import defchararray
 from numpy.polynomial.polynomial import polyfit
 try:
     from astropy.extern import six
@@ -239,8 +238,7 @@ def find_rows_by_string(tab, names, colnames=['assoc']):
             continue
 
         col = tab[[colname]].copy()
-        col[colname] = defchararray.replace(defchararray.lower(col[colname]).astype(str),
-                                        ' ', '')
+        col[colname] = np.char.replace(np.char.lower(col[colname]).astype(str),' ', '')
         for name in names:
             mask |= col[colname] == name
     return mask
