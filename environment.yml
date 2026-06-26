@@ -7,6 +7,7 @@ dependencies:
   - pyyaml
   - numpy>=1.16
   - scipy
+  - regions<0.12
   - astropy
   - matplotlib>=3.3
   - healpy
