@@ -76,7 +76,7 @@ class MapInterpolator(object):
                 idx += [0]
             else:
                 npix1 = int(self.shape[i])
-                pix0 = int(pix[i - 1]) - npix1 // 2
+                pix0 = int(pix[i - 1][0]) - npix1 // 2
                 idx += [pix0]
 
         return idx
@@ -90,7 +90,7 @@ class MapInterpolator(object):
         for i in range(len(self.shape) - 1):
             x = self.rebin * (pix[i] - pix_offset[i + 1]
                               ) + (self.rebin - 1.0) / 2.
-            dpix[i] = x - self._pix_ref[i]
+            dpix[i] = x[0] - self._pix_ref[i]
 
         pos = [pix_offset[i] + self.shape[i] // 2
                for i in range(self.data.ndim)]
