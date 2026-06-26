@@ -4791,7 +4791,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
 
         if src['SpatialType'] == 'SkyDirFunction':
             pylike_src = pyLike.PointSource(self.like.logLike.observation())
-            pylike_src.setDir(src.skydir.ra.deg, src.skydir.dec.deg, False,
+            pylike_src.setDir(float(src.skydir.ra.deg), float(src.skydir.dec.deg), False,
                               False)
         elif src['SpatialType'] == 'SpatialMap':
             filepath = str(utils.path_to_xmlpath(src['Spatial_Filename']))
@@ -4802,20 +4802,20 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
         elif src['SpatialType'] == 'RadialProfile':
             filepath = str(utils.path_to_xmlpath(src['Spatial_Filename']))
             sm = pyLike.RadialProfile(filepath)
-            sm.setCenter(src['ra'], src['dec'])
+            sm.setCenter(float(src['ra']), float(src['dec']))
             pylike_src = pyLike.DiffuseSource(sm,
                                               self.like.logLike.observation(),
                                               False)
         elif src['SpatialType'] == 'RadialGaussian':
-            sm = pyLike.RadialGaussian(src.skydir.ra.deg, src.skydir.dec.deg,
-                                       src.spatial_pars['Sigma']['value'])
+            sm = pyLike.RadialGaussian(float(src.skydir.ra.deg), float(src.skydir.dec.deg),
+                                       float(src.spatial_pars['Sigma']['value']))
             pylike_src = pyLike.DiffuseSource(sm,
                                               self.like.logLike.observation(),
                                               False)
 
         elif src['SpatialType'] == 'RadialDisk':
-            sm = pyLike.RadialDisk(src.skydir.ra.deg, src.skydir.dec.deg,
-                                   src.spatial_pars['Radius']['value'])
+            sm = pyLike.RadialDisk(float(src.skydir.ra.deg), float(src.skydir.dec.deg),
+                                   float(src.spatial_pars['Radius']['value']))
             pylike_src = pyLike.DiffuseSource(sm,
                                               self.like.logLike.observation(),
                                               False)
