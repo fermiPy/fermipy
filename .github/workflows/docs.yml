@@ -1,5 +1,13 @@
 name: Docs
-on: [push, release]
+on:
+  push:
+    branches:
+      - master 
+    tags:
+      - '*'
+  pull_request:
+    branches:
+      - master
 
 jobs:
   notebooks:
@@ -14,7 +22,7 @@ jobs:
       #- name: Set up Python
       #  uses: actions/setup-python@v5
       #  with:
-      #    python-version: 3.9
+      #    python-version: 3.11
       - name: Checkout
         uses: actions/checkout@v4
         with:
@@ -27,7 +35,7 @@ jobs:
           auto-activate-base: false
           architecture: "x64"
           miniforge-version: latest
-          python-version: 3.9
+          python-version: 3.11
           environment-file: environment.yml
       - name: Install additional packages
         shell: bash -l {0}
