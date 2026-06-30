@@ -13,7 +13,7 @@ import SummedLikelihood as sl
 import BinnedAnalysis as ba
 
 
-pyIrfLoader.Loader_go()
+pyIrfLoader.Loader.go()
 
 _funcFactory = pyLike.SourceFactory_funcFactory()
 
