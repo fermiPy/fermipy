@@ -10,7 +10,7 @@ from astropy.io import fits
 
 import pyIrfLoader
 
-pyIrfLoader.Loader_go()
+pyIrfLoader.Loader.go()
 
 from fermipy import utils
 from fermipy import spectrum

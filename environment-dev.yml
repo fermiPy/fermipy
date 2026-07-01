@@ -6,11 +6,11 @@ dependencies:
   - python
   - pyyaml
   - numpy>=2.0
-  - scipy<1.18
+  - scipy
   - regions<0.12
   - astropy<8
   - matplotlib>=3.3
   - healpy
   - astropy-healpix
   - gammapy>=2.0
-  - fermitools>=2.2.0
+  - fermitools>=2.5.0
