@@ -5,12 +5,12 @@ channels:
 dependencies:
   - python
   - pyyaml
-  - numpy>=1.16
-  - scipy
+  - numpy>=2.0
+  - scipy<1.18
   - regions<0.12
-  - astropy
+  - astropy<8
   - matplotlib>=3.3
   - healpy
   - astropy-healpix
-  - gammapy>=1.0
-  - fermitools>=2.2.0
+  - gammapy>=2.0
+  - fermitools>=2.5.0

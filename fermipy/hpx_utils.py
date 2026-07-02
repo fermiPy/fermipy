@@ -339,7 +339,7 @@ class HPX(object):
         if self._rmap is not None:
             retval = np.empty((sliced.size), 'i')
             retval.fill(-1)
-            m = np.in1d(sliced.flat, self._ipix)
+            m = np.isin(sliced.flat, self._ipix)
             retval[m] = np.searchsorted(self._ipix, sliced.flat[m])
             return retval.reshape(sliced.shape)
         return sliced

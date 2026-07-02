@@ -59,6 +59,19 @@ def join_tables(left, right, key_left, key_right,
     if key_left not in cols_right:
         cols_right += [key_left]
 
+    # Fill missing (masked) values in key columns before joining (astropy >6
+    # raises TableMergeError if key columns have missing values).
+    for tbl in [left, right]:
+        if key_left in tbl.colnames:
+            col = tbl[key_left]
+            if hasattr(col, 'mask') and col.mask.any():
+                if col.dtype.kind in ['S', 'U']:
+                    tbl[key_left] = col.filled('')
+                elif col.dtype.kind in ['i']:
+                    tbl[key_left] = col.filled(0)
+                else:
+                    tbl[key_left] = col.filled(np.nan)
+
     out = join(left, right[cols_right], keys=key_left,
                join_type='left')
 
@@ -85,7 +98,7 @@ def row_to_dict(row):
     o = {}
     for colname in row.colnames:
 
-        if isinstance(row[colname], np.string_) and row[colname].dtype.kind in ['S', 'U']:
+        if isinstance(row[colname], (np.bytes_, np.str_)) and row[colname].dtype.kind in ['S', 'U']:
             o[colname] = str(row[colname])
         else:
             o[colname] = row[colname]
