@@ -507,7 +507,7 @@ class SummedLikelihood(sl.SummedLikelihood):
         if tol is None:
             tol = self.tol
         if optObject is None:
-            optFactory = pyLike.OptimizerFactory_instance()
+            optFactory = pyLike.OptimizerFactory.instance()
             myOpt = optFactory.create(optimizer, self.logLike)
         else:
             myOpt = optObject
@@ -541,7 +541,7 @@ class SummedLikelihood(sl.SummedLikelihood):
         if reoptimize:
             if verbosity > 0:
                 print("** Do reoptimize")
-            optFactory = pyLike.OptimizerFactory_instance()
+            optFactory = pyLike.OptimizerFactory.instance()
             myOpt = optFactory.create(self.optimizer, self.composite)
             Niter = 1
             while Niter <= MaxIterations:
@@ -687,7 +687,7 @@ class BinnedAnalysis(ba.BinnedAnalysis):
         if reoptimize:
             if verbosity > 0:
                 print("** Do reoptimize")
-            optFactory = pyLike.OptimizerFactory_instance()
+            optFactory = pyLike.OptimizerFactory.instance()
             myOpt = optFactory.create(self.optimizer, self.logLike)
             Niter = 1
             while Niter <= MaxIterations:

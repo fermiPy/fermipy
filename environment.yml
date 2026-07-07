@@ -5,7 +5,7 @@ channels:
 dependencies:
   - python
   - pyyaml
-  - numpy>=2.0
+  - numpy
   - scipy<1.18
   - regions<0.12
   - astropy<8
