@@ -15,7 +15,7 @@ import BinnedAnalysis as ba
 
 pyIrfLoader.Loader.go()
 
-_funcFactory = pyLike.SourceFactory_funcFactory()
+_funcFactory = pyLike.SourceFactory.funcFactory()
 
 
 
@@ -116,7 +116,7 @@ def init_function_pars():
     FUNCTION_PAR_NAMES = {}
     FUNCTION_NORM_PARS = {}
 
-    funcFactory = pyLike.SourceFactory_funcFactory()
+    funcFactory = pyLike.SourceFactory.funcFactory()
 
     names = pyLike.StringVector()
     funcFactory.getFunctionNames(names)
@@ -223,7 +223,7 @@ def create_spectrum_from_dict(spectrum_type, spectral_pars, fn=None):
     """
 
     if fn is None:
-        fn = pyLike.SourceFactory_funcFactory().create(str(spectrum_type))
+        fn = pyLike.SourceFactory.funcFactory().create(str(spectrum_type))
 
     if spectrum_type == 'PiecewisePowerLaw':        
         build_piecewise_powerlaw(fn, spectral_pars)
