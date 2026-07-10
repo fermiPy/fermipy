@@ -119,7 +119,7 @@ setup(
         "matplotlib>=3.3",
         "gammapy>=2.0",
         "healpy",
-        "astropy-healpix"
+        "astropy-healpix",
         "regions<0.12",
     ],
 )
