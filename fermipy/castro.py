@@ -839,7 +839,7 @@ class CastroData_Base(object):
             mle = self._loglikes[i].mle()
             nll0 = self._loglikes[i].interp(mle)
             nll1 = self._loglikes[i].interp(x[i])
-            chi2_vals[i] = 2.0 * np.abs(nll0 - nll1)
+            chi2_vals[i] = 2.0 * np.abs(nll0 - nll1)[0]
 
         return chi2_vals
 

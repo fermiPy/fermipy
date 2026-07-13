@@ -8,7 +8,7 @@ dependencies:
   - numpy>=2.0
   - scipy
   - regions<0.12
-  - astropy
+  - astropy<8
   - matplotlib>=3.3
   - healpy
   - astropy-healpix

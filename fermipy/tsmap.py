@@ -1096,7 +1096,7 @@ class TSCubeGenerator(object):
 
         skyproj = pyLike.FitScanner.buildSkyProj(str("AIT"), refdir, float(pixsize), int(npix), galactic)
 
-        optFactory = pyLike.OptimizerFactory_instance()
+        optFactory = pyLike.OptimizerFactory.instance()
         optObject = optFactory.create(str("MINUIT"), self.like.composite)
 
         fitScanner = pyLike.FitScanner(self.like.composite, optObject, skyproj,
