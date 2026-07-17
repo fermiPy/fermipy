@@ -2830,7 +2830,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         elif optimizer.upper() == 'NEWMINUIT':
             optObject = pyLike.NewMinuit(self.like.logLike)
         else:
-            optFactory = pyLike.OptimizerFactory_instance()
+            optFactory = pyLike.OptimizerFactory.instance()
             optObject = optFactory.create(str(optimizer), self.like.logLike)
         return optObject
 
