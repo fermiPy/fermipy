@@ -266,7 +266,7 @@ def gtlike_spectrum_to_dict(spectrum):
         d[pname] = np.array([pval, perr])
 
         if d['spectrum_type'] == 'FileFunction':
-            ff = pyLike.FileFunction_cast(spectrum)
+            ff = pyLike.FileFunction.cast(spectrum)
             d['file'] = ff.filename()
     return d
 

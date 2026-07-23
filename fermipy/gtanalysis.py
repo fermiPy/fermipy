@@ -835,7 +835,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
         for c in self.components:
             src = c.like.logLike.getSource(str(name))
             spectrum = src.spectrum()
-            file_function = pyLike.FileFunction_cast(spectrum)
+            file_function = pyLike.FileFunction.cast(spectrum)
             file_function.setSpectrum(10**xy[0], dnde)
 
         if update_source:
@@ -863,7 +863,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
             src = self.components[0].like.logLike.getSource(str(name))
             spectrum = src.spectrum()
-            file_function = pyLike.FileFunction_cast(spectrum)
+            file_function = pyLike.FileFunction.cast(spectrum)
             loge = file_function.log_energy()
             logdnde = file_function.log_dnde()
 
@@ -919,7 +919,7 @@ class GTAnalysis(fermipy.config.Configurable, sed.SEDGenerator,
 
             spectrum.getParam(str('Normalization')).setBounds(1E-3, 1E3)
 
-            file_function = pyLike.FileFunction_cast(spectrum)
+            file_function = pyLike.FileFunction.cast(spectrum)
             file_function.readFunction(str(filename))
             c.roi[name]['Spectrum_Filename'] = filename
 
@@ -4834,7 +4834,7 @@ class GTBinnedAnalysis(fermipy.config.Configurable):
             fn = gtutils.create_spectrum_from_dict(src['SpectrumType'],
                                                    src.spectral_pars)
 
-            file_function = pyLike.FileFunction_cast(fn)
+            file_function = pyLike.FileFunction.cast(fn)
             filename = str(os.path.expandvars(src['Spectrum_Filename']))
             file_function.readFunction(filename)
         elif src['SpectrumType'] == 'DMFitFunction':
