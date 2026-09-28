@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import numpy as np
 from numpy.testing import assert_allclose
+import pytest
 from fermipy import spectrum
 
 
@@ -30,8 +31,8 @@ def test_dmfitfunction_spectrum():
     mass = 100.  # Mass in GeV
     params = [sigmav, mass]
 
-    fn0 = spectrum.DMFitFunction(params, chan='bb')
-    fn1 = spectrum.DMFitFunction(params, chan='tautau')
+    fn0 = spectrum.DMFitFunction(params, chan='bb', tablepath='legacy')
+    fn1 = spectrum.DMFitFunction(params, chan='tautau', tablepath='legacy')
 
     loge = np.linspace(2, 4, 5)
 
@@ -67,3 +68,37 @@ def test_dmfitfunction_spectrum():
     assert_allclose(dnde0[:, 1], fn0.dnde(10**loge, params=[sigmav, 200E3]))
     assert_allclose(dnde1[:, 0], fn1.dnde(10**loge, params=[sigmav, 100E3]))
     assert_allclose(dnde1[:, 1], fn1.dnde(10**loge, params=[sigmav, 200E3]))
+
+
+def test_dmfitfunction_tables():
+
+    assert spectrum.get_dmfit_tablepath() == \
+        os.path.join('$FERMIPY_DATA_DIR', 'gammamc_dif_CosmiXs.dat')
+    assert spectrum.get_dmfit_tablepath('legacy') == \
+        os.path.join('$FERMIPY_DATA_DIR', 'gammamc_dif.dat')
+    assert spectrum.get_dmfit_tablepath('/some/table.dat') == \
+        '/some/table.dat'
+
+    params = [3E-26, 100.]
+    fn = spectrum.DMFitFunction(params, chan='bb')
+    fn_legacy = spectrum.DMFitFunction(params, chan='bb', tablepath='legacy')
+    assert fn.dnde(1E3) != fn_legacy.dnde(1E3)
+
+
+def test_dmfitfunction_pylike():
+
+    pyLike = pytest.importorskip('pyLikelihood')
+
+    params = [3E-26, 100.]
+    loge = np.linspace(2, 4, 5)
+    for table in spectrum.DMFIT_TABLES:
+        tablepath = os.path.expandvars(spectrum.get_dmfit_tablepath(table))
+        fn_st = pyLike.DMFitFunction()
+        fn_st.readFunction(tablepath)
+        fn_st.setParam('sigmav', params[0])
+        fn_st.setParam('mass', params[1])
+        fn_st.setParam('channel0', 4)
+        fn_st.setParam('norm', 1E19)
+        fn = spectrum.DMFitFunction(params, chan='bb', tablepath=table)
+        assert_allclose(fn.dnde(10**loge),
+                        [fn_st(pyLike.dArg(10**x)) for x in loge], rtol=1E-5)

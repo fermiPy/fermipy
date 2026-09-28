@@ -22,6 +22,7 @@ from fermipy import defaults
 from fermipy import model_utils
 from fermipy import fits_utils
 from fermipy.logger import Logger, log_level
+from fermipy.spectrum import get_dmfit_tablepath
 from fermipy.model_utils import make_parameter_dict
 from fermipy.model_utils import cast_pars_dict
 from fermipy.model_utils import get_function_defaults
@@ -1043,9 +1044,9 @@ class Source(Model):
         if 'file' in src_dict:
             src_dict['Spectrum_Filename'] = src_dict.pop('file')
 
-        if spectrum_type == 'DMFitFunction' and src_dict['Spectrum_Filename'] is None:
-            src_dict['Spectrum_Filename'] = os.path.join('$FERMIPY_DATA_DIR',
-                                                         'gammamc_dif.dat')
+        if spectrum_type == 'DMFitFunction':
+            src_dict['Spectrum_Filename'] = \
+                get_dmfit_tablepath(src_dict['Spectrum_Filename'])
 
         src_dict['spectral_pars'] = cast_pars_dict(spectral_pars)
         src_dict['spatial_pars'] = cast_pars_dict(spatial_pars)

@@ -6,6 +6,14 @@ Changelog
 This page is a changelog for releases of Fermipy.  You can also browse
 releases on `Github <https://github.com/fermiPy/fermipy/releases>`_.
 
+Unreleased
+----------
+* The default lookup table of `~fermipy.spectrum.DMFitFunction` is now based on
+  CosmiXs (Arina et al. 2024; ``gammamc_dif_CosmiXs.dat``). This changes the
+  predicted DM spectra and therefore fitted cross sections/lifetimes. The previous
+  table (Jeltema & Profumo 2008; ``gammamc_dif.dat``) can still be selected with
+  ``tablepath='legacy'`` or ``Spectrum_Filename: legacy`` in the source dictionary.
+
 1.4.3 (07/31/2026)
 ------------------
 * Fixed incorrect extension()/localize() results caused by a fermitools SourceMap caching bug (fixed upstream in fermitools 2.5.3).
