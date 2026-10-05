@@ -79,10 +79,21 @@ def test_dmfitfunction_tables():
     assert spectrum.get_dmfit_tablepath('/some/table.dat') == \
         '/some/table.dat'
 
-    params = [3E-26, 100.]
-    fn = spectrum.DMFitFunction(params, chan='bb')
-    fn_legacy = spectrum.DMFitFunction(params, chan='bb', tablepath='legacy')
-    assert fn.dnde(1E3) != fn_legacy.dnde(1E3)
+    sigmav = 3E-26
+    mass = 100.  # Mass in GeV
+    params = [sigmav, mass]
+
+    fn0 = spectrum.DMFitFunction(params, chan='bb')
+    fn1 = spectrum.DMFitFunction(params, chan='tautau')
+
+    loge = np.linspace(2, 4, 5)
+
+    assert_allclose(fn0.dnde(10**loge),
+                    [5.08337e-14, 3.08786e-14, 1.12428e-14,
+                     2.14891e-15, 1.83371e-16], rtol=1E-3)
+    assert_allclose(fn1.dnde(10**loge),
+                    [7.49400e-16, 4.08160e-16, 2.80641e-16,
+                     1.97219e-16, 9.62359e-17], rtol=1E-3)
 
 
 def test_dmfitfunction_pylike():

@@ -547,6 +547,11 @@ class DMFitFunction(SpectralFunction):
     By default the spectra are taken from the CosmiXs tables (Arina et
     al. 2024).  The previous tables based on Jeltema & Profumo (2008)
     can be selected with ``tablepath='legacy'``.
+
+    The CosmiXs tables start at a DM mass of 6 GeV (the 2 and 4 GeV
+    rows of the mass grid are zero).  Spectra for WW and ZZ below the
+    on-shell threshold include off-shell gauge boson production and
+    assume a 100% branching ratio.
     """
 
     # Mapping between the ST channel codes and the rows in the gammamc
