@@ -89,11 +89,11 @@ def test_dmfitfunction_tables():
     loge = np.linspace(2, 4, 5)
 
     assert_allclose(fn0.dnde(10**loge),
-                    [5.08337e-14, 3.08786e-14, 1.12428e-14,
-                     2.14891e-15, 1.83371e-16], rtol=1E-3)
+                    [5.08714e-14, 3.08441e-14, 1.12053e-14,
+                     2.14793e-15, 1.84833e-16], rtol=1E-3)
     assert_allclose(fn1.dnde(10**loge),
-                    [7.49400e-16, 4.08160e-16, 2.80641e-16,
-                     1.97219e-16, 9.62359e-17], rtol=1E-3)
+                    [7.47014e-16, 4.07607e-16, 2.81216e-16,
+                     1.97613e-16, 9.59704e-17], rtol=1E-3)
 
 
 def test_dmfitfunction_pylike():

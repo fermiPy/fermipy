@@ -544,8 +544,8 @@ class DMFitFunction(SpectralFunction):
 
     For decay the D-factor is in uits of GeV cm^-2 s
 
-    By default the spectra are taken from the CosmiXs tables (Arina et
-    al. 2024).  The previous tables based on Jeltema & Profumo (2008)
+    By default the spectra are taken from the CosmiXs 2024 release
+    (Arina et al. 2024).  The previous tables based on Jeltema & Profumo (2008)
     can be selected with ``tablepath='legacy'``.
 
     The CosmiXs tables start at a DM mass of 6 GeV (the 2 and 4 GeV
