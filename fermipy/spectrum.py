@@ -501,6 +501,32 @@ class PLSuperExpCutoff(SpectralFunction):
                 (params[1] * params[2] - x) / (params[2] * x))
 
 
+# Lookup tables for DMFitFunction available in $FERMIPY_DATA_DIR
+DMFIT_TABLES = {
+    'cosmixs': 'gammamc_dif_CosmiXs.dat',  # Arina et al. 2024 (CosmiXs)
+    'legacy': 'gammamc_dif.dat',  # Jeltema & Profumo 2008
+}
+
+DMFIT_DEFAULT_TABLE = 'cosmixs'
+
+
+def get_dmfit_tablepath(table=None):
+    """Return the path to a DMFitFunction lookup table.
+
+    Parameters
+    ----------
+    table : str
+        Either one of the table names in `DMFIT_TABLES` ('cosmixs',
+        'legacy') or a path to a table file.  If None the default
+        table (`DMFIT_DEFAULT_TABLE`) is returned.
+    """
+    if table is None:
+        table = DMFIT_DEFAULT_TABLE
+    if table in DMFIT_TABLES:
+        return os.path.join('$FERMIPY_DATA_DIR', DMFIT_TABLES[table])
+    return table
+
+
 class DMFitFunction(SpectralFunction):
     """Class that evaluates the spectrum for a DM particle of a given
     mass, channel, cross section, and J-factor.  The parameterization
@@ -517,6 +543,15 @@ class DMFitFunction(SpectralFunction):
     in units of GeV and GeV^2 cm^-5 while energies are defined in MeV.
 
     For decay the D-factor is in uits of GeV cm^-2 s
+
+    By default the spectra are taken from the CosmiXs 2024 release
+    (Arina et al. 2024).  The previous tables based on Jeltema & Profumo (2008)
+    can be selected with ``tablepath='legacy'``.
+
+    The CosmiXs tables start at a DM mass of 6 GeV (the 2 and 4 GeV
+    rows of the mass grid are zero).  Spectra for WW and ZZ below the
+    on-shell threshold include off-shell gauge boson production and
+    assume a 100% branching ratio.
     """
 
     # Mapping between the ST channel codes and the rows in the gammamc
@@ -632,7 +667,9 @@ class DMFitFunction(SpectralFunction):
 
         tablepath : str
             Path to lookup table with pre-computed DM spectra on a
-            grid of energy, mass, and channel.
+            grid of energy, mass, and channel, or the name of one of
+            the tables distributed with fermipy ('cosmixs' or
+            'legacy').  If None the default table ('cosmixs') is used.
 
         dfactor : float
             D-factor of this object.  Note that this needs to be given
@@ -640,9 +677,7 @@ class DMFitFunction(SpectralFunction):
 
         """
 
-        if tablepath is None:
-            tablepath = os.path.join('$FERMIPY_DATA_DIR',
-                                     'gammamc_dif.dat')
+        tablepath = get_dmfit_tablepath(tablepath)
         data = np.loadtxt(os.path.expandvars(tablepath))
 
         # Number of decades in x = log10(E/M)
@@ -712,7 +747,11 @@ class DMFitFunction(SpectralFunction):
             jfactor = extra_params.get('jfactor')
             phip = 1. / (8. * np.pi) * np.power(mass, -2) * (sigmav * jfactor)
         #dndx = self._dndx_interp[ichan]((np.log10(mass),xm))
-        dndx = dndx_interp((mass, xm))
+        # Hold the first/last tabulated values outside the x grid instead of
+        # extrapolating linearly (as done in the ST DMFitFunction), which can
+        # give negative values between the last bin center and x = 1
+        xgrid = dndx_interp.grid[1]
+        dndx = dndx_interp((mass, np.clip(xm, xgrid[0], xgrid[-1])))
         dndx[xm > 0] = 0
         return phip * dndx / x
 

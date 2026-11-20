@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import numpy as np
 from numpy.testing import assert_allclose
+import pytest
 from fermipy import spectrum
 
 
@@ -30,8 +31,8 @@ def test_dmfitfunction_spectrum():
     mass = 100.  # Mass in GeV
     params = [sigmav, mass]
 
-    fn0 = spectrum.DMFitFunction(params, chan='bb')
-    fn1 = spectrum.DMFitFunction(params, chan='tautau')
+    fn0 = spectrum.DMFitFunction(params, chan='bb', tablepath='legacy')
+    fn1 = spectrum.DMFitFunction(params, chan='tautau', tablepath='legacy')
 
     loge = np.linspace(2, 4, 5)
 
@@ -67,3 +68,52 @@ def test_dmfitfunction_spectrum():
     assert_allclose(dnde0[:, 1], fn0.dnde(10**loge, params=[sigmav, 200E3]))
     assert_allclose(dnde1[:, 0], fn1.dnde(10**loge, params=[sigmav, 100E3]))
     assert_allclose(dnde1[:, 1], fn1.dnde(10**loge, params=[sigmav, 200E3]))
+
+
+def test_dmfitfunction_tables():
+
+    assert spectrum.get_dmfit_tablepath() == \
+        os.path.join('$FERMIPY_DATA_DIR', 'gammamc_dif_CosmiXs.dat')
+    assert spectrum.get_dmfit_tablepath('legacy') == \
+        os.path.join('$FERMIPY_DATA_DIR', 'gammamc_dif.dat')
+    assert spectrum.get_dmfit_tablepath('/some/table.dat') == \
+        '/some/table.dat'
+
+    sigmav = 3E-26
+    mass = 100.  # Mass in GeV
+    params = [sigmav, mass]
+
+    fn0 = spectrum.DMFitFunction(params, chan='bb')
+    fn1 = spectrum.DMFitFunction(params, chan='tautau')
+
+    loge = np.linspace(2, 4, 5)
+
+    assert_allclose(fn0.dnde(10**loge),
+                    [5.08714e-14, 3.08441e-14, 1.12053e-14,
+                     2.14793e-15, 1.84833e-16], rtol=1E-3)
+    assert_allclose(fn1.dnde(10**loge),
+                    [7.47014e-16, 4.07607e-16, 2.81216e-16,
+                     1.97613e-16, 9.59704e-17], rtol=1E-3)
+
+
+def test_dmfitfunction_pylike():
+
+    pyLike = pytest.importorskip('pyLikelihood')
+
+    params = [3E-26, 100.]
+    # Include energies just below the DM mass, beyond the last bin center
+    loge = np.concatenate((np.linspace(2, 4, 5),
+                           np.log10([95E3, 97E3, 99E3, 99.9E3])))
+    for table in spectrum.DMFIT_TABLES:
+        tablepath = os.path.expandvars(spectrum.get_dmfit_tablepath(table))
+        fn_st = pyLike.DMFitFunction()
+        fn_st.readFunction(tablepath)
+        fn_st.setParam('sigmav', params[0])
+        fn_st.setParam('mass', params[1])
+        fn_st.setParam('channel0', 4)
+        fn_st.setParam('norm', 1E19)
+        fn = spectrum.DMFitFunction(params, chan='bb', tablepath=table)
+        assert_allclose(fn.dnde(10**loge),
+                        [fn_st(pyLike.dArg(10**x)) for x in loge], rtol=1E-5,
+                        atol=1E-30)
+        assert np.all(fn.dnde(10**loge) >= 0)
