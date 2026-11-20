@@ -101,7 +101,9 @@ def test_dmfitfunction_pylike():
     pyLike = pytest.importorskip('pyLikelihood')
 
     params = [3E-26, 100.]
-    loge = np.linspace(2, 4, 5)
+    # Include energies just below the DM mass, beyond the last bin center
+    loge = np.concatenate((np.linspace(2, 4, 5),
+                           np.log10([95E3, 97E3, 99E3, 99.9E3])))
     for table in spectrum.DMFIT_TABLES:
         tablepath = os.path.expandvars(spectrum.get_dmfit_tablepath(table))
         fn_st = pyLike.DMFitFunction()
@@ -112,4 +114,6 @@ def test_dmfitfunction_pylike():
         fn_st.setParam('norm', 1E19)
         fn = spectrum.DMFitFunction(params, chan='bb', tablepath=table)
         assert_allclose(fn.dnde(10**loge),
-                        [fn_st(pyLike.dArg(10**x)) for x in loge], rtol=1E-5)
+                        [fn_st(pyLike.dArg(10**x)) for x in loge], rtol=1E-5,
+                        atol=1E-30)
+        assert np.all(fn.dnde(10**loge) >= 0)

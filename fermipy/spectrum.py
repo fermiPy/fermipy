@@ -747,7 +747,11 @@ class DMFitFunction(SpectralFunction):
             jfactor = extra_params.get('jfactor')
             phip = 1. / (8. * np.pi) * np.power(mass, -2) * (sigmav * jfactor)
         #dndx = self._dndx_interp[ichan]((np.log10(mass),xm))
-        dndx = dndx_interp((mass, xm))
+        # Hold the first/last tabulated values outside the x grid instead of
+        # extrapolating linearly (as done in the ST DMFitFunction), which can
+        # give negative values between the last bin center and x = 1
+        xgrid = dndx_interp.grid[1]
+        dndx = dndx_interp((mass, np.clip(xm, xgrid[0], xgrid[-1])))
         dndx[xm > 0] = 0
         return phip * dndx / x
 

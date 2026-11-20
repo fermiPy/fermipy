@@ -13,6 +13,9 @@ Unreleased
   changes the predicted DM spectra and therefore fitted cross sections/lifetimes. The previous
   table (Jeltema & Profumo 2008; ``gammamc_dif.dat``) can still be selected with
   ``tablepath='legacy'`` or ``Spectrum_Filename: legacy`` in the source dictionary.
+* Fixed `~fermipy.spectrum.DMFitFunction` extrapolating the tabulated spectra
+  linearly near E = mass, which could give negative values. It now holds the
+  last tabulated value, as the Fermitools DMFitFunction does.
 
 1.4.3 (07/31/2026)
 ------------------
