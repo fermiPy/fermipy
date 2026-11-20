@@ -153,7 +153,7 @@ class SEDGenerator(object):
                 Column(name='norm_err', dtype='f8', data=sed['norm_err']),
                 Column(name='norm_errp', dtype='f8', data=sed['norm_err_hi']),
                 Column(name='norm_errn', dtype='f8', data=sed['norm_err_lo']),
-                Column(name='norm_ul', dtype='f8', data=sed['norm_ul95']),
+                Column(name='norm_ul', dtype='f8', data=sed['norm_ul']),
                 Column(name='ts', dtype='f8', data=sed['ts']),
                 Column(name='loglike', dtype='f8', data=sed['loglike']),
                 Column(name='norm_scan', dtype='f8', data=sed['norm_scan']),
@@ -163,7 +163,7 @@ class SEDGenerator(object):
                 ]
 
         tab = Table(cols)
-        tab.meta['UL_CONF'] = 0.95
+        tab.meta['UL_CONF'] = kwargs.get('ul_confidence', 0.95)
         hdu_sed = fits.table_to_hdu(tab)
         hdu_sed.name = 'SED'
 
